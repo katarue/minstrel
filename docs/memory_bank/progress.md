@@ -6,6 +6,19 @@ Minstrelプロジェクトの作業記録（時系列）。
 
 ---
 
+## 2026-05-08：メモリーバンク整合性修正 (D-028)
+
+### 完了タスク
+
+#### メモリーバンク整合性修正（D-028）
+- `active_context.md` の「次の3ステップ」をフェーズ2タスク（2-A/2-B/2-C）に更新
+- `progress.md` にフェーズ1-C・1-D完了の遡り追記（以下の「2026-05-07（続き）」セクション）
+- `decision_log.md` に D-028 追記
+- 不要ローカルブランチ4本を削除（chore/fix-claude-md、chore/memory-bank-investigation、feature/1c3-organizer-pages、feature/update-plan-with-decisions）
+  - feature/update-plan-with-decisions は全コミットが main に取り込み済みであることを確認してから削除
+
+---
+
 ## 2026-05-07（続き）：フェーズ1完了 + メモリーバンク移植
 
 ### 完了タスク
