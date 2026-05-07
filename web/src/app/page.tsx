@@ -64,7 +64,7 @@ export default function Home() {
       </div>
 
       {/* ── 最新のコンサートセクション ── */}
-      <section className="max-w-7xl mx-auto px-4 md:px-8 pb-20">
+      <section className="max-w-7xl mx-auto px-4 lg:px-20 pb-20">
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
           最新のコンサート
         </h2>
