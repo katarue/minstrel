@@ -134,11 +134,10 @@ CHECK 4: @docs/folder_structure.md を読む（リポジトリ構造の把握）
 
 ## ⚡ AUTO-PUSH POLICY
 
-**ステータス: 未導入（将来検討）**
+**ステータス: 有効（2026-05-07〜）**
 
-`.githooks/post-commit` スクリプトは配置済みだが、動作テストが未実施のため有効化していない。
+`git config core.hooksPath .githooks` 適用済み（D-026）。動作テスト完了。
 
-有効化する場合: `git config core.hooksPath .githooks`
 バイパス（緊急時のみ）: `git commit --no-verify`（理由を memory-bank に記録すること）
 
 有効化後の動作:
