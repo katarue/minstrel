@@ -2,34 +2,38 @@
 
 このファイルは、新規チャットのClaudeに**最初のメッセージとして渡す**ことを想定した引き継ぎ文書。
 
-最終更新：2026年5月7日
+最終更新：2026年5月7日（リポジトリpublic化に伴い、URL直接読み込み方式に更新）
 
 ---
 
-## 新規チャットへの最初のメッセージテンプレート
+## 重要な前提
 
-以下をコピペして、新規チャットの最初のメッセージとして送る：
+Minstrelリポジトリは**public**になっている。これにより、新規チャットのClaude（チャットClaude）は`web_fetch`ツールで`raw.githubusercontent.com`経由でリポジトリ内のファイルを直接読める。
+
+そのため、新規チャット開始時はURLを明示的に渡すだけでよく、ファイル内容のコピペは不要。
 
 ---
 
-```
+## 新規チャットへの最初のメッセージ（決定版）
+
+以下を新規チャットの最初のメッセージとして送る。**そのままコピペでOK**。
+
+````
 Minstrelプロジェクトの作業を継続します。
-
-このプロジェクトの全文脈は、GitHubリポジトリ内のドキュメントに集約されています。以下を必ず読んでから作業を開始してください。
 
 リポジトリ：https://github.com/katarue/minstrel
 
-【必読ドキュメント（順序厳守）】
+【必読ドキュメント（順序厳守、すべてweb_fetchで読み込んでください）】
 
-1. `docs/memory_bank/active_context.md` - 現在地と次の3ステップ（最優先）
-2. `docs/memory_bank/pending_decisions.md` - 未解決の検討事項
-3. `docs/memory_bank/decision_log.md` - 過去の決定とその根拠
-4. `docs/memory_bank/system_patterns.md` - アーキテクチャ・命名規則・運用ルール
-5. `docs/memory_bank/progress.md` - 作業履歴
-6. `docs/project_plan.md` - プロジェクト計画書（戦略・哲学）
-7. `docs/implementation_schedule.md` - 実装スケジュール
-8. `docs/design_system.md` - デザインシステム定義
-9. `CLAUDE.md` - Minstrel固有のClaude Code向けルール
+1. https://raw.githubusercontent.com/katarue/minstrel/main/docs/memory_bank/active_context.md
+2. https://raw.githubusercontent.com/katarue/minstrel/main/docs/memory_bank/pending_decisions.md
+3. https://raw.githubusercontent.com/katarue/minstrel/main/docs/memory_bank/decision_log.md
+4. https://raw.githubusercontent.com/katarue/minstrel/main/docs/memory_bank/system_patterns.md
+5. https://raw.githubusercontent.com/katarue/minstrel/main/docs/memory_bank/progress.md
+6. https://raw.githubusercontent.com/katarue/minstrel/main/docs/project_plan.md
+7. https://raw.githubusercontent.com/katarue/minstrel/main/docs/implementation_schedule.md
+8. https://raw.githubusercontent.com/katarue/minstrel/main/docs/design_system.md
+9. https://raw.githubusercontent.com/katarue/minstrel/main/CLAUDE.md
 
 【私について】
 
@@ -49,47 +53,22 @@ Minstrelプロジェクトの作業を継続します。
 
 【次にやること】
 
-`docs/memory_bank/active_context.md` の「次の3ステップ」を確認してください。
-
-それでは、ドキュメントを読み終わったら、現状把握と次のアクション提案をしてください。
-```
+active_context.mdの「次の3ステップ」を確認してください。
+すべて読み終わったら、現状把握と次のアクション提案をしてください。
+````
 
 ---
 
-## 引き継ぎチェックリスト
+## なぜこの方式が機能するか
 
-新規チャット開始時、以下が確実に伝わっているか確認する：
+新規チャットのClaude（チャットClaude）は通常、ユーザーが明示的に共有したURL以外はweb_fetchできない（セキュリティ仕様）。
 
-### プロジェクトの基本
-- [ ] Minstrelとは何か（ゲーム音楽コンサート情報ポータル）
-- [ ] ターゲット（30〜50代男性中心）
-- [ ] コンセプト（「ギルドの掲示板」）
-- [ ] 現在のフェーズ（フェーズ1-Bまで完了、1-C着手前）
+しかし、上記メッセージにURLを直接列挙することで、Claudeは「ユーザーが共有したURL」として認識し、各URLをfetchできる。
 
-### 技術環境
-- [ ] スタック（Next.js 15 + Supabase + Vercel + Prefect + Claude API）
-- [ ] リポジトリの場所（C:\Users\katar\repos\active\minstrel）
-- [ ] 開発ポート（3001、3000ではない）
-- [ ] Supabase URL（pobbxakrszuldyhyjrjp.supabase.co）
-
-### 重要な規約
-- [ ] ブランチ運用（feature/*、chore/*）
-- [ ] 命名規則（snake_case）
-- [ ] CSSの@layer base ルール
-- [ ] スクレイピング配慮ルール
-
-### 過去の罠
-- [ ] CSSの@layer問題（D-023）
-- [ ] GRANT権限自動付与なし（D-019）
-- [ ] ポート競合（D-010）
-- [ ] Supabase新方式キー（D-018）
-
-### コミュニケーションルール
-- [ ] です・ます調
-- [ ] 結論先出し
-- [ ] 一問一答
-- [ ] 忖度しない
-- [ ] コードブロックネストしない
+これにより：
+- リポジトリの内容をコピペで貼り付ける必要がない（過去20万文字のコピペが必要だった問題を解消）
+- 常に最新のドキュメントを読める
+- メンテナンスはリポジトリ側で完結する
 
 ---
 
@@ -132,8 +111,8 @@ Minstrelプロジェクトの作業を継続します。
 
 ## 引き継ぎが失敗するパターンと対策
 
-### パターン1：「memory_bankを読みません」と言われる
-**対策**: 最初のメッセージで「必ず読んでから」と強く明記する
+### パターン1：「リポジトリを読みません」と言われる
+**対策**: 最初のメッセージで「すべてweb_fetchで読み込んでください」と明記
 
 ### パターン2：要約しすぎて文脈が抜ける
 **対策**: 要約禁止、原文を読ませる方針を明記
@@ -143,3 +122,43 @@ Minstrelプロジェクトの作業を継続します。
 
 ### パターン4：トーンがブレる
 **対策**: コミュニケーションルールを最初に提示
+
+### パターン5：URLが古くなる
+**対策**: リポジトリ構造を変える時は、このhandover_notes.mdのURLも併せて更新
+
+---
+
+## 引き継ぎチェックリスト
+
+新規チャット開始時、以下が確実に伝わっているか確認する：
+
+### プロジェクトの基本
+- [ ] Minstrelとは何か（ゲーム音楽コンサート情報ポータル）
+- [ ] ターゲット（30〜50代男性中心）
+- [ ] コンセプト（「ギルドの掲示板」）
+- [ ] 現在のフェーズ（フェーズ1-Bまで完了、1-C着手前）
+
+### 技術環境
+- [ ] スタック（Next.js 15 + Supabase + Vercel + Prefect + Claude API）
+- [ ] リポジトリの場所（C:\Users\katar\repos\active\minstrel）
+- [ ] 開発ポート（3001、3000ではない）
+- [ ] Supabase URL（pobbxakrszuldyhyjrjp.supabase.co）
+
+### 重要な規約
+- [ ] ブランチ運用（feature/*、chore/*）
+- [ ] 命名規則（snake_case）
+- [ ] CSSの@layer base ルール
+- [ ] スクレイピング配慮ルール
+
+### 過去の罠
+- [ ] CSSの@layer問題（D-023）
+- [ ] GRANT権限自動付与なし（D-019）
+- [ ] ポート競合（D-010）
+- [ ] Supabase新方式キー（D-018）
+
+### コミュニケーションルール
+- [ ] です・ます調
+- [ ] 結論先出し
+- [ ] 一問一答
+- [ ] 忖度しない
+- [ ] コードブロックネストしない
