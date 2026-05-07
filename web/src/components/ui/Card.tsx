@@ -9,6 +9,7 @@ interface CardProps {
   title: string;
   date: string;
   venue: string;
+  organizer?: string;
   genre?: Genre;
   href: string;
 }
@@ -22,7 +23,7 @@ const genreLabels: Record<Genre, string> = {
   other:     "その他",
 };
 
-export default function Card({ imageUrl, title, date, venue, genre, href }: CardProps) {
+export default function Card({ imageUrl, title, date, venue, organizer, genre, href }: CardProps) {
   return (
     <Link href={href} className="block group">
       <article
@@ -54,6 +55,9 @@ export default function Card({ imageUrl, title, date, venue, genre, href }: Card
           </h3>
           <p className="font-body text-ink-body text-sm">{date}</p>
           <p className="font-body text-ink-body/70 text-sm truncate">{venue}</p>
+          {organizer && (
+            <p className="font-body text-ink-body/60 text-sm truncate">{organizer}</p>
+          )}
         </div>
       </article>
     </Link>

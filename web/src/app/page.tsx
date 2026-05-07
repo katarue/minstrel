@@ -1,42 +1,65 @@
+import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
 import Card from "@/components/ui/Card";
 
-/* 仮データ：1-C でSupabaseの実データに差し替え */
-const sampleConcerts = [
-  {
-    id: "1",
-    title: "ファイナルファンタジーオーケストラコンサート 2026",
-    date: "2026年6月15日（日）",
-    venue: "サントリーホール（東京）",
-    genre: "orchestra" as const,
-    href: "#",
-  },
-  {
-    id: "2",
-    title: "植松伸夫 presents クリスタルフォーチュン in Tokyo",
-    date: "2026年7月20日（日）",
-    venue: "東京国際フォーラム ホールA",
-    genre: "orchestra" as const,
-    href: "#",
-  },
-  {
-    id: "3",
-    title: "ゼルダの伝説 吹奏楽フェスタ",
-    date: "2026年8月3日（土）",
-    venue: "大阪フェスティバルホール",
-    genre: "wind" as const,
-    href: "#",
-  },
-  {
-    id: "4",
-    title: "ペルソナ ライブバンド コンサート",
-    date: "2026年8月22日（金）",
-    venue: "Zepp Tokyo",
-    genre: "rock" as const,
-    href: "#",
-  },
+type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
+
+const VALID_GENRES: readonly Genre[] = [
+  "orchestra", "wind", "rock", "acoustic", "chamber", "other",
 ];
 
-export default function Home() {
+type EventRow = {
+  id: string;
+  event_name: string;
+  start_datetime: string;
+  venue_name: string;
+  prefecture: string;
+  key_visual_url: string | null;
+  performance_type: string | null;
+  organizers: { name: string } | null;
+};
+
+function formatEventDate(isoDatetime: string): string {
+  const datePart = isoDatetime.substring(0, 10);
+  const [y, m, d] = datePart.split("-").map(Number);
+  return `${y}年${m}月${d}日`;
+}
+
+function toGenre(val: string | null | undefined): Genre | undefined {
+  if (val && (VALID_GENRES as readonly string[]).includes(val)) return val as Genre;
+  return undefined;
+}
+
+export default async function Home() {
+  let events: EventRow[] = [];
+
+  try {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const { data, error } = await supabase
+      .from("events")
+      .select(`
+        id,
+        event_name,
+        start_datetime,
+        venue_name,
+        prefecture,
+        key_visual_url,
+        performance_type,
+        organizers ( name )
+      `)
+      .eq("is_published", true)
+      .order("start_datetime", { ascending: true });
+
+    if (error) {
+      console.error("Failed to fetch events:", error);
+    } else {
+      events = (data ?? []) as unknown as EventRow[];
+    }
+  } catch (err) {
+    console.error("Supabase connection error:", err);
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-20 min-h-screen">
       {/* ── ヒーローセクション ── */}
@@ -55,7 +78,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── セクション区切り装飾（design_system 9-2）── */}
+      {/* ── セクション区切り装飾 ── */}
       <div
         className="flex items-center justify-center py-8 text-gold text-2xl select-none"
         aria-hidden
@@ -63,23 +86,31 @@ export default function Home() {
         ♩
       </div>
 
-      {/* ── 最新のコンサートセクション ── */}
+      {/* ── 開催予定のコンサート ── */}
       <section className="pb-20">
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
-          最新のコンサート
+          開催予定のコンサート
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {sampleConcerts.map((concert) => (
-            <Card
-              key={concert.id}
-              title={concert.title}
-              date={concert.date}
-              venue={concert.venue}
-              genre={concert.genre}
-              href={concert.href}
-            />
-          ))}
-        </div>
+        {events.length === 0 ? (
+          <p className="font-body text-ink-body/70 text-base py-12 text-center">
+            現在掲載中のコンサートはありません
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {events.map((event) => (
+              <Card
+                key={event.id}
+                title={event.event_name}
+                date={formatEventDate(event.start_datetime)}
+                venue={`${event.venue_name}（${event.prefecture}）`}
+                organizer={event.organizers?.name}
+                genre={toGenre(event.performance_type)}
+                imageUrl={event.key_visual_url ?? undefined}
+                href={`/events/${event.id}`}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
