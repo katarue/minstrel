@@ -6,7 +6,7 @@ import Link from "next/link";
 const navLinks = [
   { label: "コンサート一覧", href: "#" },
   { label: "演奏団体", href: "/organizers" },
-  { label: "ゲームタイトル", href: "#" },
+  { label: "ゲームタイトル", href: "/titles" },
   { label: "カレンダー", href: "#" },
 ];
 
