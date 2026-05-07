@@ -1,0 +1,41 @@
+#!/bin/sh
+# Auto-push hook for feature/* branches (adapted from AI News Pipeline D-063)
+#
+# Purpose:
+# - Eliminate human error: ensure every commit on feature/* branches
+#   is immediately reflected to origin
+# - main / master / chore/* branches: SKIP (require manual push)
+#
+# STATUS: NOT ACTIVATED (未有効化)
+# To activate: git config core.hooksPath .githooks
+# To bypass (emergency only): git commit --no-verify
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ -z "$branch" ]; then
+    # Detached HEAD or other unusual state — skip auto-push
+    exit 0
+fi
+
+case "$branch" in
+    main|master)
+        echo "[post-commit] Skipping auto-push: $branch requires manual review (rules.md)"
+        exit 0
+        ;;
+    feature/*)
+        echo "[post-commit] Auto-pushing $branch to origin..."
+        if git push origin "$branch" 2>&1; then
+            echo "[post-commit] Pushed successfully"
+        else
+            echo "[post-commit] Auto-push failed. Run 'git push origin $branch' manually."
+            exit 0
+        fi
+        ;;
+    *)
+        # chore/*, hotfix/*, etc. — skip auto-push for safety
+        echo "[post-commit] Skipping auto-push: $branch is not a feature/* branch"
+        exit 0
+        ;;
+esac
+
+exit 0

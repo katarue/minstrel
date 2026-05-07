@@ -9,64 +9,53 @@
 ## プロジェクト現在地
 
 ### フェーズ
-**フェーズ1（基盤構築）の途中**
+**フェーズ1（基盤構築）完了。メモリーバンク移植完了。次はフェーズ2（情報収集パイプライン）。**
 
 ### 完了したセクション
 - ✓ フェーズ0：準備（アカウント・APIキー取得）
-- ✓ フェーズ1-A：DB構築（スキーマ作成・テーブル作成・RLS設定）
+- ✓ フェーズ1-A：DB構築（スキーマ作成・テーブル作成・RLS設定・テストデータ投入）
 - ✓ フェーズ1-B：Next.js基盤（プロジェクト初期化・Tailwind・Supabase接続・デザイントーン・共通コンポーネント）
-
-### 進行中
-- なし（1-B-5完了、1-Cに着手前）
+- ✓ フェーズ1-C：基本ページ実装（トップページ・イベント詳細・演奏団体・ゲームタイトル）
+- ✓ フェーズ1-D：仮公開（Vercelデプロイ済み）
+- ✓ メモリーバンク・プロトコル移植（D-025）
 
 ### 残タスク
-- フェーズ1-A-3：テストデータ手動投入（後回し、1-Bと統合予定）
-- フェーズ1-C：基本ページ実装（トップ詳細化、イベント詳細、団体ページ、タイトルページ、レスポンシブ）
-- フェーズ1-D：仮公開（Vercelデプロイ、minstrel.live接続）
-- フェーズ2以降：収集パイプライン構築
+- フェーズ2：情報収集パイプライン構築（Prefect + Python スクレイピング）
+- minstrel.live ドメイン DNS 接続
+- ヘッダー「コンサート一覧」リンクを `/` に接続（現在 `#`）
+- カレンダーページ（フェーズ3以降）
 
 ---
 
 ## 次の3ステップ
 
-### ステップ1：1-A-3 / 1-C-1 統合（テストデータ + トップページ実装）
+### ステップ1：minstrel.live ドメイン接続
 
-トップページに実データを表示する形で、テストデータ投入とトップページ実装を統合する。
+Vercel プロジェクト設定 → Domains → `minstrel.live` を追加。
+DNS レコードをドメイン管理会社に設定する（Vercel が A レコードまたは CNAME を指示）。
 
-具体的には：
-- Supabaseに5〜10件のテストデータを手動投入（events、organizers、game_titles）
-- トップページがSupabaseから実データを取得して表示するように改修
+### ステップ2：フェーズ2 設計
 
-### ステップ2：1-C-2（イベント詳細ページ）
+情報収集パイプラインの設計着手。`docs/implementation_schedule.md` のフェーズ2タスクを確認する。
 
-各イベントの個別ページを実装。動的ルーティング `/events/[id]` を使う。
+### ステップ3：ヘッダーナビの整理
 
-### ステップ3：1-C-3（団体ページ）
-
-演奏団体の一覧・詳細ページを実装。
+「コンサート一覧」を `href="#"` から `href="/"` に変更（トップページはコンサート一覧）。
+「カレンダー」は将来実装まで `href="#"` のままでよい。
 
 ---
 
 ## 現在のリポジトリ状態
 
-- **mainブランチ**: 最新（1-B-5までの全変更がマージ済み）
-- **未マージブランチ**: なし
-- **未コミット変更**: なし
+- **mainブランチ**: 最新（フェーズ1完了、push済み）
+- **デプロイ先**: Vercel（本番公開済み）
+- **Supabase**: `https://pobbxakrszuldyhyjrjp.supabase.co`
 - **開発サーバーポート**: 3001
 
-### 直近のコミット
+### 直近のコミット（memory-bank-port ブランチ）
 
-```
-ee0b06a chore: change dev server port to 3001
-3dfc360 fix: resolve padding issue caused by unlayered global CSS reset
-edb6552 fix: padding adjustments for page.tsx
-712fa43 feat: トップページをデザインシステムに合わせて更新
-4313318 feat: UI基本コンポーネント追加 Button/Card/Badge
-3b8b024 feat: Header・Footerコンポーネント追加
-a3b1152 feat: Tailwindテーマ定義とGoogle Fonts設定
-edc67a7 docs: add design system specification
-59cb393 feat: setup Supabase client and grant anon permissions
-```
+memory-bank 移植作業中（chore/memory-bank-port ブランチ）。
+完了後に main にマージ・push する。
 
 ---
 
@@ -84,37 +73,33 @@ npm run dev
 ### 環境変数
 
 `web/.env.local` に以下が設定されている（gitignored）：
-- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`: `https://pobbxakrszuldyhyjrjp.supabase.co`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-Secret keyはまだ未使用（フェーズ2のPythonパイプラインで使用予定）。
+### メモリーバンク運用
 
-### Supabase接続
+- セッション開始時: `session_log.md` に OPEN タイムスタンプ記録 → memory_bank/ 6ファイルを順番に読む
+- セッション終了時: 「クロージングを始めて」で CLOSING RITUAL（3 Gate）を起動
+- 詳細: `docs/memory_bank/framework_overview.md` を参照
 
-- Project URL: `https://pobbxakrszuldyhyjrjp.supabase.co`
-- 接続テストは1-B-3で完了している
+### CSS の重要ルール（D-023）
+
+`globals.css` の CSS リセットは必ず `@layer base { }` で囲む。
+unlayered CSS は Tailwind ユーティリティに勝ってしまい px-* 等が無効化される。
 
 ### ブランチ運用
 
 - 作業は必ず `feature/*` または `chore/*` ブランチで行う
-- mainへの直接コミット禁止
-- pre-commit hookは未導入（必要になれば追加）
+- main への直接コミット禁止
+- `.githooks/` は配置済みだが未有効化（AUTO-PUSH は将来検討）
 
 ---
 
-## このセッションで完了したこと（2026-05-07）
+## フェーズ1で発覚した主要な罠（次回以降も有効）
 
-1. プロジェクト計画策定〜Notion保存
-2. GitHubリポジトリ作成・初期セットアップ
-3. 3階層CLAUDE.md構成（ホーム・Minstrel・AI News Pipeline）
-4. フェーズ1-A完了（DB構築）
-5. フェーズ1-B完了（Next.js基盤・デザイン）
-6. design_system.md作成
-7. memory_bank構造を整備
-
-## このセッション中に見つかった主要な罠
-
-- Supabase publishable/secret keyの新方式（旧anon/service_roleキー）
-- GRANT権限がCLI作成テーブルには自動付与されない
-- globals.cssのCSSリセットが@layer baseで囲まれていないとTailwindユーティリティが効かない
-- Next.jsのデフォルトポート（3000）がRemotionと競合
+1. **Supabase publishable/secret key 新方式**（D-018）
+2. **GRANT権限の自動付与なし**（D-019）
+3. **CSSの@layer問題**（D-023）
+4. **ポート競合: 3001 固定**（D-010）
+5. **game_titles に genre カラムなし**（series_name / publisher で代替）
+6. **event_game_titles ネスト取得の TypeScript 型推論**（配列型になる、flatMap で対処）

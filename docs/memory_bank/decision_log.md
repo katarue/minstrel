@@ -249,6 +249,28 @@ Minstrelプロジェクトで確定した決定事項とその根拠の記録。
 
 ---
 
+## D-025：メモリーバンク・プロトコルを AI News Pipeline から移植
+
+**日付**: 2026年5月7日
+**決定**: AI News Pipeline の memory-bank 運用プロトコルを Minstrel に正式移植
+**根拠**: 「次回セッションで Claude Code が記憶ゼロでログインしても、必要な情報を全て自力で取得し、安全に作業を継続できる状態」を目指すため。AI News Pipeline での D-122 まで欠番なく機能していた実績を踏まえて採用。
+**主な変更内容**:
+- `docs/memory_bank/session_log.md` 新規作成（セッションタイムスタンプ記録）
+- `docs/memory_bank/rules.md` 新規作成（R-01〜R-08、R-DIR-01〜07）
+- `docs/memory_bank/framework_overview.md` 新規作成（運用構造・参照決定木）
+- `docs/folder_structure.md` 新規作成（リポジトリ構造定義）
+- `CLAUDE.md` 全面書き直し（プロトコル埋め込み、8点修正）
+- `.githooks/` 配置（post-commit / pre-commit / pre-commit.ps1）
+**重要な移植調整**:
+- ファイル名は snake_case を継続（AI News Pipeline の camelCase は採用しない）
+- D-NN / P-NN は Minstrel 独立番号体系（AI News Pipeline と無関係）
+- R-01〜R-03 は Claude Desktop 固有のルールのため Minstrel 用に再定義
+- R-01〜R-06 はすべて rules.md に直書き（外部参照依存ゼロ）
+- AUTO-PUSH POLICY は未導入（動作テスト未実施、将来検討）
+**影響**: 次回セッションから CLAUDE.md を読むだけで完全な作業再開が可能になる
+
+---
+
 ## D-024：memory_bankシステムの導入
 
 **日付**: 2026年5月7日  
