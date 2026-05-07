@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Pre-commit hook: (1) R-DIR-01 directory naming rule violation detection (2) secret file blocking
+# Enable locally with: git config core.hooksPath .githooks
+#
+# STATUS: NOT ACTIVATED (未有効化)
+
+# --- R-DIR-01 check (PowerShell) ---
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -ExecutionPolicy Bypass -File "$REPO_ROOT/.githooks/pre-commit.ps1"
+  PS_EXIT=$?
+  if [ "$PS_EXIT" != "0" ]; then
+    exit 1
+  fi
+fi
+# --- end R-DIR-01 check ---
+
+set -eu
+
+staged="$(git diff --cached --name-only --diff-filter=ACM)"
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+blocked=0
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  base="$(basename "$file")"
+
+  if [ "$base" = ".env.example" ]; then
+    continue
+  fi
+
+  case "$base" in
+    .env|.env.*|*.key|*.pem|credentials.json|client_secret*.json|service-account*.json)
+      echo "機密ファイルのコミットがブロックされました: $file" >&2
+      blocked=1
+      ;;
+  esac
+done <<< "$staged"
+
+if [ "$blocked" = "1" ]; then
+  echo "" >&2
+  echo "Hint: 上記ファイルは .gitignore にマッチするはずです。" >&2
+  echo "誤って追跡した場合は 'git rm --cached <file>' で index から外してください。" >&2
+  exit 1
+fi
+
+exit 0

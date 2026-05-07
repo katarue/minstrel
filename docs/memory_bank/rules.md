@@ -1,0 +1,120 @@
+# Rules
+
+Minstrel プロジェクトの運用ルール定義。
+
+**このファイルは Minstrel プロジェクト独自のルール体系。AI News Pipeline の番号とは無関係。**
+
+最終更新: 2026-05-07（D-025: AI News Pipeline からの移植・Minstrel 用に書き直し）
+
+---
+
+## 基本ルール（R-01〜R-06）
+
+> **出典**: AI News Pipeline の R-01〜R-06 を Minstrel 用に書き直し。
+> AI News Pipeline は Claude Desktop + Claude Code の2ツール併用構成だが、
+> Minstrel は Claude Code のみで運用するため、Artifacts 関連ルール（R-01〜R-03）は
+> Minstrel の文脈に合わせて再定義した。
+
+### R-01: セッション開始時の必読プロトコル厳守
+
+新規セッション開始時は CLAUDE.md の `MANDATORY READING AT SESSION START` を**必ずこの順序で**実行する。
+順序を飛ばしてはいけない。読み込み後、ムーチョに3行サマリーを報告してから作業を開始する。
+
+**この手順を省略して即座に実装に入ることを禁じる。**
+
+### R-02: 実装前に既存の決定事項を必ず確認する
+
+設計・実装を提案する前に以下を確認する:
+
+1. `decision_log.md` — 同じ判断をすでに D-NN として記録していないか
+2. `pending_decisions.md` — 関連する未解決事項（P-NN）がないか
+3. `active_context.md` — 現在の作業フォーカスと矛盾しないか
+
+確認なしに「新しい設計」として提案することを禁じる。過去の議論を踏みにじることが最大の失敗。
+
+### R-03: 基本サイクル（推測で設計しない）
+
+1. **情報収集と現状把握**（memory_bank/ を読む）
+2. **プランの明示**（何をするか説明する）
+3. **ムーチョの確認**（不明点は実装前に質問）
+4. **承認後に実装**
+
+曖昧な指示に対して勝手な仮定を置き、独断で実装を進めることを禁じる。
+
+### R-04: 曖昧な指示は推測せず確認質問する
+
+要件に不明瞭な点がある場合、コードを書き始める前に必ずムーチョに質問する。
+解釈が複数存在する場合、「AとBの解釈が可能ですが、どちらですか？」と理由を添えて確認する。
+
+### R-05: memory_bank/ が Source of Truth
+
+`docs/memory_bank/` 配下が唯一の真実の源泉（Source of Truth）。
+Notion の開発日誌や Claude Code auto-memory（`~/.claude/projects/*/`）は補助情報。
+情報に食い違いがある場合は **memory_bank/ の最新コミット版を優先**する。
+
+### R-06: 場当たり的な書き込みは絶対禁止
+
+ドキュメントに新しい情報を追加する際は、必ず `framework_overview.md` の「情報の配置先判断フロー」に従って保存先を判断する。
+確認なく「どこか適当なファイルに書いておく」行為を禁じる。
+
+---
+
+## メタルール
+
+### R-07: ルール追加・改廃プロトコル
+
+ルール自体（R-NN / framework_overview / 番号体系）の追加・改廃は以下の5ステージに従う。
+
+- **Stage 1: Proposal** — `pending_decisions.md` に `P-NN(meta)` として起票
+- **Stage 2: Decision** — ムーチョが承認（基準: 再現性あり・真っさらな Claude が読んで理解できる）
+- **Stage 3: Implementation** — `rules.md` に追加、変更履歴を `D-NN(meta)` として `decision_log.md` に記録
+- **Stage 4: Completeness Check** — 矛盾がないか検証
+- **Stage 5: Sync** — `active_context.md` の「重要な注意事項」を必要に応じて更新
+
+### R-08: 軽量版 Immutability ルール（完了済み意思決定の改変禁止）
+
+**対象**: ✅ 完了マーク付きの D-NN
+
+**編集可**: タイポ修正 / 壊れたリンク修正 / 追記（日付付き "Addendum:" として末尾に追加）
+
+**禁止**: 決定本文の書き換え / エントリ自体の削除
+
+**内容を変更したい場合**: 新しい D-NN を起票し、冒頭に `**Supersedes**: D-XXX` と明示。旧 D-NN 側には `Addendum YYYY-MM-DD: この決定は D-NNN によって supersede された。` と追記する。
+
+---
+
+## ディレクトリ管理ルール（R-DIR-01〜07）
+
+**最終更新**: 2026-05-07（AI News Pipeline から移植）
+
+本ルールは AI News Pipeline で「`.NEW` 接尾辞付きディレクトリ名により Claude Code が作業対象を誤認する事故」が発生した後に制定されたもの。Minstrel にも同じリスクがあるため移植する。
+
+### R-DIR-01: 状態表現の接尾辞禁止
+
+プロジェクト名・ファイル名に `.NEW`、`.OLD`、`_v2`、`_temp`、`_backup`、`_old`、`_new` 等の状態を表す接尾辞を付けてはいけない。一時的な名前は永続化するアンチパターン。
+
+### R-DIR-02: 命名規則は kebab-case（ディレクトリ）/ snake_case（ファイル）
+
+- ディレクトリ名: kebab-case（例: `ai-news-video-pipeline`）
+- ファイル名: snake_case（例: `active_context.md`）
+- React コンポーネント: PascalCase（例: `Header.tsx`）— 唯一の例外
+
+### R-DIR-03: 現役プロジェクトは active/ 配下
+
+現在開発中・本番運用中のプロジェクトは `C:\Users\katar\repos\active\` 配下に配置。
+
+### R-DIR-04: 休眠プロジェクトは dormant/ 配下
+
+1ヶ月以上コミットがなく、すぐに再開する可能性が低いプロジェクトは `repos/dormant/` 配下に配置。削除はしない。
+
+### R-DIR-05: アーカイブは _archive_YYYYMMDD/ 配下
+
+完全にアーカイブされたプロジェクトは `repos/_archive_YYYYMMDD/` 配下にスナップショットとして格納する。
+
+### R-DIR-06: 同名プロジェクトの並走禁止
+
+新規プロジェクト作成時、既存の現役プロジェクト名と衝突する場合は、**既存を必ず dormant/archive に先に移動**してから新名で作成する。`.NEW` を付けて並走させてはいけない。
+
+### R-DIR-07: リネーム時の全パス参照更新
+
+リネーム作業を行う際は、関連する全パス参照（設定ファイル、環境変数、ドキュメント等）を `grep` で洗い出し、まとめて更新する。
