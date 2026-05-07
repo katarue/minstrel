@@ -19,6 +19,7 @@
 - ✓ フェーズ1-D：仮公開（Vercelデプロイ済み）
 - ✓ メモリーバンク・プロトコル移植（D-025）
 - ✓ AUTO-PUSH POLICY 有効化（D-026）
+- ✓ Claude.ai セッション開始ハブ導入（D-027）`session_start_for_claude.md`
 
 ### 残タスク
 - フェーズ2：情報収集パイプライン構築（Prefect + Python スクレイピング）
@@ -56,10 +57,10 @@ DNS レコードをドメイン管理会社に設定する（Vercel が A レコ
 ### 直近のコミット
 
 ```
+dd7147a Merge chore/auto-push-activation: AUTO-PUSH有効化 (D-026)
+36a4e86 chore: AUTO-PUSH有効化・memory_bank更新 (D-026)
 794e788 Merge pull request #1 from katarue/chore/memory-bank-port
 096889c chore: メモリーバンク・プロトコルを AI News Pipeline から移植 (D-025)
-07a1736 chore: Vercelデプロイ設定追加 (1-D-1)
-1dd6a5f feat: ゲームタイトル一覧・詳細ページ実装 (1-C-4) をmainにマージ
 ```
 
 ---

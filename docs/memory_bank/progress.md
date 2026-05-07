@@ -39,6 +39,12 @@ Minstrelプロジェクトの作業記録（時系列）。
 - `.githooks/post-commit`・`pre-commit`・`pre-commit.ps1` 配置（未有効化）
 - `decision_log.md` に D-025 追記
 
+#### Claude.ai セッション開始ハブ導入（D-027）
+- `session_start_for_claude.md` をリポジトリルート直下に新規作成
+- README.md に Claude.ai 向け案内を追記
+- `decision_log.md` に D-027 追記
+- Claude.ai はハブURL1つを提示するだけで必読ドキュメントを連鎖読み込みできる体制が整った
+
 #### AUTO-PUSH 有効化（D-026）
 - PR #1（`chore/memory-bank-port`）を main にマージ
 - `git config core.hooksPath .githooks` で hooks 有効化
