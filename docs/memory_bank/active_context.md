@@ -18,6 +18,7 @@
 - ✓ フェーズ1-C：基本ページ実装（トップページ・イベント詳細・演奏団体・ゲームタイトル）
 - ✓ フェーズ1-D：仮公開（Vercelデプロイ済み）
 - ✓ メモリーバンク・プロトコル移植（D-025）
+- ✓ AUTO-PUSH POLICY 有効化（D-026）
 
 ### 残タスク
 - フェーズ2：情報収集パイプライン構築（Prefect + Python スクレイピング）
@@ -52,10 +53,14 @@ DNS レコードをドメイン管理会社に設定する（Vercel が A レコ
 - **Supabase**: `https://pobbxakrszuldyhyjrjp.supabase.co`
 - **開発サーバーポート**: 3001
 
-### 直近のコミット（memory-bank-port ブランチ）
+### 直近のコミット
 
-memory-bank 移植作業中（chore/memory-bank-port ブランチ）。
-完了後に main にマージ・push する。
+```
+794e788 Merge pull request #1 from katarue/chore/memory-bank-port
+096889c chore: メモリーバンク・プロトコルを AI News Pipeline から移植 (D-025)
+07a1736 chore: Vercelデプロイ設定追加 (1-D-1)
+1dd6a5f feat: ゲームタイトル一覧・詳細ページ実装 (1-C-4) をmainにマージ
+```
 
 ---
 
@@ -91,7 +96,8 @@ unlayered CSS は Tailwind ユーティリティに勝ってしまい px-* 等�
 
 - 作業は必ず `feature/*` または `chore/*` ブランチで行う
 - main への直接コミット禁止
-- `.githooks/` は配置済みだが未有効化（AUTO-PUSH は将来検討）
+- `.githooks/` 有効化済み（`git config core.hooksPath .githooks`、D-026）
+- `feature/*` ブランチのコミット時に自動 push
 
 ---
 

@@ -39,6 +39,14 @@ Minstrelプロジェクトの作業記録（時系列）。
 - `.githooks/post-commit`・`pre-commit`・`pre-commit.ps1` 配置（未有効化）
 - `decision_log.md` に D-025 追記
 
+#### AUTO-PUSH 有効化（D-026）
+- PR #1（`chore/memory-bank-port`）を main にマージ
+- `git config core.hooksPath .githooks` で hooks 有効化
+- `feature/auto-push-test` ブランチで動作テスト → `[post-commit] Pushed successfully` 確認
+- テストブランチをローカル・リモートから削除
+- `CLAUDE.md` の AUTO-PUSH POLICY ステータスを「有効（2026-05-07〜）」に更新
+- `decision_log.md` に D-026 追記
+
 ### 発生した問題・学び
 
 1. **game_titles に genre カラムなし**：タスク仕様に genre Badge の記述があったが、実テーブルには該当カラムが存在しない。series_name / publisher で代替した

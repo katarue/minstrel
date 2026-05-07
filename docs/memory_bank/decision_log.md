@@ -249,6 +249,19 @@ Minstrelプロジェクトで確定した決定事項とその根拠の記録。
 
 ---
 
+## D-026：AUTO-PUSH POLICY 有効化
+
+**日付**: 2026年5月7日
+**決定**: `.githooks/post-commit` を `git config core.hooksPath .githooks` で有効化
+**根拠**: D-025 で配置済みのフックが動作テスト未実施だったため保留していた。`feature/auto-push-test` ブランチでコミット → 自動 push → `[post-commit] Pushed successfully` を確認して有効化に踏み切った。
+**動作仕様**:
+- `feature/*` ブランチ: コミット直後に自動 `git push origin <branch>`
+- `main` / `chore/*` / その他: 自動 push なし（手動 push が必要）
+- バイパス: `git commit --no-verify`（使用時は memory-bank に理由を記録）
+**影響**: CLAUDE.md の AUTO-PUSH POLICY ステータスを「有効（2026-05-07〜）」に更新
+
+---
+
 ## D-025：メモリーバンク・プロトコルを AI News Pipeline から移植
 
 **日付**: 2026年5月7日
