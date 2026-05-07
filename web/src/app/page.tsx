@@ -38,9 +38,9 @@ const sampleConcerts = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-20 min-h-screen">
       {/* ── ヒーローセクション ── */}
-      <section className="bg-parchment py-24 px-4 text-center border-b border-gold/30">
+      <section className="py-24 text-center border-b border-gold/30">
         <div className="max-w-3xl mx-auto flex flex-col items-center gap-6">
           <h1 className="font-heading text-bordeaux text-5xl md:text-7xl font-bold tracking-widest leading-tight">
             MINSTREL
@@ -64,11 +64,11 @@ export default function Home() {
       </div>
 
       {/* ── 最新のコンサートセクション ── */}
-      <section className="max-w-7xl mx-auto px-4 lg:px-20 pb-20">
+      <section className="pb-20">
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
           最新のコンサート
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
           {sampleConcerts.map((concert) => (
             <Card
               key={concert.id}
