@@ -54,6 +54,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: SITE_URL,
   },
+  verification: {
+    google: "MpkAwIPcBhesDvo5IZt4sCEajkdKBYCtbEfuUUEXGJw",
+  },
 };
 
 export default function RootLayout({
