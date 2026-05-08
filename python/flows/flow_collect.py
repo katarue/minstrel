@@ -34,25 +34,35 @@ def upsert_to_db(events: list[dict]) -> int:
     db = get_client()
     count = 0
     for event in events:
-        # 重複チェック: title + start_datetime の組み合わせで判定
+        event_name = event.get("title") or ""
+        start_dt = event.get("start_datetime") or ""
+        # 重複チェック: event_name + start_datetime の組み合わせで判定
         existing = (
             db.table("events")
             .select("id")
-            .eq("title", event.get("title", ""))
-            .eq("start_datetime", event.get("start_datetime", ""))
+            .eq("event_name", event_name)
+            .eq("start_datetime", start_dt)
             .execute()
         )
         if existing.data:
-            continue  # 既存レコードはスキップ（将来は UPDATE に変更予定）
-        db.table("events").insert({
-            "title": event.get("title"),
-            "start_datetime": event.get("start_datetime"),
-            "venue": event.get("venue"),
+            continue
+        ticket_url = event.get("ticket_url")
+        row = {
+            "event_name": event_name,
+            "start_datetime": start_dt or None,
+            "venue_name": event.get("venue"),
+            "prefecture": event.get("prefecture"),
             "description": event.get("description"),
             "source_url": event.get("source_url"),
+            "source_rank": event.get("source_rank", "B"),
+            "confidence_score": int(event["confidence_score"] * 100) if event.get("confidence_score") is not None else None,
             "auto_publish_eligible": event.get("auto_publish_eligible", False),
+            "is_canceled": event.get("is_cancelled", False),
             "is_published": False,
-        }).execute()
+        }
+        if ticket_url:
+            row["ticket_urls"] = {"primary": ticket_url}
+        db.table("events").insert(row).execute()
         count += 1
     return count
 

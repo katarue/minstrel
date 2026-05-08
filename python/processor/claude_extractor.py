@@ -46,6 +46,15 @@ JSONのみ返してください。他のテキストは不要です。"""
     )
 
     try:
-        return json.loads(resp.content[0].text)
+        text = resp.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        parsed = json.loads(text.strip())
+        # Claudeがリストを返した場合は先頭要素を使用
+        if isinstance(parsed, list):
+            return parsed[0] if parsed else None
+        return parsed
     except (json.JSONDecodeError, IndexError):
         return None
