@@ -1,18 +1,37 @@
 """
-Prefect スケジューラー起動スクリプト（2-F-2）
+Minstrel 定期収集スケジューラー（2-F-2）
+
+AI News Video Pipeline の run パターンに合わせた構成。
 
 起動方法:
+  # スケジュール付き常駐（3日おき 09:00 JST）
   cd python
-  .venv/Scripts/python run_scheduler.py
+  .venv/Scripts/python run_scheduler.py --serve-scheduled
 
-3日に1回・午前9時（JST = UTC+00:00 の 00:00）に collect_flow を実行する。
-このプロセスが起動中である限りスケジュールが維持される。
-プロセスを止めると停止するので、常駐させる場合は Task Scheduler や pm2 で管理すること。
+  # 即時1回実行（テスト用）
+  .venv/Scripts/python run_scheduler.py --run-now
 """
+import argparse
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
 from flows.flow_collect import collect_flow
 
 if __name__ == "__main__":
-    collect_flow.serve(
-        name="minstrel-collect-scheduled",
-        cron="0 0 */3 * *",  # 3日おき UTC 00:00 = JST 09:00
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run-now", action="store_true", help="即時1回実行")
+    parser.add_argument("--serve-scheduled", action="store_true", help="3日おき09:00 JSTで自動実行")
+    args = parser.parse_args()
+
+    if args.run_now:
+        collect_flow()
+    elif args.serve_scheduled:
+        from prefect.client.schemas.schedules import CronSchedule
+        collect_flow.serve(
+            name="minstrel-collect-scheduled",
+            schedules=[CronSchedule(cron="0 9 */3 * *", timezone="Asia/Tokyo")],
+        )
+    else:
+        collect_flow.serve(name="minstrel-collect")

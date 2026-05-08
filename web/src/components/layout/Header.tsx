@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 const navLinks = [
-  { label: "コンサート一覧", href: "#" },
+  { label: "コンサート一覧", href: "/concerts" },
   { label: "演奏団体", href: "/organizers" },
   { label: "ゲームタイトル", href: "/titles" },
   { label: "カレンダー", href: "#" },
