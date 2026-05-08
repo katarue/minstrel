@@ -60,6 +60,9 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
             extracted["_image_url"] = raw.get("image_url")
             extracted["_source_name"] = raw.get("source_name", "unknown")
             extracted["_raw_source_url"] = raw.get("source_url", "")
+            # ticket_url がスクレイパーから直接提供されている場合は優先使用
+            if raw.get("ticket_url") and not extracted.get("ticket_url"):
+                extracted["ticket_url"] = raw["ticket_url"]
             results.append(extracted)
 
     if skipped_low_score:
