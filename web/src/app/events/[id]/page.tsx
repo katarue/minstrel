@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import Badge from "@/components/ui/Badge";
+import { googleCalendarUrl } from "@/utils/ical";
 
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 const VALID_GENRES: readonly Genre[] = [
@@ -32,9 +33,11 @@ type EventDetail = {
   event_name: string;
   description: string | null;
   start_datetime: string;
+  end_datetime: string | null;
   venue_name: string;
   prefecture: string;
   key_visual_url: string | null;
+  flyer_image_url: string | null;
   performance_type: string | null;
   has_streaming: boolean;
   streaming_price: string | null;
@@ -66,9 +69,11 @@ export default async function EventDetailPage({
       event_name,
       description,
       start_datetime,
+      end_datetime,
       venue_name,
       prefecture,
       key_visual_url,
+      flyer_image_url,
       performance_type,
       has_streaming,
       streaming_price,
@@ -112,9 +117,9 @@ export default async function EventDetailPage({
       <div className="relative w-full aspect-video bg-parchment-dark rounded-md overflow-hidden mb-8"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
       >
-        {event.key_visual_url ? (
+        {(event.flyer_image_url ?? event.key_visual_url) ? (
           <Image
-            src={event.key_visual_url}
+            src={(event.flyer_image_url ?? event.key_visual_url)!}
             alt={event.event_name}
             fill
             className="object-cover"
@@ -241,6 +246,31 @@ export default async function EventDetailPage({
             </a>
           </div>
         )}
+
+        {/* カレンダーボタン */}
+        <div className="border-t border-gold/30 pt-6 flex flex-wrap gap-3">
+          <a
+            href={googleCalendarUrl({
+              id: event.id,
+              event_name: event.event_name,
+              start_datetime: event.start_datetime,
+              end_datetime: event.end_datetime,
+              description: event.description,
+              venue_name: event.venue_name,
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer border border-gold text-bordeaux hover:bg-gold/10 px-5 py-2.5 text-sm"
+          >
+            Googleカレンダーに追加
+          </a>
+          <a
+            href={`/api/events/${event.id}/ical`}
+            className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer border border-gold/50 text-ink-body hover:bg-parchment-dark px-5 py-2.5 text-sm"
+          >
+            カレンダーに追加（.ics）
+          </a>
+        </div>
       </div>
     </div>
   );
