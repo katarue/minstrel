@@ -1,4 +1,4 @@
-# スクレイピング
+# scraping
 requests==2.32.3
 beautifulsoup4==4.12.3
 lxml==5.2.2
@@ -9,11 +9,11 @@ anthropic==0.28.0
 # Supabase
 supabase==2.5.1
 
-# 画像処理
+# image processing
 Pillow==10.3.0
 
-# Prefect（ローカル実行）
+# Prefect (local)
 prefect==2.19.9
 
-# ユーティリティ
+# utilities
 python-dotenv==1.0.1
