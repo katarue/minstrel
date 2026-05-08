@@ -294,3 +294,36 @@ AI による「ファクトチェック」ではなく、ルールベースの�
 Minstrel 固有のルール・設計が変わった場合、このファイルを更新する。
 共通ルールはホームディレクトリの `C:\Users\katar\CLAUDE.md` を更新する。
 ルール変更は R-07 に従い P-NN(meta) → D-NN(meta) のフローで管理する。
+
+---
+
+## Claude HQ システムへの移行(2026-05-08〜)
+
+このプロジェクトは Claude HQ システムへ段階的に移行中。
+
+### 新仕組みの基本
+
+- **現在地**: STATE.md(リポジトリのルート、毎セッション上書き)
+- **過去の決定の正本**: GitHub Issues(タイトル: `[decision] ...`、ラベル: `decision/adopted`)
+- **判断基準**: このファイル(CLAUDE.md)の判断マトリクス
+
+### 旧メモリーバンク(docs/memory_bank/)の扱い
+
+**2026-05-08 以降、参照のみ・更新停止**
+
+- 過去の決定確認のみ参照(D-001〜D-027)
+- 新規決定は GitHub Issue で記録
+- 新規セッションでは active_context.md / decision_log.md / progress.md を**更新しない**
+
+### 新仕組みの全体像
+
+詳細は以下を参照:
+- ローカル: C:\Users\katar\repos\active\claude-hq\docs\ai_session_brief.md
+- GitHub: katarue/claude-hq の docs/ai_session_brief.md
+
+### 過去の決定を参照する手順
+
+1. STATE.md の「関連 Issue」を確認
+2. なければ GitHub Issues で `label:decision/adopted` で検索
+3. 旧 D-NN で参照される古い決定は docs/memory_bank/decision_log.md を読んでもよい
+4. ただし**新規決定は必ず Issue 起票**(旧 D-NN フォーマットは使わない)
