@@ -13,7 +13,7 @@ supabase==2.5.1
 Pillow==10.3.0
 
 # Prefect (local)
-prefect==2.19.9
+prefect>=3.0.0,<4.0.0
 
 # utilities
 python-dotenv==1.0.1

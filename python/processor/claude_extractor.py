@@ -47,11 +47,14 @@ JSONのみ返してください。他のテキストは不要です。"""
 
     try:
         text = resp.content[0].text.strip()
-        # ```json ... ``` ブロックを除去
         if text.startswith("```"):
             text = text.split("```")[1]
             if text.startswith("json"):
                 text = text[4:]
-        return json.loads(text.strip())
+        parsed = json.loads(text.strip())
+        # Claudeがリストを返した場合は先頭要素を使用
+        if isinstance(parsed, list):
+            return parsed[0] if parsed else None
+        return parsed
     except (json.JSONDecodeError, IndexError):
         return None
