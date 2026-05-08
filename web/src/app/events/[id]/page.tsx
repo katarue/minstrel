@@ -2,9 +2,12 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import Badge from "@/components/ui/Badge";
 import { googleCalendarUrl } from "@/utils/ical";
+
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://minstrel.live";
 
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 const VALID_GENRES: readonly Genre[] = [
@@ -51,6 +54,45 @@ type EventDetail = {
     game_titles: { title_name: string } | null;
   }>;
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data } = await supabase
+    .from("events")
+    .select("event_name, description, start_datetime, flyer_image_url, key_visual_url")
+    .eq("id", id)
+    .eq("is_published", true)
+    .single();
+
+  if (!data) return { title: "Minstrel" };
+
+  const imageUrl = data.flyer_image_url ?? data.key_visual_url;
+  const dateStr = formatDateWithDay(data.start_datetime);
+  const description = data.description ?? `${data.event_name}（${dateStr}）のゲーム音楽コンサート情報`;
+
+  return {
+    title: data.event_name,
+    description,
+    openGraph: {
+      title: data.event_name,
+      description,
+      ...(imageUrl ? { images: [{ url: imageUrl }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: data.event_name,
+      description,
+      ...(imageUrl ? { images: [imageUrl] } : {}),
+    },
+  };
+}
 
 export default async function EventDetailPage({
   params,
@@ -103,7 +145,40 @@ export default async function EventDetailPage({
     .map((egt) => egt.game_titles?.title_name)
     .filter((t): t is string => t != null);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.event_name,
+    startDate: event.start_datetime,
+    ...(event.end_datetime ? { endDate: event.end_datetime } : {}),
+    location: {
+      "@type": "Place",
+      name: `${event.venue_name}（${event.prefecture}）`,
+    },
+    ...(event.description ? { description: event.description } : {}),
+    ...((event.flyer_image_url ?? event.key_visual_url)
+      ? { image: event.flyer_image_url ?? event.key_visual_url }
+      : {}),
+    ...(event.organizers
+      ? {
+          organizer: {
+            "@type": "Organization",
+            name: event.organizers.name,
+            ...(event.organizers.official_site_url
+              ? { url: event.organizers.official_site_url }
+              : {}),
+          },
+        }
+      : {}),
+    url: `${BASE_URL}/events/${event.id}`,
+  };
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     <div className="max-w-2xl mx-auto px-4 md:px-8 py-12">
       {/* ── 一覧に戻るリンク ── */}
       <Link
@@ -273,5 +348,6 @@ export default async function EventDetailPage({
         </div>
       </div>
     </div>
+    </>
   );
 }
