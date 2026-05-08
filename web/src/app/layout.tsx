@@ -26,10 +26,34 @@ const notoSerifJP = Noto_Serif_JP({
   preload: false,
 });
 
+const SITE_URL = "https://minstrel.live";
+const SITE_NAME = "Minstrel";
+const SITE_DESCRIPTION =
+  "日本のゲーム音楽コンサート情報を網羅する専門ポータル。公演スケジュール、チケット情報、演奏団体、ゲームタイトル別に検索できます。";
+
 export const metadata: Metadata = {
-  title: "Minstrel - Game Music Concert Portal",
-  description:
-    "日本のゲーム音楽コンサート情報を網羅する専門ポータル。公演スケジュール、チケット情報、演奏団体、ゲームタイトル別に検索できます。",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} - Game Music Concert Portal`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} - Game Music Concert Portal`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} - Game Music Concert Portal`,
+    description: SITE_DESCRIPTION,
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
 };
 
 export default function RootLayout({
