@@ -1,15 +1,20 @@
 """
-Minstrel 定期収集スケジューラー（2-F-2）
-
-AI News Video Pipeline の run パターンに合わせた構成。
+Minstrel スケジューラー
 
 起動方法:
-  # スケジュール付き常駐（3日おき 09:00 JST）
-  cd python
-  .venv/Scripts/python run_scheduler.py --serve-scheduled
+  # 収集フロー: 3日おき 09:00 JST
+  cd python && .venv/Scripts/python run_scheduler.py --serve-scheduled
 
-  # 即時1回実行（テスト用）
-  .venv/Scripts/python run_scheduler.py --run-now
+  # 投稿フロー: 月・金 09:00 JST
+  cd python && .venv/Scripts/python run_scheduler.py --serve-post
+
+  # 全フロー同時常駐
+  cd python && .venv/Scripts/python run_scheduler.py --serve-all
+
+  # 即時テスト実行
+  cd python && .venv/Scripts/python run_scheduler.py --run-now
+  cd python && .venv/Scripts/python run_scheduler.py --run-post-monday
+  cd python && .venv/Scripts/python run_scheduler.py --run-post-friday
 """
 import argparse
 import os
@@ -18,20 +23,63 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from flows.flow_collect import collect_flow
+from flows.flow_post_weekly import post_friday_flow, post_monday_flow
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run-now", action="store_true", help="即時1回実行")
-    parser.add_argument("--serve-scheduled", action="store_true", help="3日おき09:00 JSTで自動実行")
+    parser.add_argument("--run-now", action="store_true", help="収集フロー即時実行")
+    parser.add_argument("--run-post-monday", action="store_true", help="月曜投稿フロー即時実行")
+    parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
+    parser.add_argument("--serve-scheduled", action="store_true", help="収集フロー: 3日おき09:00 JST")
+    parser.add_argument("--serve-post", action="store_true", help="投稿フロー: 月・金 09:00 JST")
+    parser.add_argument("--serve-all", action="store_true", help="全フロー常駐")
     args = parser.parse_args()
+
+    from prefect.client.schemas.schedules import CronSchedule
 
     if args.run_now:
         collect_flow()
+    elif args.run_post_monday:
+        post_monday_flow()
+    elif args.run_post_friday:
+        post_friday_flow()
     elif args.serve_scheduled:
-        from prefect.client.schemas.schedules import CronSchedule
         collect_flow.serve(
             name="minstrel-collect-scheduled",
             schedules=[CronSchedule(cron="0 9 */3 * *", timezone="Asia/Tokyo")],
         )
+    elif args.serve_post:
+        from prefect.runner import Runner
+        runner = Runner(name="minstrel-post-runner")
+        runner.add_flow(
+            post_monday_flow,
+            name="minstrel-post-monday",
+            schedules=[CronSchedule(cron="0 9 * * 1", timezone="Asia/Tokyo")],
+        )
+        runner.add_flow(
+            post_friday_flow,
+            name="minstrel-post-friday",
+            schedules=[CronSchedule(cron="0 9 * * 5", timezone="Asia/Tokyo")],
+        )
+        runner.start()
+    elif args.serve_all:
+        from prefect.runner import Runner
+        runner = Runner(name="minstrel-runner")
+        runner.add_flow(
+            collect_flow,
+            name="minstrel-collect-scheduled",
+            schedules=[CronSchedule(cron="0 9 */3 * *", timezone="Asia/Tokyo")],
+        )
+        runner.add_flow(
+            post_monday_flow,
+            name="minstrel-post-monday",
+            schedules=[CronSchedule(cron="0 9 * * 1", timezone="Asia/Tokyo")],
+        )
+        runner.add_flow(
+            post_friday_flow,
+            name="minstrel-post-friday",
+            schedules=[CronSchedule(cron="0 9 * * 5", timezone="Asia/Tokyo")],
+        )
+        runner.start()
     else:
         collect_flow.serve(name="minstrel-collect")
