@@ -51,12 +51,29 @@ class Scraper2083Web(BaseScraper):
         if not content:
             return None
 
+        image_url = self._extract_image_url(content, url)
         return {
             "source_url": url,
             "source_name": self.source_name,
             "source_rank": self.source_rank,
             "raw_html": str(content)[:8000],
+            "image_url": image_url,
         }
+
+    def _extract_image_url(self, content, page_url: str) -> str | None:
+        for img in content.find_all("img"):
+            src = img.get("src", "")
+            # ソーシャル共有ボタン・ナビ画像を除外し、コンサート画像のみ取得
+            if not src or "/img/hatena" in src or "b.hatena.ne.jp" in src:
+                continue
+            if src.startswith("http"):
+                return src
+            if src.startswith("img/"):
+                # 相対パス: concert/ ディレクトリ基準
+                return f"{BASE_URL}/concert/{src}"
+            if src.startswith("/"):
+                return f"{BASE_URL}{src}"
+        return None
 
     def _fetch_decoded(self, url: str) -> str:
         import time
