@@ -25,6 +25,73 @@ EXTRACTION_SCHEMA = {
 }
 
 
+ANNOUNCEMENT_SYSTEM = """
+あなたはゲーム音楽コンサートの告知ツイートを判定するアシスタントです。
+与えられたテキストが「今後開催されるコンサートの告知」かどうかを判定し、
+確度スコア（0-100）を返してください。
+"""
+
+ANNOUNCEMENT_SCHEMA = {
+    "is_announcement": "boolean: 告知ツイートか（true/false）",
+    "announcement_score": "integer 0-100: 告知である確度",
+    "reason": "string: 判定理由（1行）",
+}
+
+NEGATIVE_KEYWORDS = [
+    "行ってきた", "行ってきました", "感想", "楽しかった", "最高だった",
+    "終演", "終わった", "終わりました", "お疲れ様", "セットリスト", "セトリ",
+    "ブラボー", "アーカイブ配信", "見てきた",
+]
+
+POSITIVE_KEYWORDS = [
+    "開催", "開演", "チケット", "発売", "予約", "申込", "入場",
+    "演奏会", "コンサート", "公演", "出演", "日時", "会場",
+]
+
+
+def score_announcement(raw_text: str) -> int:
+    """
+    ツイートが告知かどうかを Claude で判定し、確度スコア（0-100）を返す。
+    事前のヒューリスティックフィルタを通過しなければ Claude を呼ばない。
+    """
+    # ヒューリスティック: ネガティブキーワードが多ければ即 0
+    neg_count = sum(1 for kw in NEGATIVE_KEYWORDS if kw in raw_text)
+    if neg_count >= 2:
+        return 0
+
+    # ヒューリスティック: ポジティブキーワードが少なければ即 0
+    pos_count = sum(1 for kw in POSITIVE_KEYWORDS if kw in raw_text)
+    if pos_count == 0:
+        return 0
+
+    prompt = f"""以下のテキストはゲーム音楽コンサートの告知ツイートですか？
+
+テキスト:
+{raw_text[:1000]}
+
+以下のJSONスキーマで返してください:
+{json.dumps(ANNOUNCEMENT_SCHEMA, ensure_ascii=False)}
+
+JSONのみ返してください。"""
+
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=256,
+            messages=[{"role": "user", "content": prompt}],
+            system=ANNOUNCEMENT_SYSTEM,
+        )
+        text = resp.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        parsed = json.loads(text.strip())
+        return int(parsed.get("announcement_score", 0))
+    except Exception:
+        return 0
+
+
 def extract_event(raw_text: str, source_url: str) -> dict | None:
     prompt = f"""以下のテキストからコンサート情報を抽出してください。
 
