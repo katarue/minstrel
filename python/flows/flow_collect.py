@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from prefect import flow, task
 from scrapers.scraper_2083web import Scraper2083Web
+from scrapers.scraper_x_search import scrape_x_search
 from processor.claude_extractor import extract_event
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
@@ -16,13 +17,19 @@ def scrape_2083web() -> list[dict]:
 
 
 @task
+def scrape_x(since_days: int = 3) -> list[dict]:
+    return scrape_x_search(since_days=since_days)
+
+
+@task
 def extract_events(raw_events: list[dict]) -> list[dict]:
     results = []
     for raw in raw_events:
-        extracted = extract_event(
-            raw.get("raw_html", ""),
-            raw.get("source_url", ""),
-        )
+        # HTML スクレイピング(2083web)は raw_html、X は raw_text を使う
+        content = raw.get("raw_html") or raw.get("raw_text") or ""
+        if not content:
+            continue
+        extracted = extract_event(content, raw.get("source_url", ""))
         if extracted:
             extracted["source_rank"] = raw.get("source_rank", "B")
             extracted["_image_url"] = raw.get("image_url")
@@ -108,9 +115,11 @@ def collect_flow():
     scraped_count = 0
     inserted_count = 0
     try:
-        raw = scrape_2083web()
+        raw_2083 = scrape_2083web()
+        raw_x = scrape_x(since_days=3)
+        raw = raw_2083 + raw_x
         scraped_count = len(raw)
-        print(f"scraped: {scraped_count} items")
+        print(f"scraped: 2083web={len(raw_2083)}, x={len(raw_x)}, total={scraped_count}")
 
         extracted = extract_events(raw)
         print(f"extracted: {len(extracted)} items")
