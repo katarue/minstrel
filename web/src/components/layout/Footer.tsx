@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const footerLinks = [
-  { label: "プライバシーポリシー", href: "#" },
-  { label: "利用規約", href: "#" },
-  { label: "お問い合わせ", href: "#" },
+  { label: "プライバシーポリシー", href: "/privacy" },
+  { label: "利用規約", href: "/terms" },
+  { label: "お問い合わせ", href: "/contact" },
 ];
 
 export default function Footer() {
@@ -39,6 +39,12 @@ export default function Footer() {
             </Link>
           ))}
         </nav>
+
+        {/* Disclaimer */}
+        <p className="font-body text-ink-body/50 text-xs text-center max-w-lg">
+          掲載情報は公式サイト等をもとに作成していますが、正確性を保証するものではありません。
+          最新情報は必ず公式情報をご確認ください。
+        </p>
 
         {/* Copyright */}
         <p className="font-body text-ink-body/50 text-xs text-center">

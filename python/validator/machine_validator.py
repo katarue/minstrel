@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 
 
-def validate(event: dict) -> dict:
+def validate(event: dict, allow_past: bool = False) -> dict:
     """
     ルールベースの機械検証。D-004の方針に従いAI判定は使わない。
     結果として validated_event に検証フラグを付与して返す。
+
+    allow_past=True: 過去日付のイベントを past_event 扱いしない（アーカイブ投入用）
     """
     issues = []
 
@@ -17,7 +19,7 @@ def validate(event: dict) -> dict:
     if event.get("start_datetime"):
         try:
             dt = datetime.fromisoformat(event["start_datetime"])
-            if dt < datetime.now(timezone.utc):
+            if not allow_past and dt < datetime.now(timezone.utc):
                 issues.append("past_event")
         except ValueError:
             issues.append("invalid_datetime_format")
