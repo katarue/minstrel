@@ -26,8 +26,10 @@ db = create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
 
 
 def normalize_title(name: str) -> str:
-    """末尾の（地名）や (City) を除去して正規化する。"""
-    return re.sub(r'[\s　]*[（(][^）)]*[）)]\s*$', '', name).strip()
+    """末尾の（地名）・【地名】・(City) を除去して正規化する。"""
+    name = re.sub(r'[\s　]*[（(][^）)]*[）)]\s*$', '', name).strip()
+    name = re.sub(r'[\s　]*【[^】]*】\s*$', '', name).strip()
+    return name
 
 
 def run() -> None:

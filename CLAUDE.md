@@ -181,12 +181,13 @@ db.table("events").delete().eq("id", some_id).execute()
 ### 確認コマンド
 
 ```bash
-# 複数会場が混入していないか確認
+# 複数会場が混入していないか確認（「、」「/」「／」区切りを検出）
 python -c "
 from utils.db import get_client
 db = get_client()
-r = db.table('events').select('id, event_name, prefecture').eq('is_published', True).execute()
-multi = [ev for ev in r.data if ev.get('prefecture') and '、' in ev['prefecture']]
+r = db.table('events').select('id, event_name, prefecture, venue_name').eq('is_published', True).execute()
+multi = [ev for ev in r.data if ev.get('prefecture') and any(sep in ev['prefecture'] for sep in ['、', '/', '／'])
+         or ev.get('venue_name') and any(sep in ev['venue_name'] for sep in ['、', '/', '／'])]
 print(f'要修正: {len(multi)} 件')
 for ev in multi: print(' ', ev['event_name'])
 "
