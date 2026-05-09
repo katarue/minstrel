@@ -105,7 +105,7 @@ export default async function Home() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-20 min-h-screen">
-      <section className="py-24 text-center border-b border-gold/30">
+      <section className="pt-24 pb-12 text-center border-b border-gold/30">
         <div className="max-w-3xl mx-auto flex flex-col items-center gap-6">
           <h1 className="font-heading text-bordeaux text-5xl md:text-7xl font-bold tracking-widest leading-tight">
             MINSTREL
@@ -119,10 +119,6 @@ export default async function Home() {
           </p>
         </div>
       </section>
-
-      <div className="flex items-center justify-center py-8 text-gold text-2xl select-none" aria-hidden>
-        ♩
-      </div>
 
       <section className="pb-20">
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
