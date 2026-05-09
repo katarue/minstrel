@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 const footerLinks = [
+  { label: "掲載基準", href: "/policy" },
   { label: "プライバシーポリシー", href: "/privacy" },
   { label: "利用規約", href: "/terms" },
   { label: "お問い合わせ", href: "/contact" },
