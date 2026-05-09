@@ -11,10 +11,10 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navLinks = [
-    { label: t("concerts"), href: "/concerts" },
-    { label: t("organizers"), href: "/organizers" },
-    { label: t("titles"), href: "/titles" },
     { label: t("calendar"), href: "/calendar" },
+    { label: t("concerts"), href: "/concerts" },
+    { label: t("titles"), href: "/titles" },
+    { label: t("organizers"), href: "/organizers" },
   ];
 
   const otherLocale = locale === "ja" ? "en" : "ja";
