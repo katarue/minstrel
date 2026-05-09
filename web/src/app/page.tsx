@@ -101,6 +101,12 @@ export default async function Home() {
   try {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
+    // 本日（JST）の開始時刻を計算してフィルター
+    const nowUtc = new Date();
+    const jstNow = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
+    const todayJst = jstNow.toISOString().substring(0, 10); // "YYYY-MM-DD"
+    const todayStart = `${todayJst}T00:00:00+09:00`;
+
     const { data, error } = await supabase
       .from("events")
       .select(`
@@ -114,6 +120,7 @@ export default async function Home() {
         organizers ( name )
       `)
       .eq("is_published", true)
+      .gte("start_datetime", todayStart)
       .order("start_datetime", { ascending: true });
 
     if (error) {
