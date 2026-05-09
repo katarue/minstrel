@@ -13,6 +13,7 @@ from utils.entity_resolution import (
     find_existing_event,
     find_existing_event_by_name_date,
     find_or_create_organizer,
+    save_game_titles,
     save_external_ids,
     save_event_source,
     merge_fields,
@@ -187,6 +188,7 @@ def upsert_to_db(events: list[dict]) -> int:
                 continue
 
             save_external_ids(db, new_event_id, hard_keys)
+            save_game_titles(db, new_event_id, event.get("game_titles") or [])
             inserted += 1
 
     print(f"[db] inserted={inserted}, merged={merged}")

@@ -183,6 +183,28 @@ def save_event_source(
         return False
 
 
+def save_game_titles(db, event_id: str, titles: list[str]) -> None:
+    """game_titles に find-or-create して event_game_titles に紐づける。"""
+    for title in titles:
+        if not title or not title.strip():
+            continue
+        name = title.strip()
+        existing = db.table("game_titles").select("id").eq("title_name", name).limit(1).execute()
+        if existing.data:
+            gt_id = existing.data[0]["id"]
+        else:
+            created = db.table("game_titles").insert({"title_name": name}).execute()
+            if not created.data:
+                continue
+            gt_id = created.data[0]["id"]
+        try:
+            db.table("event_game_titles").insert(
+                {"event_id": event_id, "game_title_id": gt_id}
+            ).execute()
+        except Exception:
+            pass  # 重複は無視
+
+
 def find_or_create_organizer(db, organizer_name: str) -> str | None:
     """organizer_name で organizers テーブルを検索し、なければ作成して ID を返す。"""
     if not organizer_name or not organizer_name.strip():

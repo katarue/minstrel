@@ -48,13 +48,14 @@ def validate(event: dict, allow_past: bool = False) -> dict:
 
 def _has_minimum_info(event: dict) -> bool:
     """コンサートを見たい人が最低限知るべき情報が揃っているか確認する。
-    必須4項目: 開催日 / 会場 / 説明文 / 演奏団体名
+    必須5項目: 開催日 / 会場 / 説明文 / 演奏団体名 / ゲームタイトル
     """
     has_date = bool(event.get("start_datetime"))
     has_venue = bool(event.get("venue")) or event.get("has_streaming", False)
     has_description = bool((event.get("description") or "").strip())
     has_organizer = bool((event.get("organizer_name") or "").strip())
-    return has_date and has_venue and has_description and has_organizer
+    has_game_titles = bool(event.get("game_titles"))
+    return has_date and has_venue and has_description and has_organizer and has_game_titles
 
 
 def _calc_confidence(event: dict, issues: list) -> float:
