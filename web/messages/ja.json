@@ -41,7 +41,8 @@
     "buyTicket": "チケットを購入する",
     "addToGoogleCal": "Googleカレンダーに追加",
     "addToIcal": "カレンダーに追加（.ics）",
-    "mapsLink": "地図を見る"
+    "mapsLink": "地図を見る",
+    "tourOtherDates": "このツアーの他の公演"
   },
   "concerts": {
     "title": "コンサート一覧",

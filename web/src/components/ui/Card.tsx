@@ -18,6 +18,7 @@ interface CardProps {
   genre?: Genre;
   href: string;
   gameTitles?: string[];
+  tourCount?: number;
 }
 
 const genreLabels: Record<Genre, string> = {
@@ -29,7 +30,7 @@ const genreLabels: Record<Genre, string> = {
   other:     "その他",
 };
 
-export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles }: CardProps) {
+export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount }: CardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + (prefecture ? ` ${prefecture}` : ""))}`;
 
   return (
@@ -77,11 +78,16 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
             </p>
           )}
 
-          {/* 日付 + 都道府県 */}
-          <div className="flex items-center gap-2">
+          {/* 日付 + 都道府県 + ツアーバッジ */}
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="font-body text-ink-body text-sm shrink-0">{date}</p>
             {prefecture && (
               <p className="font-body text-ink-body/60 text-sm truncate">{prefecture}</p>
+            )}
+            {tourCount && tourCount > 1 && (
+              <span className="shrink-0 font-body text-xs text-bordeaux border border-bordeaux/40 rounded px-1.5 py-0.5 leading-none">
+                全{tourCount}公演
+              </span>
             )}
           </div>
 
