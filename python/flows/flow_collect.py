@@ -11,6 +11,7 @@ from utils.notify import notify_failure, notify_success
 from utils.entity_resolution import (
     extract_hard_keys,
     find_existing_event,
+    find_existing_event_by_name_date,
     save_external_ids,
     save_event_source,
     merge_fields,
@@ -109,6 +110,12 @@ def upsert_to_db(events: list[dict]) -> int:
         # ── step 2: ハードキーで既存 event を検索 ──────────────────────────
         existing_event_id = find_existing_event(db, hard_keys)
 
+        # ── step 2b: ファジーマッチ（同名 + 同日）で重複チェック ────────────
+        if not existing_event_id:
+            existing_event_id = find_existing_event_by_name_date(
+                db, event.get("title"), event.get("start_datetime")
+            )
+
         if existing_event_id:
             # 既存イベントに補完マージ
             existing = (
@@ -157,7 +164,7 @@ def upsert_to_db(events: list[dict]) -> int:
                 ),
                 "auto_publish_eligible": event.get("auto_publish_eligible", False),
                 "is_canceled": event.get("is_cancelled", False),
-                "is_published": False,
+                "is_published": event.get("auto_publish_eligible", False),
                 "flyer_image_url": event.get("flyer_image_url"),
             }
             if ticket_url:

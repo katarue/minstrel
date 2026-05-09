@@ -33,7 +33,7 @@ MAX_PAGES_PER_QUERY = 5
 
 class ScraperTeket(BaseScraper):
     source_name = "teket"
-    source_rank = "B"
+    source_rank = "A"
 
     def scrape(self) -> list[dict]:
         seen_urls: set[str] = set()
