@@ -37,12 +37,22 @@ def validate(event: dict, allow_past: bool = False) -> dict:
         rank in ("A", "B")
         and not issues
         and not event.get("is_cancelled", False)
+        and _has_minimum_info(event)
     )
 
     event["validation_issues"] = issues
     event["auto_publish_eligible"] = eligible
     event["confidence_score"] = _calc_confidence(event, issues)
     return event
+
+
+def _has_minimum_info(event: dict) -> bool:
+    """コンサートを見たい人が最低限知るべき情報が揃っているか確認する。"""
+    # 会場: venue名 or オンライン配信確定
+    has_venue = bool(event.get("venue")) or event.get("has_streaming", False)
+    # 説明文（出演者・主催者情報を含む前提）
+    has_description = bool((event.get("description") or "").strip())
+    return has_venue and has_description
 
 
 def _calc_confidence(event: dict, issues: list) -> float:
