@@ -157,7 +157,7 @@ def upsert_to_db(events: list[dict]) -> int:
                 ),
                 "auto_publish_eligible": event.get("auto_publish_eligible", False),
                 "is_canceled": event.get("is_cancelled", False),
-                "is_published": False,
+                "is_published": event.get("auto_publish_eligible", False),
                 "flyer_image_url": event.get("flyer_image_url"),
             }
             if ticket_url:
