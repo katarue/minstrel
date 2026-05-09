@@ -114,6 +114,31 @@ def find_existing_event(db, hard_keys: list[tuple[str, str]]) -> str | None:
     return None
 
 
+def find_existing_event_by_name_date(db, event_name: str, start_datetime: str) -> str | None:
+    """
+    イベント名 + 開催日が一致する既存イベントを検索する（ファジーマッチ）。
+    ハードキーで見つからなかった場合の重複防止として使用。
+    同名・同日で会場が異なる別公演（例: 東京/大阪同日開催）は
+    venue_name が異なるため誤マージは起きにくいが、念のため呼び出し元で確認を推奨。
+    """
+    if not event_name or not start_datetime:
+        return None
+
+    date_str = start_datetime[:10]
+    result = (
+        db.table("events")
+        .select("id")
+        .eq("event_name", event_name.strip())
+        .gte("start_datetime", f"{date_str}T00:00:00+00:00")
+        .lt("start_datetime", f"{date_str}T23:59:59+00:00")
+        .limit(1)
+        .execute()
+    )
+    if result.data:
+        return result.data[0]["id"]
+    return None
+
+
 def save_external_ids(db, event_id: str, hard_keys: list[tuple[str, str]]) -> None:
     """event_external_ids にハードキーを登録する（UPSERT）。"""
     for id_type, value in hard_keys:
