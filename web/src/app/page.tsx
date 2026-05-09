@@ -14,6 +14,7 @@ type EventRow = {
   start_datetime: string;
   venue_name: string | null;
   prefecture: string | null;
+  flyer_image_url: string | null;
   key_visual_url: string | null;
   performance_type: string | null;
   organizers: { name: string } | null;
@@ -115,6 +116,7 @@ export default async function Home() {
         start_datetime,
         venue_name,
         prefecture,
+        flyer_image_url,
         key_visual_url,
         performance_type,
         organizers ( name )
@@ -181,7 +183,7 @@ export default async function Home() {
                   venue={formatVenue(ev.venue_name, ev.prefecture)}
                   organizer={ev.organizers?.name}
                   genre={toGenre(ev.performance_type)}
-                  imageUrl={ev.key_visual_url ?? undefined}
+                  imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
                   href={`/events/${ev.id}`}
                 />
               );
