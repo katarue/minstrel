@@ -13,6 +13,7 @@ const VALID_GENRES: readonly Genre[] = ["orchestra", "wind", "rock", "acoustic",
 type CardEvent = {
   id: string;
   event_name: string;
+  event_name_en: string | null;
   start_datetime: string;
   venue_name: string | null;
   prefecture: string | null;
@@ -71,7 +72,7 @@ export default async function Home() {
       supabase
         .from("events")
         .select(`
-          id, event_name, start_datetime, venue_name, prefecture,
+          id, event_name, event_name_en, start_datetime, venue_name, prefecture,
           flyer_image_url, key_visual_url, performance_type,
           organizers ( name ),
           event_game_titles ( game_titles ( id, title_name, english_name ) )
@@ -205,6 +206,7 @@ export default async function Home() {
                 <Card
                   key={ev.id}
                   title={ev.event_name}
+                  titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
                   date={formatDateShort(ev.start_datetime, locale)}
                   venue={formatVenue(ev.venue_name, ev.prefecture)}
                   organizer={ev.organizers?.name}

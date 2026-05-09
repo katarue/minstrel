@@ -21,6 +21,7 @@ function toGenre(val: string | null | undefined): Genre {
 type EventDetail = {
   id: string;
   event_name: string;
+  event_name_en: string | null;
   description: string | null;
   start_datetime: string;
   venue_name: string;
@@ -87,7 +88,7 @@ export default async function EventDetailPage({
   const { data, error } = await supabase
     .from("events")
     .select(`
-      id, event_name, description, start_datetime, venue_name, prefecture,
+      id, event_name, event_name_en, description, start_datetime, venue_name, prefecture,
       key_visual_url, flyer_image_url, performance_type, ticket_urls,
       organizers ( name, official_site_url, x_url ),
       event_game_titles ( game_titles ( title_name, english_name ) )
@@ -174,6 +175,11 @@ export default async function EventDetailPage({
             <h1 className="font-heading text-ink-heading text-2xl md:text-3xl font-bold leading-snug">
               {event.event_name}
             </h1>
+            {locale === "en" && event.event_name_en && (
+              <p className="font-body text-ink-body/50 text-sm italic leading-snug">
+                {event.event_name_en}
+              </p>
+            )}
           </div>
 
           <dl className="flex flex-col gap-3">
