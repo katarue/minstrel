@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         hostname: "pobbxakrszuldyhyjrjp.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.igdb.com",
+        pathname: "/igdb/image/upload/**",
+      },
     ],
   },
 };

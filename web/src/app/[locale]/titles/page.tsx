@@ -1,9 +1,16 @@
+import Image from "next/image";
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { Link } from "@/i18n/navigation";
 
-type GameTitleRow = { id: string; title_name: string; series_name: string | null; publisher: string | null };
+type GameTitleRow = {
+  id: string;
+  title_name: string;
+  series_name: string | null;
+  publisher: string | null;
+  igdb_cover_url: string | null;
+};
 
 export default async function TitlesPage() {
   const t = await getTranslations("titles");
@@ -14,7 +21,7 @@ export default async function TitlesPage() {
     const supabase = createClient(cookieStore);
     const { data, error } = await supabase
       .from("game_titles")
-      .select("id, title_name, series_name, publisher")
+      .select("id, title_name, series_name, publisher, igdb_cover_url")
       .order("title_name", { ascending: true });
     if (error) console.error("Failed to fetch game_titles:", error);
     else titles = (data ?? []) as GameTitleRow[];
@@ -28,15 +35,37 @@ export default async function TitlesPage() {
       {titles.length === 0 ? (
         <p className="font-body text-ink-body/70 text-base py-12 text-center">{t("empty")}</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5">
           {titles.map((title) => (
             <Link key={title.id} href={`/titles/${title.id}`} className="block group">
-              <div className="bg-parchment-dark rounded-md p-6 h-full transition-all duration-200 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
-                style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}>
-                <h2 className="font-heading text-ink-heading text-lg font-semibold leading-snug mb-3">{title.title_name}</h2>
-                <div className="flex flex-col gap-1">
-                  {title.series_name && <p className="font-body text-ink-body/60 text-sm">{title.series_name}</p>}
-                  {title.publisher && <p className="font-body text-ink-body/50 text-sm">{title.publisher}</p>}
+              <div
+                className="rounded-md overflow-hidden transition-all duration-200 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_6px_20px_rgba(59,47,29,0.22)]"
+                style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
+              >
+                <div className="relative aspect-[3/4] bg-parchment-dark">
+                  {title.igdb_cover_url ? (
+                    <Image
+                      src={title.igdb_cover_url}
+                      alt={title.title_name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full px-2">
+                      <span className="font-heading text-ink-heading/25 text-3xl font-bold text-center leading-tight">
+                        {title.title_name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-parchment-dark px-3 py-2.5">
+                  <p className="font-heading text-ink-heading text-xs font-semibold leading-snug line-clamp-2">
+                    {title.title_name}
+                  </p>
+                  {title.series_name && (
+                    <p className="font-body text-ink-body/50 text-xs mt-0.5 truncate">{title.series_name}</p>
+                  )}
                 </div>
               </div>
             </Link>
