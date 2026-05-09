@@ -50,9 +50,11 @@ def _has_minimum_info(event: dict) -> bool:
     """コンサートを見たい人が最低限知るべき情報が揃っているか確認する。"""
     # 会場: venue名 or オンライン配信確定
     has_venue = bool(event.get("venue")) or event.get("has_streaming", False)
-    # 説明文（出演者・主催者情報を含む前提）
+    # 説明文
     has_description = bool((event.get("description") or "").strip())
-    return has_venue and has_description
+    # 演奏団体名
+    has_organizer = bool((event.get("organizer_name") or "").strip())
+    return has_venue and has_description and has_organizer
 
 
 def _calc_confidence(event: dict, issues: list) -> float:
