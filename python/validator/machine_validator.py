@@ -34,7 +34,7 @@ def validate(event: dict, allow_past: bool = False) -> dict:
     # source_rank による auto_publish_eligible 判定（D-003）
     rank = event.get("source_rank", "C")
     eligible = (
-        rank == "A"
+        rank in ("A", "B")
         and not issues
         and not event.get("is_cancelled", False)
     )
