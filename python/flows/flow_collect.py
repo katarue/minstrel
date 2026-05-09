@@ -57,7 +57,7 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
 
         extracted = extract_event(content, raw.get("source_url", ""))
         if extracted:
-            extracted["source_rank"] = raw.get("source_rank", "B")
+            extracted["source_rank"] = raw.get("source_rank", "C")
             extracted["_image_url"] = raw.get("image_url")
             extracted["_source_name"] = raw.get("source_name", "unknown")
             extracted["_raw_source_url"] = raw.get("source_url", "")
