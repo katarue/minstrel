@@ -7,6 +7,7 @@ type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 interface CardProps {
   imageUrl?: string;
   title: string;
+  titleEn?: string;
   date: string;
   venue: string;
   organizer?: string;
@@ -24,7 +25,7 @@ const genreLabels: Record<Genre, string> = {
   other:     "その他",
 };
 
-export default function Card({ imageUrl, title, date, venue, organizer, genre, href, gameTitles }: CardProps) {
+export default function Card({ imageUrl, title, titleEn, date, venue, organizer, genre, href, gameTitles }: CardProps) {
   return (
     <Link href={href} className="block group">
       <article
@@ -64,6 +65,11 @@ export default function Card({ imageUrl, title, date, venue, organizer, genre, h
           <h3 className="font-heading text-ink-heading text-base font-semibold leading-snug line-clamp-2">
             {title}
           </h3>
+          {titleEn && (
+            <p className="font-body text-ink-body/50 text-xs italic leading-snug line-clamp-2 -mt-1">
+              {titleEn}
+            </p>
+          )}
           <p className="font-body text-ink-body text-sm">{date}</p>
           <p className="font-body text-ink-body/70 text-sm truncate">{venue}</p>
           {organizer && (
