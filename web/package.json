@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/postcss": "^4.2.4",
     "next": "15.5.16",
+    "next-intl": "^4.11.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "tailwindcss": "^4.2.4"

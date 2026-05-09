@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "concerts": "Concerts",
+    "organizers": "Organizers",
+    "titles": "Game Titles",
+    "calendar": "Calendar",
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu",
+    "main": "Main navigation",
+    "mobile": "Mobile navigation"
+  },
+  "footer": {
+    "tagline": "Game Music Concert Portal",
+    "policy": "Listing Policy",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact",
+    "disclaimer": "Concert information is sourced from official websites and may not be fully accurate. Always check official sources for the latest details.",
+    "copyright": "© 2026 Minstrel - Game Music Concert Portal",
+    "footerNav": "Footer navigation"
+  },
+  "home": {
+    "heroTagline": "Game Music Concert Portal",
+    "heroDescription": "The dedicated portal for game music concerts in Japan.",
+    "upcomingTitle": "Upcoming Concerts",
+    "empty": "No concerts are currently listed."
+  },
+  "event": {
+    "backToList": "← Back to list",
+    "date": "Date",
+    "venue": "Venue",
+    "organizer": "Organizer",
+    "officialX": "Official X",
+    "gameTitles": "Game Titles",
+    "description": "About",
+    "buyTicket": "Buy Tickets",
+    "addToGoogleCal": "Add to Google Calendar",
+    "addToIcal": "Add to Calendar (.ics)",
+    "mapsLink": "View on map"
+  },
+  "concerts": {
+    "title": "Concert List",
+    "searchPlaceholder": "Search by concert name",
+    "searchButton": "Search",
+    "allGenres": "All Genres",
+    "nationwide": "All Regions",
+    "resultsCount": "{count} results",
+    "empty": "No concerts found matching your criteria."
+  },
+  "genre": {
+    "orchestra": "Orchestra",
+    "wind": "Wind Ensemble",
+    "rock": "Band",
+    "acoustic": "Acoustic",
+    "chamber": "Chamber Music",
+    "other": "Other"
+  },
+  "period": {
+    "upcoming": "Upcoming",
+    "all": "All Periods",
+    "thisMonth": "This Month",
+    "nextMonth": "Next Month"
+  },
+  "organizers": {
+    "title": "Organizers",
+    "empty": "No organizers are currently registered.",
+    "region": "Region",
+    "officialSite": "Official Site",
+    "officialX": "Official X",
+    "backToList": "← Back to organizers",
+    "hostedEvents": "Hosted Events",
+    "noEvents": "No events are currently published."
+  },
+  "titles": {
+    "title": "Game Titles",
+    "empty": "No game titles are currently registered.",
+    "series": "Series",
+    "publisher": "Publisher",
+    "backToList": "← Back to game titles",
+    "relatedConcerts": "Related Concerts",
+    "noConcerts": "No concerts are currently published."
+  },
+  "calendar": {
+    "title": "Calendar",
+    "subscribe": "Subscribe to calendar (iCal / .ics)",
+    "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "For removal/correction requests, event listing inquiries, or other messages, please use the form below.",
+    "fieldName": "Name",
+    "fieldEmail": "Email",
+    "fieldType": "Inquiry Type",
+    "fieldMessage": "Message",
+    "typeSelect": "Please select",
+    "typeDelete": "Request to remove listing",
+    "typeCorrection": "Request to correct listing",
+    "typeEventAdd": "Request to add an event",
+    "typeOther": "Other",
+    "submit": "Send",
+    "sending": "Sending...",
+    "successTitle": "Message sent",
+    "successBody": "Thank you for your message. We will review it and respond if needed."
+  },
+  "policy": {
+    "title": "Listing Policy",
+    "intro": "Minstrel is a dedicated portal collecting and publishing information about game music concerts held in Japan. Our goal is not to list every concert, but to accurately deliver information focused on game music.",
+    "definitionTitle": "What is \"Game Music\"?",
+    "definitionBody": "Minstrel lists concerts that perform music originally composed for video games — including game soundtracks and music created specifically for games.",
+    "includedLabel": "Examples of eligible concerts",
+    "includedItems": [
+      "Concerts performing music from Final Fantasy, The Legend of Zelda, Dragon Quest, and other game series",
+      "Orchestra or wind ensemble concerts themed around game soundtracks"
+    ],
+    "excludedLabel": "Examples of ineligible concerts",
+    "excludedItems": [
+      "Concerts performing only music from anime, manga, or film IPs (even if those IPs later received game adaptations)",
+      "Concerts featuring only anime songs, J-POP, or other non-game music"
+    ],
+    "mixedNote": "For concerts mixing game music with other genres, we evaluate the program content on a case-by-case basis.",
+    "collectionTitle": "How We Collect Information",
+    "collectionBody1": "Concert information is automatically collected from official ticket sites, organizer websites, and official social media accounts. All listings go through a mechanical validation process, but we cannot guarantee complete accuracy.",
+    "collectionBody2": "Always check each concert's official sources for the latest information on schedules, tickets, and cancellations.",
+    "removalTitle": "Removal and Correction Requests",
+    "removalBody": "If you find incorrect information, or if you are a rights holder or organizer requesting removal, we will respond promptly. Please contact us via the Contact page."
+  },
+  "lang": {
+    "switch": "JA"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "concerts": "コンサート一覧",
+    "organizers": "演奏団体",
+    "titles": "ゲームタイトル",
+    "calendar": "カレンダー",
+    "menuOpen": "メニューを開く",
+    "menuClose": "メニューを閉じる",
+    "main": "メインナビゲーション",
+    "mobile": "モバイルナビゲーション"
+  },
+  "footer": {
+    "tagline": "Game Music Concert Portal",
+    "policy": "掲載基準",
+    "privacy": "プライバシーポリシー",
+    "terms": "利用規約",
+    "contact": "お問い合わせ",
+    "disclaimer": "掲載情報は公式サイト等をもとに作成していますが、正確性を保証するものではありません。最新情報は必ず公式情報をご確認ください。",
+    "copyright": "© 2026 Minstrel - Game Music Concert Portal",
+    "footerNav": "フッターナビゲーション"
+  },
+  "home": {
+    "heroTagline": "Game Music Concert Portal",
+    "heroDescription": "日本のゲーム音楽コンサート情報を集約する専門ポータル",
+    "upcomingTitle": "開催予定のコンサート",
+    "empty": "現在掲載中のコンサートはありません"
+  },
+  "event": {
+    "backToList": "← 一覧に戻る",
+    "date": "開催日",
+    "venue": "会場",
+    "organizer": "演奏団体",
+    "officialX": "公式X",
+    "gameTitles": "関連ゲームタイトル",
+    "description": "概要",
+    "buyTicket": "チケットを購入する",
+    "addToGoogleCal": "Googleカレンダーに追加",
+    "addToIcal": "カレンダーに追加（.ics）",
+    "mapsLink": "地図を見る"
+  },
+  "concerts": {
+    "title": "コンサート一覧",
+    "searchPlaceholder": "コンサート名で検索",
+    "searchButton": "検索",
+    "allGenres": "すべてのジャンル",
+    "nationwide": "全国",
+    "resultsCount": "{count} 件",
+    "empty": "条件に合うコンサートが見つかりませんでした"
+  },
+  "genre": {
+    "orchestra": "オーケストラ",
+    "wind": "吹奏楽",
+    "rock": "バンド",
+    "acoustic": "アコースティック",
+    "chamber": "室内楽",
+    "other": "その他"
+  },
+  "period": {
+    "upcoming": "開催予定",
+    "all": "全期間",
+    "thisMonth": "今月",
+    "nextMonth": "来月"
+  },
+  "organizers": {
+    "title": "演奏団体",
+    "empty": "現在登録されている演奏団体はありません",
+    "region": "拠点",
+    "officialSite": "公式サイト",
+    "officialX": "公式X",
+    "backToList": "← 演奏団体一覧に戻る",
+    "hostedEvents": "主催イベント",
+    "noEvents": "現在公開中のイベントはありません"
+  },
+  "titles": {
+    "title": "ゲームタイトル",
+    "empty": "現在登録されているゲームタイトルはありません",
+    "series": "シリーズ",
+    "publisher": "パブリッシャー",
+    "backToList": "← ゲームタイトル一覧に戻る",
+    "relatedConcerts": "関連コンサート",
+    "noConcerts": "現在公開中のコンサートはありません"
+  },
+  "calendar": {
+    "title": "カレンダー",
+    "subscribe": "カレンダーを購読する（iCal / .ics）",
+    "days": ["日", "月", "火", "水", "木", "金", "土"]
+  },
+  "contact": {
+    "title": "お問い合わせ",
+    "subtitle": "掲載情報の削除・修正依頼、イベント情報の掲載依頼、その他のご連絡はこちらからどうぞ。",
+    "fieldName": "お名前",
+    "fieldEmail": "メールアドレス",
+    "fieldType": "お問い合わせ種別",
+    "fieldMessage": "お問い合わせ内容",
+    "typeSelect": "選択してください",
+    "typeDelete": "掲載情報の削除依頼",
+    "typeCorrection": "掲載情報の修正依頼",
+    "typeEventAdd": "イベント情報の掲載依頼",
+    "typeOther": "その他",
+    "submit": "送信する",
+    "sending": "送信中...",
+    "successTitle": "送信が完了しました",
+    "successBody": "お問い合わせありがとうございます。内容を確認のうえ、必要に応じてご連絡いたします。"
+  },
+  "policy": {
+    "title": "掲載基準",
+    "intro": "Minstrel は、日本国内で開催される「ゲーム音楽コンサート」の情報を専門的に収集・掲載するポータルサイトです。すべてのコンサートを網羅することを目的とせず、ゲーム音楽に特化した情報を正確にお届けすることを優先しています。",
+    "definitionTitle": "「ゲーム音楽」の定義",
+    "definitionBody": "Minstrel では、「ゲームが発祥（原作）の楽曲」を演奏するコンサートを掲載対象としています。具体的には、ビデオゲームのサウンドトラックや、ゲームのために作られた楽曲を演奏するコンサートが対象です。",
+    "includedLabel": "掲載対象の例",
+    "includedItems": [
+      "ファイナルファンタジー、ゼルダの伝説、ドラゴンクエスト等のゲーム音楽を演奏するコンサート",
+      "ゲームのサウンドトラックをテーマにしたオーケストラ・吹奏楽演奏会"
+    ],
+    "excludedLabel": "掲載対象外の例",
+    "excludedItems": [
+      "アニメ・漫画・映画が原作のIP（後からゲーム化された作品）の楽曲のみを演奏するコンサート",
+      "ゲーム音楽を含まないアニメソング・J-POP等のコンサート"
+    ],
+    "mixedNote": "ゲーム音楽とそれ以外の楽曲を組み合わせたプログラムの場合は、内容を確認のうえ掲載を判断しています。",
+    "collectionTitle": "情報の収集・確認方法",
+    "collectionBody1": "掲載情報は、公式チケットサイト・主催者公式サイト・公式SNS等から自動的に収集しています。収集した情報は機械的な検証を経たうえで掲載されますが、内容の正確性を完全に保証するものではありません。",
+    "collectionBody2": "最新の公演情報・チケット販売状況・開催有無については、必ず各コンサートの公式情報をご確認ください。",
+    "removalTitle": "掲載情報の削除・修正について",
+    "removalBody": "掲載内容に誤りがある場合や、権利者・主催者からの削除要請については、速やかに対応いたします。お問い合わせページよりご連絡ください。"
+  },
+  "lang": {
+    "switch": "EN"
+  }
+}
