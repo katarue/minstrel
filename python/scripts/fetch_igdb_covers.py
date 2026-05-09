@@ -62,6 +62,20 @@ def search_cover(query: str, token: str) -> str | None:
     return url or None
 
 
+def build_search_candidates(title_name: str, english_name: str | None) -> list[str]:
+    """検索クエリ候補を優先順に返す。コロンを除去したバリアントも含む。"""
+    candidates: list[str] = []
+    for name in ([english_name, title_name] if english_name else [title_name]):
+        if not name:
+            continue
+        candidates.append(name)
+        # コロンを除去したバリアントを追加（NieR:Automata → NieR Automata）
+        without_colon = name.replace(":", " ").replace("  ", " ").strip()
+        if without_colon != name:
+            candidates.append(without_colon)
+    return candidates
+
+
 def run() -> None:
     if not IGDB_CLIENT_ID or not IGDB_CLIENT_SECRET:
         print("ERROR: IGDB_CLIENT_ID / IGDB_CLIENT_SECRET が .env に設定されていません。")
@@ -90,8 +104,7 @@ def run() -> None:
         name_ja: str = title["title_name"]
         name_en: str | None = title.get("english_name")
 
-        # 英語名があれば先に試す
-        candidates = [name_en, name_ja] if name_en else [name_ja]
+        candidates = build_search_candidates(name_ja, name_en)
         url: str | None = None
 
         for query in candidates:
