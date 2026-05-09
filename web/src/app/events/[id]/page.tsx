@@ -276,12 +276,6 @@ export default async function EventDetailPage({
               </dd>
             </div>
           )}
-          <div className="flex flex-col gap-0.5">
-            <dt className="font-body text-ink-body/60 text-xs tracking-wide">配信</dt>
-            <dd className="font-body text-ink-body text-base">
-              {event.streaming_price ?? "配信なし"}
-            </dd>
-          </div>
         </dl>
 
         {/* 関連ゲームタイトル */}
