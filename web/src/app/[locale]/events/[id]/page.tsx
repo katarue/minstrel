@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { getTranslations, getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { Link } from "@/i18n/navigation";
 import Badge from "@/components/ui/Badge";

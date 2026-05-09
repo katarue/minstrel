@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 
 interface Props {
