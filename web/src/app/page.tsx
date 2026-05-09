@@ -18,6 +18,7 @@ type EventRow = {
   key_visual_url: string | null;
   performance_type: string | null;
   organizers: { name: string } | null;
+  event_game_titles: Array<{ game_titles: { title_name: string } | null }>;
 };
 
 type EventGroup = {
@@ -119,7 +120,8 @@ export default async function Home() {
         flyer_image_url,
         key_visual_url,
         performance_type,
-        organizers ( name )
+        organizers ( name ),
+        event_game_titles ( game_titles ( title_name ) )
       `)
       .eq("is_published", true)
       .gte("start_datetime", todayStart)
@@ -185,6 +187,9 @@ export default async function Home() {
                   genre={toGenre(ev.performance_type)}
                   imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
                   href={`/events/${ev.id}`}
+                  gameTitles={ev.event_game_titles
+                    .map((egt) => egt.game_titles?.title_name)
+                    .filter((t): t is string => t != null)}
                 />
               );
             })}

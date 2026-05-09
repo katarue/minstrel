@@ -12,6 +12,7 @@ interface CardProps {
   organizer?: string;
   genre?: Genre;
   href: string;
+  gameTitles?: string[];
 }
 
 const genreLabels: Record<Genre, string> = {
@@ -23,7 +24,7 @@ const genreLabels: Record<Genre, string> = {
   other:     "その他",
 };
 
-export default function Card({ imageUrl, title, date, venue, organizer, genre, href }: CardProps) {
+export default function Card({ imageUrl, title, date, venue, organizer, genre, href, gameTitles }: CardProps) {
   return (
     <Link href={href} className="block group">
       <article
@@ -38,6 +39,16 @@ export default function Card({ imageUrl, title, date, venue, organizer, genre, h
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="font-heading text-gold/40 text-5xl select-none" aria-hidden>
                 ♪
+              </span>
+            </div>
+          )}
+          {gameTitles && gameTitles.length > 0 && (
+            <div className="absolute top-2 left-2">
+              <span className="inline-flex items-center gap-1 bg-bordeaux text-white font-body text-xs font-medium px-2 py-0.5 rounded shadow-sm">
+                {gameTitles[0]}
+                {gameTitles.length > 1 && (
+                  <span className="opacity-80">+{gameTitles.length - 1}</span>
+                )}
               </span>
             </div>
           )}
