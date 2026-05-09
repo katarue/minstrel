@@ -40,12 +40,6 @@ function toGenre(val: string | null | undefined): Genre | undefined {
   return undefined;
 }
 
-function formatVenue(venueName: string | null, prefecture: string | null): string {
-  if (venueName && prefecture) return `${venueName}（${prefecture}）`;
-  if (venueName) return venueName;
-  if (prefecture) return prefecture;
-  return "—";
-}
 
 export default async function Home() {
   const locale = await getLocale();
@@ -208,7 +202,8 @@ export default async function Home() {
                   title={ev.event_name}
                   titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
                   date={formatDateShort(ev.start_datetime, locale)}
-                  venue={formatVenue(ev.venue_name, ev.prefecture)}
+                  venue={ev.venue_name ?? "—"}
+                  prefecture={ev.prefecture ?? undefined}
                   organizer={ev.organizers?.name}
                   genre={toGenre(ev.performance_type)}
                   imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}

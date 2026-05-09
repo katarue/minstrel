@@ -127,14 +127,14 @@ export default async function ConcertsPage({
                 return (locale === "en" && gt.english_name) ? gt.english_name : gt.title_name;
               })
               .filter((t): t is string => t != null);
-            const venue = [event.venue_name, event.prefecture].filter(Boolean).join("（") + (event.prefecture ? "）" : "");
             return (
               <Card
                 key={event.id}
                 title={event.event_name}
                 titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
                 date={formatDateShort(event.start_datetime, locale)}
-                venue={venue}
+                venue={event.venue_name ?? "—"}
+                prefecture={event.prefecture ?? undefined}
                 organizer={event.organizers?.name}
                 genre={toGenre(event.performance_type)}
                 imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}
