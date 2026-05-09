@@ -6,6 +6,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from utils.db import get_client
 import anthropic
@@ -193,10 +194,10 @@ def main():
 
         if english:
             db.table("game_titles").update({"english_name": english}).eq("id", title["id"]).execute()
-            print(f"  ✓ {name} → {english}")
+            print(f"  OK: {name} -> {english}")
             updated += 1
         else:
-            print(f"  ? {name} → (not found)")
+            print(f"  NG: {name} -> (not found)")
 
     print(f"\n完了: {updated} 件更新, {skipped} 件スキップ（既存あり）")
 
