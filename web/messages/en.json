@@ -23,6 +23,11 @@
     "heroTagline": "Game Music Concert Portal",
     "heroDescription": "The dedicated portal for game music concerts in Japan.",
     "upcomingTitle": "Upcoming Concerts",
+    "seeAll": "View all →",
+    "gameTitlesTitle": "Browse by Game Title",
+    "regionTitle": "Browse by Region",
+    "calendarTitle": "Check the Calendar",
+    "viewCalendar": "View Calendar →",
     "empty": "No concerts are currently listed."
   },
   "event": {

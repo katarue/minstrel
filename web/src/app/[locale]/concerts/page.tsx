@@ -4,6 +4,8 @@ import { createClient } from "@/utils/supabase/server";
 import { formatDateShort } from "@/utils/formatDate";
 import Card from "@/components/ui/Card";
 import FilterForm from "./FilterForm";
+import { REGION_PREFECTURES } from "@/utils/regions";
+import type { Region } from "@/utils/regions";
 
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 const VALID_GENRES: readonly Genre[] = ["orchestra", "wind", "rock", "acoustic", "chamber", "other"];
@@ -47,13 +49,14 @@ function getPeriodRange(period: string): { gte?: string; lt?: string } {
 export default async function ConcertsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; prefecture?: string; genre?: string; period?: string }>;
+  searchParams: Promise<{ q?: string; prefecture?: string; genre?: string; period?: string; region?: string }>;
 }) {
   const params = await searchParams;
   const q = params.q ?? "";
   const prefecture = params.prefecture ?? "";
   const genre = params.genre ?? "";
   const period = params.period ?? "upcoming";
+  const region = params.region ?? "";
 
   const locale = await getLocale();
   const t = await getTranslations("concerts");
@@ -75,7 +78,13 @@ export default async function ConcertsPage({
       .order("start_datetime", { ascending: true });
 
     if (q) query = query.ilike("event_name", `%${q}%`);
-    if (prefecture) query = query.eq("prefecture", prefecture);
+    if (prefecture) {
+      query = query.eq("prefecture", prefecture);
+    } else if (region && region in REGION_PREFECTURES) {
+      const keywords = REGION_PREFECTURES[region as Region];
+      const orFilter = keywords.map((k) => `prefecture.ilike.%${k}%`).join(",");
+      query = query.or(orFilter);
+    }
     if (genre) query = query.eq("performance_type", genre);
 
     const range = getPeriodRange(period);

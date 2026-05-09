@@ -22,7 +22,12 @@
   "home": {
     "heroTagline": "Game Music Concert Portal",
     "heroDescription": "日本のゲーム音楽コンサート情報を集約する専門ポータル",
-    "upcomingTitle": "開催予定のコンサート",
+    "upcomingTitle": "直近のコンサート",
+    "seeAll": "すべて見る →",
+    "gameTitlesTitle": "ゲームタイトルで探す",
+    "regionTitle": "地域で探す",
+    "calendarTitle": "カレンダーで確認する",
+    "viewCalendar": "カレンダーで見る →",
     "empty": "現在掲載中のコンサートはありません"
   },
   "event": {
