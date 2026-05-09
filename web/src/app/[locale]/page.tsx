@@ -32,7 +32,7 @@ type LightEvent = {
   start_datetime: string;
   prefecture: string | null;
   event_game_titles: Array<{
-    game_titles: { id: string; title_name: string; english_name: string | null; cover_image_url: string | null } | null;
+    game_titles: { id: string; title_name: string; english_name: string | null; igdb_cover_url: string | null } | null;
   }>;
 };
 
@@ -80,7 +80,7 @@ export default async function Home() {
         .from("events")
         .select(`
           id, start_datetime, prefecture,
-          event_game_titles ( game_titles ( id, title_name, english_name, cover_image_url ) )
+          event_game_titles ( game_titles ( id, title_name, english_name, igdb_cover_url ) )
         `)
         .eq("is_published", true)
         .gte("start_datetime", todayStart)
@@ -111,7 +111,7 @@ export default async function Home() {
           id: gt.id,
           name: locale === "en" && gt.english_name ? gt.english_name : gt.title_name,
           count: 1,
-          coverUrl: gt.cover_image_url ?? null,
+          coverUrl: gt.igdb_cover_url ?? null,
         });
       }
     }
