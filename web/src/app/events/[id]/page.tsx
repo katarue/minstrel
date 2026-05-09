@@ -36,7 +36,6 @@ type EventDetail = {
   event_name: string;
   description: string | null;
   start_datetime: string;
-  end_datetime: string | null;
   venue_name: string;
   prefecture: string;
   key_visual_url: string | null;
@@ -111,7 +110,6 @@ export default async function EventDetailPage({
       event_name,
       description,
       start_datetime,
-      end_datetime,
       venue_name,
       prefecture,
       key_visual_url,
@@ -150,7 +148,6 @@ export default async function EventDetailPage({
     "@type": "Event",
     name: event.event_name,
     startDate: event.start_datetime,
-    ...(event.end_datetime ? { endDate: event.end_datetime } : {}),
     location: {
       "@type": "Place",
       name: `${event.venue_name}（${event.prefecture}）`,
@@ -329,7 +326,6 @@ export default async function EventDetailPage({
               id: event.id,
               event_name: event.event_name,
               start_datetime: event.start_datetime,
-              end_datetime: event.end_datetime,
               description: event.description,
               venue_name: event.venue_name,
             })}

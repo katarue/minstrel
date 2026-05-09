@@ -10,7 +10,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("events")
-    .select("id, event_name, start_datetime, end_datetime, description, venue_name")
+    .select("id, event_name, start_datetime, description, venue_name")
     .eq("is_published", true)
     .gte("start_datetime", new Date().toISOString())
     .order("start_datetime", { ascending: true });
