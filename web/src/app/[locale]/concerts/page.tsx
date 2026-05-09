@@ -12,6 +12,7 @@ const VALID_GENRES: readonly Genre[] = ["orchestra", "wind", "rock", "acoustic",
 
 type EventRow = {
   id: string;
+  tour_id: string | null;
   event_name: string;
   event_name_en: string | null;
   start_datetime: string;
@@ -70,7 +71,7 @@ export default async function ConcertsPage({
     let query = supabase
       .from("events")
       .select(`
-        id, event_name, event_name_en, start_datetime, venue_name, prefecture,
+        id, tour_id, event_name, event_name_en, start_datetime, venue_name, prefecture,
         key_visual_url, flyer_image_url, performance_type,
         organizers ( name ),
         event_game_titles ( game_titles ( title_name, english_name ) )
@@ -127,6 +128,9 @@ export default async function ConcertsPage({
                 return (locale === "en" && gt.english_name) ? gt.english_name : gt.title_name;
               })
               .filter((t): t is string => t != null);
+            const tourCount = event.tour_id
+              ? events.filter((e) => e.tour_id === event.tour_id).length
+              : undefined;
             return (
               <Card
                 key={event.id}
@@ -140,6 +144,7 @@ export default async function ConcertsPage({
                 imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}
                 href={`/events/${event.id}`}
                 gameTitles={gameTitles}
+                tourCount={tourCount}
               />
             );
           })}

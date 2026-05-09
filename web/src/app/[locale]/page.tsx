@@ -13,6 +13,7 @@ const VALID_GENRES: readonly Genre[] = ["orchestra", "wind", "rock", "acoustic",
 
 type CardEvent = {
   id: string;
+  tour_id: string | null;
   event_name: string;
   event_name_en: string | null;
   start_datetime: string;
@@ -67,7 +68,7 @@ export default async function Home() {
       supabase
         .from("events")
         .select(`
-          id, event_name, event_name_en, start_datetime, venue_name, prefecture,
+          id, tour_id, event_name, event_name_en, start_datetime, venue_name, prefecture,
           flyer_image_url, key_visual_url, performance_type,
           organizers ( name ),
           event_game_titles ( game_titles ( id, title_name, english_name ) )
@@ -75,7 +76,7 @@ export default async function Home() {
         .eq("is_published", true)
         .gte("start_datetime", todayStart)
         .order("start_datetime", { ascending: true })
-        .limit(6),
+        .limit(30),
       supabase
         .from("events")
         .select(`
@@ -94,6 +95,22 @@ export default async function Home() {
     else allEvents = (allResult.data ?? []) as unknown as LightEvent[];
   } catch (err) {
     console.error("Supabase connection error:", err);
+  }
+
+  // Section 1: tour_id でグループ化し、代表イベント6件を選ぶ
+  const tourCounts = new Map<string, number>();
+  for (const ev of topEvents) {
+    if (ev.tour_id) tourCounts.set(ev.tour_id, (tourCounts.get(ev.tour_id) ?? 0) + 1);
+  }
+  const displayEvents: CardEvent[] = [];
+  const seenTourIds = new Set<string>();
+  for (const ev of topEvents) {
+    if (ev.tour_id) {
+      if (seenTourIds.has(ev.tour_id)) continue;
+      seenTourIds.add(ev.tour_id);
+    }
+    displayEvents.push(ev);
+    if (displayEvents.length >= 6) break;
   }
 
   // Section 2: count events per game title
@@ -186,11 +203,11 @@ export default async function Home() {
             {t("seeAll")}
           </Link>
         </div>
-        {topEvents.length === 0 ? (
+        {displayEvents.length === 0 ? (
           <p className="font-body text-ink-body/70 text-base py-12 text-center">{t("empty")}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {topEvents.map((ev) => {
+            {displayEvents.map((ev) => {
               const gameTitles = ev.event_game_titles
                 .map((egt) => {
                   const gt = egt.game_titles;
@@ -198,6 +215,7 @@ export default async function Home() {
                   return locale === "en" && gt.english_name ? gt.english_name : gt.title_name;
                 })
                 .filter((item): item is string => item != null);
+              const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
               return (
                 <Card
                   key={ev.id}
@@ -211,6 +229,7 @@ export default async function Home() {
                   imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
                   href={`/events/${ev.id}`}
                   gameTitles={gameTitles}
+                  tourCount={tourCount}
                 />
               );
             })}

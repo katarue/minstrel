@@ -20,6 +20,7 @@ function toGenre(val: string | null | undefined): Genre {
 
 type EventDetail = {
   id: string;
+  tour_id: string | null;
   event_name: string;
   event_name_en: string | null;
   description: string | null;
@@ -32,6 +33,14 @@ type EventDetail = {
   ticket_urls: { primary?: string } | null;
   organizers: { name: string; official_site_url: string | null; x_url: string | null } | null;
   event_game_titles: Array<{ game_titles: { title_name: string; english_name: string | null } | null }>;
+};
+
+type TourSibling = {
+  id: string;
+  event_name: string;
+  start_datetime: string;
+  venue_name: string;
+  prefecture: string;
 };
 
 export async function generateMetadata({
@@ -88,7 +97,7 @@ export default async function EventDetailPage({
   const { data, error } = await supabase
     .from("events")
     .select(`
-      id, event_name, event_name_en, description, start_datetime, venue_name, prefecture,
+      id, tour_id, event_name, event_name_en, description, start_datetime, venue_name, prefecture,
       key_visual_url, flyer_image_url, performance_type, ticket_urls,
       organizers ( name, official_site_url, x_url ),
       event_game_titles ( game_titles ( title_name, english_name ) )
@@ -100,6 +109,19 @@ export default async function EventDetailPage({
   if (error || !data) notFound();
 
   const event = data as unknown as EventDetail;
+
+  // ツアーの他の公演を取得
+  let tourSiblings: TourSibling[] = [];
+  if (event.tour_id) {
+    const { data: siblings } = await supabase
+      .from("events")
+      .select("id, event_name, start_datetime, venue_name, prefecture")
+      .eq("tour_id", event.tour_id)
+      .neq("id", event.id)
+      .eq("is_published", true)
+      .order("start_datetime", { ascending: true });
+    tourSiblings = (siblings ?? []) as TourSibling[];
+  }
   const ticketUrl = event.ticket_urls?.primary ?? null;
   const gameTitles = event.event_game_titles
     .map((egt) => {
@@ -251,6 +273,25 @@ export default async function EventDetailPage({
               <p className="font-body text-ink-body text-base leading-relaxed">
                 {event.description}
               </p>
+            </div>
+          )}
+
+          {tourSiblings.length > 0 && (
+            <div className="border-t border-gold/30 pt-6 flex flex-col gap-3">
+              <p className="font-body text-ink-body/60 text-xs tracking-wide">{t("tourOtherDates")}</p>
+              <ul className="flex flex-col gap-2">
+                {tourSiblings.map((s) => (
+                  <li key={s.id}>
+                    <Link
+                      href={`/events/${s.id}`}
+                      className="flex items-baseline gap-2 font-body text-sm text-bordeaux hover:text-bordeaux/70 transition-colors"
+                    >
+                      <span className="shrink-0">{formatDateFull(s.start_datetime, locale)}</span>
+                      <span className="text-ink-body/50 truncate">{s.venue_name}（{s.prefecture}）</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

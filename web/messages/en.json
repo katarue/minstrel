@@ -41,7 +41,8 @@
     "buyTicket": "Buy Tickets",
     "addToGoogleCal": "Add to Google Calendar",
     "addToIcal": "Add to Calendar (.ics)",
-    "mapsLink": "View on map"
+    "mapsLink": "View on map",
+    "tourOtherDates": "Other dates in this tour"
   },
   "concerts": {
     "title": "Concert List",
