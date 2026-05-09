@@ -8,6 +8,7 @@ from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
 from utils.db import get_client
 from utils.notify import notify_failure, notify_success
+from utils.config import IGDB_CLIENT_ID, IGDB_CLIENT_SECRET
 from utils.entity_resolution import (
     extract_hard_keys,
     find_existing_event,
@@ -195,6 +196,49 @@ def upsert_to_db(events: list[dict]) -> int:
     return inserted
 
 
+@task
+def fetch_missing_igdb_covers() -> int:
+    """igdb_cover_url が未設定のゲームタイトルにカバー画像を付与する。"""
+    if not IGDB_CLIENT_ID or not IGDB_CLIENT_SECRET:
+        print("[igdb] IGDB_CLIENT_ID / IGDB_CLIENT_SECRET 未設定のためスキップ")
+        return 0
+
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from scripts.fetch_igdb_covers import get_token, search_cover, build_search_candidates
+    import time
+
+    db = get_client()
+    result = db.table("game_titles").select("id, title_name, english_name, igdb_cover_url").execute()
+    pending = [t for t in (result.data or []) if not t.get("igdb_cover_url")]
+
+    if not pending:
+        print("[igdb] カバー画像取得不要（すべて設定済み）")
+        return 0
+
+    print(f"[igdb] 未取得タイトル: {len(pending)} 件")
+    token = get_token()
+    found = 0
+    for title in pending:
+        candidates = build_search_candidates(title["title_name"], title.get("english_name"))
+        url = None
+        for query in candidates:
+            try:
+                url = search_cover(query, token)
+                time.sleep(0.25)
+            except Exception as e:
+                print(f"[igdb] error for {title['title_name']}: {e}")
+                break
+            if url:
+                break
+        if url:
+            db.table("game_titles").update({"igdb_cover_url": url}).eq("id", title["id"]).execute()
+            found += 1
+
+    print(f"[igdb] 取得完了: {found} / {len(pending)} 件")
+    return found
+
+
 def _log_run(
     started_at: datetime,
     status: str,
@@ -244,6 +288,9 @@ def collect_flow():
 
         inserted_count = upsert_to_db(with_images)
         print(f"inserted: {inserted_count} new events")
+
+        igdb_count = fetch_missing_igdb_covers()
+        print(f"igdb covers fetched: {igdb_count}")
 
         _log_run(started_at, "success", scraped_count, inserted_count)
         notify_success(FLOW_NAME, scraped_count, inserted_count)
