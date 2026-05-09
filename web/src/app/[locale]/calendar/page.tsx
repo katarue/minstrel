@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getTranslations, getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { Link } from "@/i18n/navigation";
 import CalendarNav from "./CalendarNav";
@@ -14,7 +14,6 @@ export default async function CalendarPage({
   const year = parseInt(params.year ?? String(now.getFullYear()), 10);
   const month = parseInt(params.month ?? String(now.getMonth() + 1), 10);
 
-  const locale = await getLocale();
   const t = await getTranslations("calendar");
   const days = t.raw("days") as string[];
 
@@ -93,6 +92,7 @@ export default async function CalendarPage({
       </div>
 
       <div className="mt-8">
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/api/feed/ical" className="font-body text-sm text-bordeaux hover:underline">
           {t("subscribe")}
         </a>
