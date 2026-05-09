@@ -9,6 +9,7 @@ import { formatDateFull } from "@/utils/formatDate";
 type GameTitleDetail = {
   id: string;
   title_name: string;
+  english_name: string | null;
   series_name: string | null;
   publisher: string | null;
   igdb_cover_url: string | null;
@@ -25,11 +26,14 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
 
   const { data: titleData, error: titleError } = await supabase
     .from("game_titles")
-    .select("id, title_name, series_name, publisher, igdb_cover_url")
+    .select("id, title_name, english_name, series_name, publisher, igdb_cover_url")
     .eq("id", id)
     .single();
   if (titleError || !titleData) notFound();
   const title = titleData as GameTitleDetail;
+
+  const displayName =
+    locale === "en" && title.english_name ? title.english_name : title.title_name;
 
   const { data: eventLinks } = await supabase
     .from("event_game_titles")
@@ -52,7 +56,6 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
         {t("backToList")}
       </Link>
 
-      {/* Hero: カバー画像 + タイトル情報 */}
       <div
         className="bg-parchment-dark rounded-md overflow-hidden flex flex-col sm:flex-row gap-0 mb-8"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
@@ -61,7 +64,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
           <div className="relative w-full sm:w-36 aspect-[3/4] sm:aspect-auto shrink-0">
             <Image
               src={title.igdb_cover_url}
-              alt={title.title_name}
+              alt={displayName}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 144px"
@@ -71,7 +74,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
         )}
         <div className="p-6 md:p-8 flex flex-col gap-4 justify-center">
           <h1 className="font-heading text-ink-heading text-2xl md:text-3xl font-bold leading-snug">
-            {title.title_name}
+            {displayName}
           </h1>
           <dl className="flex flex-col gap-3">
             {title.series_name && (
@@ -90,7 +93,6 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      {/* 関連コンサート */}
       <section>
         <h2 className="font-heading text-ink-heading text-xl font-semibold mb-5">{t("relatedConcerts")}</h2>
         {events.length === 0 ? (
