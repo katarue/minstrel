@@ -44,10 +44,10 @@ export default function Card({ imageUrl, title, date, venue, organizer, genre, h
           )}
           {gameTitles && gameTitles.length > 0 && (
             <div className="absolute top-2 left-2">
-              <span className="inline-flex items-center gap-1 bg-bordeaux text-white font-body text-xs font-medium px-2 py-0.5 rounded shadow-sm">
-                {gameTitles[0]}
+              <span className="inline-flex items-center gap-1 bg-bordeaux text-white font-body text-xs font-medium px-2 py-0.5 rounded shadow-sm max-w-[10rem]">
+                <span className="truncate">{gameTitles[0]}</span>
                 {gameTitles.length > 1 && (
-                  <span className="opacity-80">+{gameTitles.length - 1}</span>
+                  <span className="opacity-80 shrink-0">+{gameTitles.length - 1}</span>
                 )}
               </span>
             </div>
