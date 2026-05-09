@@ -183,6 +183,20 @@ def save_event_source(
         return False
 
 
+def find_or_create_organizer(db, organizer_name: str) -> str | None:
+    """organizer_name で organizers テーブルを検索し、なければ作成して ID を返す。"""
+    if not organizer_name or not organizer_name.strip():
+        return None
+    name = organizer_name.strip()
+    result = db.table("organizers").select("id").eq("name", name).limit(1).execute()
+    if result.data:
+        return result.data[0]["id"]
+    created = db.table("organizers").insert({"name": name}).execute()
+    if created.data:
+        return created.data[0]["id"]
+    return None
+
+
 def merge_fields(existing: dict, new_event: dict, source_name: str) -> dict:
     """
     既存イベントに新しいソースのデータを補完マージする。

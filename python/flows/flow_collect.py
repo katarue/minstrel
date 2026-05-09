@@ -12,6 +12,7 @@ from utils.entity_resolution import (
     extract_hard_keys,
     find_existing_event,
     find_existing_event_by_name_date,
+    find_or_create_organizer,
     save_external_ids,
     save_event_source,
     merge_fields,
@@ -149,14 +150,16 @@ def upsert_to_db(events: list[dict]) -> int:
 
             ticket_url = event.get("ticket_url")
             confidence = event.get("confidence_score")
+            organizer_id = find_or_create_organizer(db, event.get("organizer_name"))
             row = {
                 "event_name": event_name,
                 "start_datetime": start_dt,
                 "venue_name": event.get("venue"),
                 "prefecture": event.get("prefecture"),
                 "description": event.get("description"),
+                "organizer_id": organizer_id,
                 "source_url": source_url,
-                "source_rank": event.get("source_rank", "B"),
+                "source_rank": event.get("source_rank", "C"),
                 "confidence_score": (
                     int(confidence * 100) if isinstance(confidence, float)
                     else int(confidence) if confidence is not None
