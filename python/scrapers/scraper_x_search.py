@@ -43,7 +43,8 @@ def search_tweets(query: str, since_days: int = 3) -> list[dict]:
     since_days: 何日前から検索するか（デフォルト3日）
     """
     if not TWITTERAPI_IO_KEY:
-        raise RuntimeError("TWITTERAPI_IO_KEY が設定されていません")
+        print("[x_search] TWITTERAPI_IO_KEY が未設定のためスキップ")
+        return []
 
     since_ts = int(
         (datetime.now(timezone.utc) - timedelta(days=since_days)).timestamp()
