@@ -146,6 +146,21 @@ CHECK 4: @docs/folder_structure.md を読む（リポジトリ構造の把握）
 
 ---
 
+## 🗄️ Supabase 操作ルール
+
+- **DML（SELECT / INSERT / UPDATE / DELETE）**: Claude Code が Python Supabase クライアント経由で直接実行する。ムーチョに SQL Editor の操作を依頼してはいけない。
+- **DDL（CREATE TABLE / ALTER TABLE 等）**: PostgREST 経由では実行不可のため、ムーチョに Supabase SQL Editor での実行を依頼する。
+
+```python
+# DML の実行例（python/ ディレクトリで実行）
+from utils.config import SUPABASE_URL, SUPABASE_SECRET_KEY
+from supabase import create_client
+db = create_client(SUPABASE_URL, SUPABASE_SECRET_KEY)
+db.table("events").delete().eq("id", some_id).execute()
+```
+
+---
+
 ## 🖥️ Environment
 
 ```
