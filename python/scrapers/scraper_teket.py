@@ -13,15 +13,19 @@ import time
 from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC
 
+# teket API の実測: 正常レスポンスは 1〜3 秒。
+# (connect_timeout, read_timeout) 形式で設定。
+REQUEST_TIMEOUT = (5, 15)
+
 BASE_URL = "https://teket.jp"
 API_URL = f"{BASE_URL}/api/events"
 
 # 検索キーワード × カテゴリの組み合わせ
+# 注意: teket API は1セッションで複数クエリを連続実行するとレートリミットし
+# 応答をドリップ配信して無限待ちになる。1クエリのみ使用し、
+# MAX_PAGES_PER_QUERY × 10件 = 最大50件を取得する。
 SEARCH_CONFIGS = [
-    {"word": "ゲーム音楽",       "category": "3"},   # 音楽カテゴリ
-    {"word": "ゲームミュージック", "category": "3"},
-    {"word": "ゲーム音楽",       "category": "11"},  # ゲームカテゴリ
-    {"word": "演奏会",           "category": "11"},
+    {"word": "ゲーム音楽", "category": "3"},   # 音楽カテゴリ（主要クエリ）
 ]
 
 MAX_PAGES_PER_QUERY = 5
@@ -54,7 +58,7 @@ class ScraperTeket(BaseScraper):
                 resp = self.session.get(
                     API_URL,
                     params={"word": word, "category": category, "p": page},
-                    timeout=15,
+                    timeout=REQUEST_TIMEOUT,
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -66,7 +70,6 @@ class ScraperTeket(BaseScraper):
             if not items:
                 break
 
-            new_count = 0
             for item in items:
                 url = item.get("url") or ""
                 if not url or url in seen:
@@ -75,7 +78,6 @@ class ScraperTeket(BaseScraper):
                 event = self._build_event(item)
                 if event:
                     results.append(event)
-                    new_count += 1
 
             next_page = data.get("next_page")
             if not next_page:
