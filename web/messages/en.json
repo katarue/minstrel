@@ -74,7 +74,8 @@
     "upcoming": "Upcoming",
     "all": "All Periods",
     "thisMonth": "This Month",
-    "nextMonth": "Next Month"
+    "nextMonth": "Next Month",
+    "past": "Past Concerts"
   },
   "organizers": {
     "title": "Organizers",
