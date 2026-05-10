@@ -8,6 +8,14 @@ import Card from "@/components/ui/Card";
 import { REGIONS, prefectureToRegion } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
+type BroadcastRow = {
+  id: string;
+  program_name: string;
+  channel: string | null;
+  broadcast_datetime: string;
+  is_replay: boolean;
+};
+
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 const VALID_GENRES: readonly Genre[] = ["orchestra", "wind", "rock", "acoustic", "chamber", "other"];
 
@@ -46,6 +54,7 @@ function toGenre(val: string | null | undefined): Genre | undefined {
 export default async function Home() {
   const locale = await getLocale();
   const t = await getTranslations("home");
+  const tb = await getTranslations("broadcasts");
 
   const nowUtc = new Date();
   const jstNow = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
@@ -59,12 +68,15 @@ export default async function Home() {
 
   let topEvents: CardEvent[] = [];
   let allEvents: LightEvent[] = [];
+  let upcomingBroadcasts: BroadcastRow[] = [];
 
   try {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
 
-    const [topResult, allResult] = await Promise.all([
+    const broadcastEnd = new Date(nowUtc.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [topResult, allResult, broadcastResult] = await Promise.all([
       supabase
         .from("events")
         .select(`
@@ -86,6 +98,14 @@ export default async function Home() {
         .eq("is_published", true)
         .gte("start_datetime", todayStart)
         .order("start_datetime", { ascending: true }),
+      supabase
+        .from("broadcasts")
+        .select("id, program_name, channel, broadcast_datetime, is_replay")
+        .eq("is_published", true)
+        .gte("broadcast_datetime", nowUtc.toISOString())
+        .lte("broadcast_datetime", broadcastEnd)
+        .order("broadcast_datetime", { ascending: true })
+        .limit(3),
     ]);
 
     if (topResult.error) console.error("Failed to fetch top events:", topResult.error);
@@ -93,6 +113,9 @@ export default async function Home() {
 
     if (allResult.error) console.error("Failed to fetch all events:", allResult.error);
     else allEvents = (allResult.data ?? []) as unknown as LightEvent[];
+
+    if (!broadcastResult.error)
+      upcomingBroadcasts = (broadcastResult.data ?? []) as unknown as BroadcastRow[];
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
@@ -315,7 +338,7 @@ export default async function Home() {
       </section>
 
       {/* Section 4: ミニカレンダー */}
-      <section className="py-12 pb-20">
+      <section className="py-12 border-b border-gold/30">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold">
             {t("calendarTitle")}
@@ -364,6 +387,47 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Section 5: 放送・配信情報 */}
+      {upcomingBroadcasts.length > 0 && (
+        <section className="py-12 pb-20">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold">
+              📺 {tb("homeTitle")}
+            </h2>
+            <Link
+              href="/concerts?tab=broadcasts"
+              className="font-body text-bordeaux hover:text-bordeaux/70 text-sm transition-colors"
+            >
+              {tb("seeAll")}
+            </Link>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {upcomingBroadcasts.map((bc) => {
+              const dt = new Date(bc.broadcast_datetime);
+              const m = dt.getMonth() + 1;
+              const d = dt.getDate();
+              const hh = String(dt.getHours()).padStart(2, "0");
+              const mm = String(dt.getMinutes()).padStart(2, "0");
+              const dateStr = locale === "ja" ? `${m}/${d} ${hh}:${mm}` : dt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+              return (
+                <li key={bc.id} className="flex items-baseline gap-3">
+                  <span className="font-body text-ink-body/60 text-sm tabular-nums shrink-0">{dateStr}</span>
+                  {bc.channel && (
+                    <span className="font-body text-ink-body/50 text-xs shrink-0">{bc.channel}</span>
+                  )}
+                  <span className="font-body text-ink-body text-sm leading-snug">
+                    {bc.program_name}
+                    {bc.is_replay && (
+                      <span className="ml-1.5 text-xs text-ink-body/50">（再放送）</span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

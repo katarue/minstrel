@@ -51,7 +51,16 @@
     "allGenres": "All Genres",
     "nationwide": "All Regions",
     "resultsCount": "{count} results",
-    "empty": "No concerts found matching your criteria."
+    "empty": "No concerts found matching your criteria.",
+    "tabConcerts": "Concerts",
+    "tabBroadcasts": "Broadcasts"
+  },
+  "broadcasts": {
+    "empty": "No upcoming broadcasts at this time.",
+    "replay": "Rerun",
+    "vod": "Watch on demand",
+    "homeTitle": "Broadcasts",
+    "seeAll": "View all →"
   },
   "genre": {
     "orchestra": "Orchestra",
