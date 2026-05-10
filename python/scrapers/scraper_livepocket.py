@@ -19,7 +19,18 @@ from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 
 BASE_URL = "https://livepocket.jp"
-SEARCH_URL = f"{BASE_URL}/event/search?query=%E3%82%B2%E3%83%BC%E3%83%A0+%E3%82%B3%E3%83%B3%E3%82%B5%E3%83%BC%E3%83%88"
+
+def _q(kw: str) -> str:
+    from urllib.parse import quote
+    return f"{BASE_URL}/event/search?query={quote(kw)}"
+
+SEARCH_URLS = [
+    _q("ゲーム音楽"),
+    _q("ゲームミュージック"),
+    _q("GAME MUSIC"),
+    _q("ゲーム 演奏会"),
+    _q("ゲーム コンサート"),
+]
 
 _SKIP_DOMAINS = {
     "livepocket.jp",
@@ -84,24 +95,25 @@ class ScraperLivepocket(BaseScraper):
     source_rank = "A"
 
     def scrape(self) -> list[dict]:
-        try:
-            html = self.fetch(SEARCH_URL)
-        except Exception as e:
-            print(f"[livepocket] search error: {e}")
-            return []
-
-        soup = BeautifulSoup(html, "lxml")
-
         seen: set[str] = set()
         detail_urls: list[str] = []
-        for a in soup.find_all("a", href=True):
-            href: str = a["href"]
-            if not href.startswith("/e/"):
+
+        for search_url in SEARCH_URLS:
+            try:
+                html = self.fetch(search_url)
+            except Exception as e:
+                print(f"[livepocket] search error {search_url}: {e}")
                 continue
-            full = urljoin(BASE_URL, href)
-            if full not in seen:
-                seen.add(full)
-                detail_urls.append(full)
+
+            soup = BeautifulSoup(html, "lxml")
+            for a in soup.find_all("a", href=True):
+                href: str = a["href"]
+                if not href.startswith("/e/"):
+                    continue
+                full = urljoin(BASE_URL, href)
+                if full not in seen:
+                    seen.add(full)
+                    detail_urls.append(full)
 
         print(f"[livepocket] found {len(detail_urls)} detail pages")
 

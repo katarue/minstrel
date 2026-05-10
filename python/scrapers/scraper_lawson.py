@@ -17,8 +17,18 @@ from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 
 BASE_URL = "https://l-tike.com"
+
+def _q(kw: str) -> str:
+    from urllib.parse import quote
+    return f"{BASE_URL}/search/?keyword={quote(kw)}&genre=1"
+
 SEARCH_QUERIES = [
-    f"{BASE_URL}/search/?keyword=%E3%82%B2%E3%83%BC%E3%83%A0+%E3%82%B3%E3%83%B3%E3%82%B5%E3%83%BC%E3%83%88&genre=1",
+    _q("ゲーム音楽"),
+    _q("ゲームミュージック"),
+    _q("ゲーム オーケストラ"),
+    _q("ゲーム 吹奏楽"),
+    _q("ゲーム 演奏会"),
+    _q("ゲーム コンサート"),
 ]
 
 _SKIP_DOMAINS = {

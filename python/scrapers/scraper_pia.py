@@ -18,8 +18,19 @@ from playwright.sync_api import sync_playwright
 from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 
-SEARCH_URL = "https://t.pia.jp/pia/search_all.do?kw=%E3%82%B2%E3%83%BC%E3%83%A0+%E3%82%B3%E3%83%B3%E3%82%B5%E3%83%BC%E3%83%88&ct_l1=1"
 DETAIL_BASE = "https://ticket.pia.jp"
+
+def _q(kw: str) -> str:
+    from urllib.parse import quote
+    return f"https://t.pia.jp/pia/search_all.do?kw={quote(kw)}&ct_l1=1"
+
+SEARCH_URLS = [
+    _q("ゲーム音楽"),
+    _q("ゲームミュージック"),
+    _q("ゲーム オーケストラ"),
+    _q("ゲーム 吹奏楽"),
+    _q("ゲーム 演奏会"),
+]
 
 
 class ScraperPia(BaseScraper):
@@ -51,15 +62,23 @@ class ScraperPia(BaseScraper):
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
-                page = browser.new_page(user_agent=USER_AGENT)
-                page.goto(SEARCH_URL, timeout=30000)
-                page.wait_for_load_state("networkidle", timeout=15000)
-                content = page.content()
+                for search_url in SEARCH_URLS:
+                    try:
+                        page = browser.new_page(user_agent=USER_AGENT)
+                        page.goto(search_url, timeout=30000)
+                        page.wait_for_load_state("networkidle", timeout=15000)
+                        content = page.content()
+                        page.close()
+                    except Exception as e:
+                        print(f"[pia] playwright error {search_url}: {e}")
+                        continue
+                    self._extract_links(content, seen, urls)
+                    time.sleep(SCRAPE_RATE_LIMIT_SEC)
                 browser.close()
         except Exception as e:
             print(f"[pia] playwright error: {e}")
-            return []
 
+    def _extract_links(self, content: str, seen: set, urls: list) -> None:
         soup = BeautifulSoup(content, "lxml")
         for a in soup.find_all("a", href=True):
             href: str = a["href"]
@@ -78,8 +97,6 @@ class ScraperPia(BaseScraper):
             if key not in seen:
                 seen.add(key)
                 urls.append(href)
-
-        return urls
 
     def _scrape_detail(self, session: requests.Session, url: str) -> dict | None:
         try:

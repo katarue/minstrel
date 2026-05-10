@@ -18,7 +18,16 @@ from playwright.sync_api import sync_playwright, Browser
 from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 
-SEARCH_URL = "https://peatix.com/search?q=%E3%82%B2%E3%83%BC%E3%83%A0+%E3%82%B3%E3%83%B3%E3%82%B5%E3%83%BC%E3%83%88&l=ja"
+def _q(kw: str) -> str:
+    from urllib.parse import quote
+    return f"https://peatix.com/search?q={quote(kw)}&l=ja"
+
+SEARCH_URLS = [
+    _q("ゲーム音楽"),
+    _q("ゲームミュージック"),
+    _q("ゲーム オーケストラ"),
+    _q("ゲーム コンサート"),
+]
 
 _SKIP_DOMAINS = {
     "peatix.com",
@@ -112,27 +121,27 @@ class ScraperPeatix(BaseScraper):
         seen: set[str] = set()
         urls: list[str] = []
 
-        page = ctx.new_page()
-        try:
-            page.goto(SEARCH_URL, timeout=30000)
-            page.wait_for_selector('a[href*="/event/"]', timeout=15000)
-            content = page.content()
-        except Exception as e:
-            print(f"[peatix] search error: {e}")
-            page.close()
-            return []
-        finally:
-            page.close()
-
-        soup = BeautifulSoup(content, "lxml")
-        for a in soup.find_all("a", href=True):
-            href: str = a["href"]
-            if "/event/" not in href or "peatix.com" not in href:
+        for search_url in SEARCH_URLS:
+            page = ctx.new_page()
+            try:
+                page.goto(search_url, timeout=30000)
+                page.wait_for_selector('a[href*="/event/"]', timeout=15000)
+                content = page.content()
+            except Exception as e:
+                print(f"[peatix] search error {search_url}: {e}")
+                page.close()
                 continue
-            # UTM パラメータを除去してユニーク判定
-            base = href.split("?")[0]
-            if base not in seen:
-                seen.add(base)
+            finally:
+                page.close()
+
+            soup = BeautifulSoup(content, "lxml")
+            for a in soup.find_all("a", href=True):
+                href: str = a["href"]
+                if "/event/" not in href or "peatix.com" not in href:
+                    continue
+                base = href.split("?")[0]
+                if base not in seen:
+                    seen.add(base)
                 urls.append(base)
 
         return urls
