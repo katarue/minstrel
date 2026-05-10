@@ -33,13 +33,14 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
 sys.path.insert(0, os.path.dirname(__file__))
 
 from flows.flow_collect import collect_flow
-from flows.flow_collect_broadcasts import collect_broadcasts_flow
+from flows.flow_collect_broadcasts import collect_broadcasts_flow, collect_broadcasts_weekly_flow
 from flows.flow_post_weekly import post_friday_flow, post_monday_flow
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-now", action="store_true", help="収集フロー即時実行")
-    parser.add_argument("--run-broadcasts", action="store_true", help="放送収集フロー即時実行")
+    parser.add_argument("--run-broadcasts", action="store_true", help="放送収集フロー即時実行（X監視）")
+    parser.add_argument("--run-broadcasts-weekly", action="store_true", help="bangumi.org 週次収集フロー即時実行")
     parser.add_argument("--run-post-monday", action="store_true", help="月曜投稿フロー即時実行")
     parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
     parser.add_argument("--serve-scheduled", action="store_true", help="収集フロー: 3日おき09:00 JST")
@@ -54,6 +55,8 @@ if __name__ == "__main__":
         collect_flow()
     elif args.run_broadcasts:
         collect_broadcasts_flow()
+    elif args.run_broadcasts_weekly:
+        collect_broadcasts_weekly_flow()
     elif args.run_post_monday:
         post_monday_flow()
     elif args.run_post_friday:
@@ -94,6 +97,11 @@ if __name__ == "__main__":
             collect_broadcasts_flow,
             name="minstrel-collect-broadcasts-scheduled",
             schedules=[CronSchedule(cron="0 8 * * *", timezone="Asia/Tokyo")],
+        )
+        runner.add_flow(
+            collect_broadcasts_weekly_flow,
+            name="minstrel-collect-broadcasts-weekly-scheduled",
+            schedules=[CronSchedule(cron="0 7 * * 0", timezone="Asia/Tokyo")],
         )
         runner.add_flow(
             post_monday_flow,
