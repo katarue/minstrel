@@ -61,25 +61,26 @@ export default async function OrganizersPage() {
       {organizers.length === 0 ? (
         <p className="font-body text-ink-body/70 text-base py-12 text-center">{t("empty")}</p>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {organizers.map((org) => (
-            <Link key={org.id} href={`/organizers/${org.id}`} className="group flex flex-col items-center gap-3">
-              <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-parchment-dark ring-2 ring-gold/20 group-hover:ring-bordeaux/50 transition-all duration-200 shrink-0">
+            <Link key={org.id} href={`/organizers/${org.id}`}
+              className="group flex items-center gap-4 px-4 py-3 rounded-lg border border-gold/20 bg-parchment hover:border-bordeaux/40 hover:bg-parchment-dark/30 transition-all duration-200">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-parchment-dark ring-1 ring-gold/20 group-hover:ring-bordeaux/40 transition-all shrink-0">
                 {org.x_profile_image_url ? (
                   <Image
                     src={org.x_profile_image_url}
                     alt={org.name}
                     fill
                     className="object-cover"
-                    sizes="80px"
+                    sizes="48px"
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-heading text-gold/40 text-2xl select-none" aria-hidden>♪</span>
+                    <span className="font-heading text-gold/40 text-lg select-none" aria-hidden>♪</span>
                   </div>
                 )}
               </div>
-              <p className="font-body text-ink-body text-xs text-center leading-snug line-clamp-3 group-hover:text-bordeaux transition-colors w-full">
+              <p className="font-body text-ink-body text-sm leading-snug line-clamp-2 group-hover:text-bordeaux transition-colors">
                 {org.name}
               </p>
             </Link>
