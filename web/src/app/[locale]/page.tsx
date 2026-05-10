@@ -45,6 +45,8 @@ type LightEvent = {
   }>;
 };
 
+type CalendarEvent = { id: string; event_name: string; start_datetime: string };
+
 function toGenre(val: string | null | undefined): Genre | undefined {
   if (val && (VALID_GENRES as readonly string[]).includes(val)) return val as Genre;
   return undefined;
@@ -69,6 +71,7 @@ export default async function Home() {
   let topEvents: CardEvent[] = [];
   let allEvents: LightEvent[] = [];
   let upcomingBroadcasts: BroadcastRow[] = [];
+  let calendarEvents: CalendarEvent[] = [];
 
   try {
     const cookieStore = await cookies();
@@ -76,7 +79,7 @@ export default async function Home() {
 
     const broadcastEnd = new Date(nowUtc.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [topResult, allResult, broadcastResult] = await Promise.all([
+    const [topResult, allResult, broadcastResult, calendarResult] = await Promise.all([
       supabase
         .from("events")
         .select(`
@@ -106,6 +109,13 @@ export default async function Home() {
         .lte("broadcast_datetime", broadcastEnd)
         .order("broadcast_datetime", { ascending: true })
         .limit(3),
+      supabase
+        .from("events")
+        .select("id, event_name, start_datetime")
+        .eq("is_published", true)
+        .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
+        .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
+        .order("start_datetime", { ascending: true }),
     ]);
 
     if (topResult.error) console.error("Failed to fetch top events:", topResult.error);
@@ -116,6 +126,9 @@ export default async function Home() {
 
     if (!broadcastResult.error)
       upcomingBroadcasts = (broadcastResult.data ?? []) as unknown as BroadcastRow[];
+
+    if (!calendarResult.error)
+      calendarEvents = (calendarResult.data ?? []) as unknown as CalendarEvent[];
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
@@ -167,13 +180,12 @@ export default async function Home() {
     if (region) regionCounts.set(region, (regionCounts.get(region) ?? 0) + 1);
   }
 
-  // Section 4: event days in current month for mini calendar
-  const eventDays = new Set<number>();
-  for (const ev of allEvents) {
+  // Section 4: events per day for full calendar grid
+  const eventsByDay: Record<number, { id: string; event_name: string }[]> = {};
+  for (const ev of calendarEvents) {
     const evJst = new Date(new Date(ev.start_datetime).getTime() + 9 * 60 * 60 * 1000);
-    if (evJst.getUTCFullYear() === calYear && evJst.getUTCMonth() === calMonth) {
-      eventDays.add(evJst.getUTCDate());
-    }
+    const day = evJst.getUTCDate();
+    (eventsByDay[day] ??= []).push(ev);
   }
 
   const calendarDays: (number | null)[] = [
@@ -337,7 +349,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Section 4: ミニカレンダー */}
+      {/* Section 4: カレンダー */}
       <section className="py-12 border-b border-gold/30">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold">
@@ -351,39 +363,42 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div className="max-w-xs">
-          <p className="font-heading text-ink-heading text-base font-semibold mb-3">{monthLabel}</p>
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
+        <p className="font-heading text-ink-heading text-base font-semibold mb-4">{monthLabel}</p>
+
+        <div className="border border-gold/30 rounded-lg overflow-hidden">
+          <div className="grid grid-cols-7 bg-parchment-dark border-b border-gold/30">
             {dayLabels.map((d, i) => (
-              <span key={i} className="text-xs font-body text-ink-body/40 py-1">
+              <div key={i} className={`py-3 text-center text-sm font-heading font-semibold ${i === 0 ? "text-error" : i === 6 ? "text-info" : "text-ink-heading"}`}>
                 {d}
-              </span>
+              </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, i) => {
-              if (day === null) return <div key={i} />;
-              const isToday = day === todayDay;
-              const hasEvent = eventDays.has(day);
-              return (
-                <div key={i} className="flex flex-col items-center justify-center h-9">
-                  <span
-                    className={`text-sm font-body w-7 h-7 flex items-center justify-center rounded-full ${
-                      isToday
-                        ? "bg-bordeaux text-parchment font-semibold"
-                        : hasEvent
-                        ? "text-bordeaux font-semibold"
-                        : "text-ink-body/50"
-                    }`}
-                  >
-                    {day}
-                  </span>
-                  {hasEvent && !isToday && (
-                    <span className="w-1 h-1 rounded-full bg-bordeaux mt-0.5" />
-                  )}
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-7">
+            {calendarDays.map((day, idx) => (
+              <div key={idx}
+                className={`min-h-32 p-2 border-b border-r border-gold/20 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
+                {day && (
+                  <>
+                    <span className={`text-sm font-body font-medium ${
+                      day === todayDay
+                        ? "inline-flex items-center justify-center w-6 h-6 rounded-full bg-bordeaux text-parchment"
+                        : idx % 7 === 0 ? "text-error" : idx % 7 === 6 ? "text-info" : "text-ink-heading"
+                    }`}>
+                      {day}
+                    </span>
+                    <div className="mt-1 flex flex-col gap-1">
+                      {(eventsByDay[day] ?? []).map((ev) => (
+                        <Link key={ev.id} href={`/events/${ev.id}`}
+                          className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug truncate transition-colors"
+                          title={ev.event_name}>
+                          {ev.event_name}
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
