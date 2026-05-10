@@ -64,8 +64,8 @@ export default async function OrganizersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {organizers.map((org) => (
             <Link key={org.id} href={`/organizers/${org.id}`}
-              className="group flex items-center gap-4 px-4 py-3 rounded-lg border border-gold/20 bg-parchment hover:border-bordeaux/40 hover:bg-parchment-dark/30 transition-all duration-200">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-parchment-dark ring-1 ring-gold/20 group-hover:ring-bordeaux/40 transition-all shrink-0">
+              className="group flex items-center gap-4 px-4 py-3 rounded-lg border border-gold/50 bg-parchment-dark/30 hover:border-bordeaux/60 hover:bg-parchment-dark/60 transition-all duration-200">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-parchment-dark ring-1 ring-gold/40 group-hover:ring-bordeaux/60 transition-all shrink-0">
                 {org.x_profile_image_url ? (
                   <Image
                     src={org.x_profile_image_url}
