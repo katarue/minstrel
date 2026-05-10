@@ -63,20 +63,23 @@ class ScraperPia(BaseScraper):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 for search_url in SEARCH_URLS:
+                    page = browser.new_page(user_agent=USER_AGENT)
                     try:
-                        page = browser.new_page(user_agent=USER_AGENT)
-                        page.goto(search_url, timeout=30000)
-                        page.wait_for_load_state("networkidle", timeout=15000)
+                        page.goto(search_url, timeout=45000)
+                        page.wait_for_load_state("domcontentloaded", timeout=15000)
                         content = page.content()
-                        page.close()
                     except Exception as e:
                         print(f"[pia] playwright error {search_url}: {e}")
                         continue
+                    finally:
+                        page.close()
                     self._extract_links(content, seen, urls)
                     time.sleep(SCRAPE_RATE_LIMIT_SEC)
                 browser.close()
         except Exception as e:
             print(f"[pia] playwright error: {e}")
+
+        return urls
 
     def _extract_links(self, content: str, seen: set, urls: list) -> None:
         soup = BeautifulSoup(content, "lxml")
