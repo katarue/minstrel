@@ -206,7 +206,7 @@ export default async function ConcertsPage({
       ) : (
         <>
           <div className="bg-parchment-dark border border-gold/30 rounded-lg p-4 mb-6">
-            <FilterForm q={q} prefecture={prefecture} genre={genre} period={period} />
+            <FilterForm q={q} region={region} genre={genre} period={period} />
           </div>
 
           <p className="font-body text-ink-body/60 text-sm mb-6">

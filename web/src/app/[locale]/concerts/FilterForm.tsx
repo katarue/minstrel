@@ -3,34 +3,25 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-
-const PREFECTURES = [
-  "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
-  "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県", "東京都", "神奈川県",
-  "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県", "岐阜県",
-  "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県",
-  "奈良県", "和歌山県", "鳥取県", "島根県", "岡山県", "広島県", "山口県",
-  "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県",
-  "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
-];
+import { REGIONS } from "@/utils/regions";
 
 const selectClass =
   "px-3 py-2 text-sm font-body bg-parchment border border-gold/50 rounded focus:outline-none focus:border-bordeaux text-ink-body cursor-pointer";
 
 interface Props {
   q: string;
-  prefecture: string;
+  region: string;
   genre: string;
   period: string;
 }
 
-export default function FilterForm({ q: initQ, prefecture: initPref, genre: initGenre, period: initPeriod }: Props) {
+export default function FilterForm({ q: initQ, region: initRegion, genre: initGenre, period: initPeriod }: Props) {
   const t = useTranslations("concerts");
   const tGenre = useTranslations("genre");
   const tPeriod = useTranslations("period");
   const router = useRouter();
   const [q, setQ] = useState(initQ);
-  const [prefecture, setPrefecture] = useState(initPref);
+  const [region, setRegion] = useState(initRegion);
   const [genre, setGenre] = useState(initGenre);
   const [period, setPeriod] = useState(initPeriod);
 
@@ -53,7 +44,7 @@ export default function FilterForm({ q: initQ, prefecture: initPref, genre: init
   ];
 
   const push = (overrides: Partial<Record<string, string>> = {}) => {
-    const vals: Record<string, string> = { q, prefecture, genre, period, ...overrides };
+    const vals: Record<string, string> = { q, region, genre, period, ...overrides };
     const params = new URLSearchParams();
     Object.entries(vals).forEach(([k, v]) => { if (v) params.set(k, v); });
     router.push(`/concerts?${params.toString()}`);
@@ -75,9 +66,9 @@ export default function FilterForm({ q: initQ, prefecture: initPref, genre: init
         {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
       </select>
 
-      <select value={prefecture} onChange={(e) => { setPrefecture(e.target.value); push({ prefecture: e.target.value }); }} className={selectClass}>
+      <select value={region} onChange={(e) => { setRegion(e.target.value); push({ region: e.target.value }); }} className={selectClass}>
         <option value="">{t("nationwide")}</option>
-        {PREFECTURES.map((p) => <option key={p} value={p}>{p}</option>)}
+        {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
       </select>
 
       <select value={genre} onChange={(e) => { setGenre(e.target.value); push({ genre: e.target.value }); }} className={selectClass}>
