@@ -25,8 +25,10 @@ _TICKET_DOMAINS = {
     "l-tike.com",
     "pia.jp",
     "t.livepocket.jp",
+    "livepocket.jp",
     "kokucheese.com",
     "ptix.co",           # peatix の短縮ドメイン
+    "ticket.pia.jp",     # チケットぴあ詳細ページのドメイン
 }
 
 
@@ -183,12 +185,29 @@ def save_event_source(
         return False
 
 
+# ゲームタイトル正規化: 通称・略称 → 正式名称へのマッピング
+_TITLE_ALIASES: dict[str, str] = {
+    "ポケモン": "ポケットモンスター",
+    "ドラクエ": "ドラゴンクエスト",
+    "DQ": "ドラゴンクエスト",
+    "FF": "ファイナルファンタジー",
+    "ゼルダ": "ゼルダの伝説",
+    "マリオ": "スーパーマリオ",
+}
+
+
+def normalize_game_title(title: str) -> str:
+    """通称・略称を正式タイトルに変換する。"""
+    stripped = title.strip()
+    return _TITLE_ALIASES.get(stripped, stripped)
+
+
 def save_game_titles(db, event_id: str, titles: list[str]) -> None:
     """game_titles に find-or-create して event_game_titles に紐づける。"""
     for title in titles:
         if not title or not title.strip():
             continue
-        name = title.strip()
+        name = normalize_game_title(title)
         existing = db.table("game_titles").select("id").eq("title_name", name).limit(1).execute()
         if existing.data:
             gt_id = existing.data[0]["id"]
@@ -219,7 +238,7 @@ def find_or_create_organizer(
     name = organizer_name.strip()
     result = (
         db.table("organizers")
-        .select("id, x_url, website_url")
+        .select("id, x_url, official_site_url")
         .eq("name", name)
         .limit(1)
         .execute()
@@ -230,8 +249,8 @@ def find_or_create_organizer(
         updates: dict = {}
         if x_url and not result.data[0].get("x_url"):
             updates["x_url"] = x_url
-        if official_url and not result.data[0].get("website_url"):
-            updates["website_url"] = official_url
+        if official_url and not result.data[0].get("official_site_url"):
+            updates["official_site_url"] = official_url
         if updates:
             db.table("organizers").update(updates).eq("id", organizer_id).execute()
         return organizer_id
@@ -240,7 +259,7 @@ def find_or_create_organizer(
     if x_url:
         insert_data["x_url"] = x_url
     if official_url:
-        insert_data["website_url"] = official_url
+        insert_data["official_site_url"] = official_url
     created = db.table("organizers").insert(insert_data).execute()
     if created.data:
         return created.data[0]["id"]

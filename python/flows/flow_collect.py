@@ -1,8 +1,11 @@
 from datetime import datetime, timezone
 from prefect import flow, task
-from scrapers.scraper_2083web import Scraper2083Web
 from scrapers.scraper_teket import ScraperTeket
 from scrapers.scraper_eplus import ScraperEplus
+from scrapers.scraper_pia import ScraperPia
+from scrapers.scraper_lawson import ScraperLawson
+from scrapers.scraper_peatix import ScraperPeatix
+from scrapers.scraper_livepocket import ScraperLivepocket
 from scrapers.scraper_x_search import scrape_x_search
 from processor.claude_extractor import extract_event, score_announcement
 from validator.machine_validator import validate
@@ -25,11 +28,6 @@ FLOW_NAME = "minstrel-collect"
 
 
 @task
-def scrape_2083web() -> list[dict]:
-    return Scraper2083Web().scrape()
-
-
-@task
 def scrape_teket() -> list[dict]:
     return ScraperTeket().scrape()
 
@@ -37,6 +35,26 @@ def scrape_teket() -> list[dict]:
 @task
 def scrape_eplus() -> list[dict]:
     return ScraperEplus().scrape()
+
+
+@task
+def scrape_pia() -> list[dict]:
+    return ScraperPia().scrape()
+
+
+@task
+def scrape_lawson() -> list[dict]:
+    return ScraperLawson().scrape()
+
+
+@task
+def scrape_peatix() -> list[dict]:
+    return ScraperPeatix().scrape()
+
+
+@task
+def scrape_livepocket() -> list[dict]:
+    return ScraperLivepocket().scrape()
 
 
 @task
@@ -108,6 +126,7 @@ def upsert_to_db(events: list[dict]) -> int:
     db = get_client()
     inserted = 0
     merged = 0
+    review_queued = 0
 
     for event in events:
         source_url = event.get("_raw_source_url") or event.get("source_url") or ""
@@ -162,6 +181,13 @@ def upsert_to_db(events: list[dict]) -> int:
             if not event_name or not start_dt:
                 # 必須項目が欠けている場合は source のみ保存して review へ
                 save_event_source(db, source_url, source_name, event, None, "review_needed")
+                review_queued += 1
+                continue
+
+            # X ソースかつハードキーなし → チケット確認なしで新規作成しない
+            if source_name == "x_search" and not hard_keys:
+                save_event_source(db, source_url, source_name, event, None, "review_needed")
+                review_queued += 1
                 continue
 
             ticket_url = event.get("ticket_url")
@@ -211,7 +237,7 @@ def upsert_to_db(events: list[dict]) -> int:
             save_game_titles(db, new_event_id, event.get("game_titles") or [])
             inserted += 1
 
-    print(f"[db] inserted={inserted}, merged={merged}")
+    print(f"[db] inserted={inserted}, merged={merged}, review_queued={review_queued}")
     return inserted
 
 
@@ -285,15 +311,19 @@ def collect_flow():
     scraped_count = 0
     inserted_count = 0
     try:
-        raw_2083 = scrape_2083web()
         raw_teket = scrape_teket()
         raw_eplus = scrape_eplus()
+        raw_pia = scrape_pia()
+        raw_lawson = scrape_lawson()
+        raw_peatix = scrape_peatix()
+        raw_livepocket = scrape_livepocket()
         raw_x = scrape_x(since_days=3)
-        raw = raw_2083 + raw_teket + raw_eplus + raw_x
+        raw = raw_teket + raw_eplus + raw_pia + raw_lawson + raw_peatix + raw_livepocket + raw_x
         scraped_count = len(raw)
         print(
-            f"scraped: 2083web={len(raw_2083)}, teket={len(raw_teket)}, "
-            f"eplus={len(raw_eplus)}, x={len(raw_x)}, total={scraped_count}"
+            f"scraped: teket={len(raw_teket)}, "
+            f"eplus={len(raw_eplus)}, pia={len(raw_pia)}, lawson={len(raw_lawson)}, "
+            f"peatix={len(raw_peatix)}, livepocket={len(raw_livepocket)}, x={len(raw_x)}, total={scraped_count}"
         )
 
         extracted = extract_events(raw)
