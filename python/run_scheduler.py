@@ -101,7 +101,7 @@ if __name__ == "__main__":
         runner.add_flow(
             collect_broadcasts_weekly_flow,
             name="minstrel-collect-broadcasts-weekly-scheduled",
-            schedules=[CronSchedule(cron="0 7 * * 0", timezone="Asia/Tokyo")],
+            schedules=[CronSchedule(cron="0 7 */2 * *", timezone="Asia/Tokyo")],
         )
         runner.add_flow(
             post_monday_flow,

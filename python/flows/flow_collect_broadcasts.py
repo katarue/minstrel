@@ -2,7 +2,7 @@
 放送・配信情報収集フロー
 
 スケジュール:
-  - bangumi.org（地上波・BS）: 週1回・日曜 07:00 JST（2週間分を一括取得）
+  - bangumi.org（地上波・BS）: 2日おき 07:00 JST（直近10日分を取得）
   - X監視（放送局アカウント）: 毎日 08:00 JST（直近2日分）
 """
 from datetime import datetime, timezone
@@ -76,9 +76,9 @@ def collect_broadcasts_flow():
 
 @flow(name=FLOW_NAME_WEEKLY, log_prints=True)
 def collect_broadcasts_weekly_flow():
-    """週次実行: bangumi.org による地上波・BS 2週間分の収集"""
+    """2日おき実行: bangumi.org による地上波・BS 10日分の収集"""
     try:
-        broadcasts = fetch_bangumi(days_ahead=14)
+        broadcasts = fetch_bangumi(days_ahead=10)
         print(f"bangumi found: {len(broadcasts)}")
         inserted = upsert_broadcasts(broadcasts)
         print(f"inserted: {inserted} new broadcasts")
