@@ -373,10 +373,10 @@ export default async function Home() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(8rem, auto)" }}>
             {calendarDays.map((day, idx) => (
               <div key={idx}
-                className={`min-h-32 p-2 border-b border-r border-gold/20 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
+                className={`p-2 border-b border-r border-gold/20 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
                 {day && (
                   <>
                     <span className={`text-sm font-body font-medium ${
