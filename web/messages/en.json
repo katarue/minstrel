@@ -46,7 +46,7 @@
   },
   "concerts": {
     "title": "Concert List",
-    "searchPlaceholder": "Search by concert name",
+    "searchPlaceholder": "Search by concert name or game title",
     "searchButton": "Search",
     "allGenres": "All Genres",
     "nationwide": "All Regions",

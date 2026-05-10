@@ -46,7 +46,7 @@
   },
   "concerts": {
     "title": "コンサート一覧",
-    "searchPlaceholder": "コンサート名で検索",
+    "searchPlaceholder": "コンサート名・ゲームタイトルで検索",
     "searchButton": "検索",
     "allGenres": "すべてのジャンル",
     "nationwide": "全国",
