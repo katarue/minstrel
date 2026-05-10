@@ -9,7 +9,6 @@ type OrganizerRow = {
   name: string;
   x_url: string | null;
   x_profile_image_url: string | null;
-  x_last_active_at: string | null;
 };
 
 export default async function OrganizersPage() {
@@ -23,15 +22,33 @@ export default async function OrganizersPage() {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-    const { data, error } = await supabase
-      .from("organizers")
-      .select("id, name, x_url, x_profile_image_url, x_last_active_at")
-      .not("x_url", "is", null)
-      .gte("x_last_active_at", oneYearAgo.toISOString())
-      .order("name", { ascending: true });
+    // 過去1年以内にコンサートが登録されている organizer_id を抽出
+    const { data: recentEvents } = await supabase
+      .from("events")
+      .select("organizer_id")
+      .eq("is_published", true)
+      .gte("start_datetime", oneYearAgo.toISOString())
+      .not("organizer_id", "is", null);
 
-    if (error) console.error("Failed to fetch organizers:", error);
-    else organizers = (data ?? []) as OrganizerRow[];
+    const activeIds = [
+      ...new Set(
+        (recentEvents ?? [])
+          .map((e: { organizer_id: string | null }) => e.organizer_id)
+          .filter((id): id is string => id != null)
+      ),
+    ];
+
+    if (activeIds.length > 0) {
+      const { data, error } = await supabase
+        .from("organizers")
+        .select("id, name, x_url, x_profile_image_url")
+        .not("x_url", "is", null)
+        .in("id", activeIds)
+        .order("name", { ascending: true });
+
+      if (error) console.error("Failed to fetch organizers:", error);
+      else organizers = (data ?? []) as OrganizerRow[];
+    }
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
