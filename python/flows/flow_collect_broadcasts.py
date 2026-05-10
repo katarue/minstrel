@@ -1,21 +1,30 @@
 """
 放送・配信情報収集フロー
 
-スケジュール: 毎日 08:00 JST
+スケジュール:
+  - bangumi.org（地上波・BS）: 週1回・日曜 07:00 JST（2週間分を一括取得）
+  - X監視（放送局アカウント）: 毎日 08:00 JST（直近2日分）
 """
 from datetime import datetime, timezone
 
 from prefect import flow, task
 
+from scrapers.scraper_bangumi import scrape_bangumi
 from scrapers.scraper_broadcasts import scrape_broadcasts
 from utils.db import get_client
 
 FLOW_NAME = "minstrel-collect-broadcasts"
+FLOW_NAME_WEEKLY = "minstrel-collect-broadcasts-weekly"
 
 
 @task
-def fetch_broadcasts(since_days: int = 2) -> list[dict]:
+def fetch_x_broadcasts(since_days: int = 2) -> list[dict]:
     return scrape_broadcasts(since_days=since_days)
+
+
+@task
+def fetch_bangumi(days_ahead: int = 14) -> list[dict]:
+    return scrape_bangumi(days_ahead=days_ahead)
 
 
 @task
@@ -48,15 +57,29 @@ def upsert_broadcasts(broadcasts: list[dict]) -> int:
         if result.data:
             inserted += 1
 
-    print(f"[broadcasts] inserted={inserted}")
+    print(f"[broadcasts] upserted={inserted}")
     return inserted
 
 
 @flow(name=FLOW_NAME, log_prints=True)
 def collect_broadcasts_flow():
+    """毎日実行: X監視（放送局アカウント）による放送情報収集"""
     try:
-        broadcasts = fetch_broadcasts(since_days=2)
-        print(f"found: {len(broadcasts)} broadcast candidates")
+        broadcasts = fetch_x_broadcasts(since_days=2)
+        print(f"x_broadcasts found: {len(broadcasts)}")
+        inserted = upsert_broadcasts(broadcasts)
+        print(f"inserted: {inserted} new broadcasts")
+    except Exception as e:
+        print(f"[error] {e}")
+        raise
+
+
+@flow(name=FLOW_NAME_WEEKLY, log_prints=True)
+def collect_broadcasts_weekly_flow():
+    """週次実行: bangumi.org による地上波・BS 2週間分の収集"""
+    try:
+        broadcasts = fetch_bangumi(days_ahead=14)
+        print(f"bangumi found: {len(broadcasts)}")
         inserted = upsert_broadcasts(broadcasts)
         print(f"inserted: {inserted} new broadcasts")
     except Exception as e:
@@ -65,4 +88,4 @@ def collect_broadcasts_flow():
 
 
 if __name__ == "__main__":
-    collect_broadcasts_flow()
+    collect_broadcasts_weekly_flow()
