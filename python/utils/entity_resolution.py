@@ -185,12 +185,29 @@ def save_event_source(
         return False
 
 
+# ゲームタイトル正規化: 通称・略称 → 正式名称へのマッピング
+_TITLE_ALIASES: dict[str, str] = {
+    "ポケモン": "ポケットモンスター",
+    "ドラクエ": "ドラゴンクエスト",
+    "DQ": "ドラゴンクエスト",
+    "FF": "ファイナルファンタジー",
+    "ゼルダ": "ゼルダの伝説",
+    "マリオ": "スーパーマリオ",
+}
+
+
+def normalize_game_title(title: str) -> str:
+    """通称・略称を正式タイトルに変換する。"""
+    stripped = title.strip()
+    return _TITLE_ALIASES.get(stripped, stripped)
+
+
 def save_game_titles(db, event_id: str, titles: list[str]) -> None:
     """game_titles に find-or-create して event_game_titles に紐づける。"""
     for title in titles:
         if not title or not title.strip():
             continue
-        name = title.strip()
+        name = normalize_game_title(title)
         existing = db.table("game_titles").select("id").eq("title_name", name).limit(1).execute()
         if existing.data:
             gt_id = existing.data[0]["id"]
