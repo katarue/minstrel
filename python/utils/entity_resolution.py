@@ -205,15 +205,43 @@ def save_game_titles(db, event_id: str, titles: list[str]) -> None:
             pass  # 重複は無視
 
 
-def find_or_create_organizer(db, organizer_name: str) -> str | None:
-    """organizer_name で organizers テーブルを検索し、なければ作成して ID を返す。"""
+def find_or_create_organizer(
+    db,
+    organizer_name: str,
+    x_url: str | None = None,
+    official_url: str | None = None,
+) -> str | None:
+    """organizer_name で organizers テーブルを検索し、なければ作成して ID を返す。
+    x_url / official_url が渡された場合、未設定のフィールドのみ補完する。
+    """
     if not organizer_name or not organizer_name.strip():
         return None
     name = organizer_name.strip()
-    result = db.table("organizers").select("id").eq("name", name).limit(1).execute()
+    result = (
+        db.table("organizers")
+        .select("id, x_url, website_url")
+        .eq("name", name)
+        .limit(1)
+        .execute()
+    )
     if result.data:
-        return result.data[0]["id"]
-    created = db.table("organizers").insert({"name": name}).execute()
+        organizer_id: str = result.data[0]["id"]
+        # 未設定フィールドのみ補完（既存値は上書きしない）
+        updates: dict = {}
+        if x_url and not result.data[0].get("x_url"):
+            updates["x_url"] = x_url
+        if official_url and not result.data[0].get("website_url"):
+            updates["website_url"] = official_url
+        if updates:
+            db.table("organizers").update(updates).eq("id", organizer_id).execute()
+        return organizer_id
+
+    insert_data: dict = {"name": name}
+    if x_url:
+        insert_data["x_url"] = x_url
+    if official_url:
+        insert_data["website_url"] = official_url
+    created = db.table("organizers").insert(insert_data).execute()
     if created.data:
         return created.data[0]["id"]
     return None
