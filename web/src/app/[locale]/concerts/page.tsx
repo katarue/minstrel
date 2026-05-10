@@ -122,7 +122,28 @@ export default async function ConcertsPage({
         .eq("is_published", true)
         .order("start_datetime", { ascending });
 
-      if (q) query = query.ilike("event_name", `%${q}%`);
+      if (q) {
+        const { data: gtData } = await supabase
+          .from("game_titles")
+          .select("id")
+          .or(`title_name.ilike.%${q}%,english_name.ilike.%${q}%`);
+        const gtIds = (gtData ?? []).map((g: { id: string }) => g.id);
+
+        let matchedEventIds: string[] = [];
+        if (gtIds.length > 0) {
+          const { data: egtData } = await supabase
+            .from("event_game_titles")
+            .select("event_id")
+            .in("game_title_id", gtIds);
+          matchedEventIds = (egtData ?? []).map((e: { event_id: string }) => e.event_id);
+        }
+
+        if (matchedEventIds.length > 0) {
+          query = query.or(`event_name.ilike.%${q}%,id.in.(${matchedEventIds.join(",")})`);
+        } else {
+          query = query.ilike("event_name", `%${q}%`);
+        }
+      }
       if (prefecture) {
         query = query.eq("prefecture", prefecture);
       } else if (region && region in REGION_PREFECTURES) {
