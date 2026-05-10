@@ -81,7 +81,7 @@ def _extract_urls_from_soup(soup: BeautifulSoup) -> tuple[str | None, str | None
 
 class ScraperLivepocket(BaseScraper):
     source_name = "livepocket"
-    source_rank = "B"
+    source_rank = "A"
 
     def scrape(self) -> list[dict]:
         try:
