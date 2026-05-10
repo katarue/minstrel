@@ -5,7 +5,7 @@ export default createMiddleware(routing);
 
 export const config = {
   matcher: [
-    // API routes and static files are excluded
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    // API routes, admin, and static files are excluded
+    "/((?!api|admin|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };

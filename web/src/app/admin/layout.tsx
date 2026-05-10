@@ -1,0 +1,20 @@
+import type { ReactNode } from "react";
+
+export const metadata = { title: "管理ダッシュボード – Minstrel" };
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="ja">
+      <body className="bg-parchment-dark min-h-screen font-body text-ink-body">
+        <header className="bg-parchment border-b border-gold/30 px-6 py-3 flex items-center gap-4">
+          <span className="font-heading text-bordeaux text-lg font-bold tracking-widest">
+            Minstrel
+          </span>
+          <span className="text-gold/60 text-sm">|</span>
+          <span className="text-sm text-ink-body/60">管理ダッシュボード</span>
+        </header>
+        <main className="max-w-5xl mx-auto px-4 md:px-8 py-8">{children}</main>
+      </body>
+    </html>
+  );
+}
