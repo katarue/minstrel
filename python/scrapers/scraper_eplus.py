@@ -23,6 +23,8 @@ _SKIP_DOMAINS = {
     "google.com", "maps.google.com", "maps.app.goo.gl",
     "apple.com", "goo.gl",
     "facebook.com", "fb.com",
+    "twitter.com",   # x_url として取れないものはスキップ
+    "x.com",
     "instagram.com",
     "youtube.com", "youtu.be",
     "line.me", "lin.ee",
