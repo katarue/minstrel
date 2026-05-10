@@ -49,6 +49,7 @@ export default function FilterForm({ q: initQ, prefecture: initPref, genre: init
     { value: "", label: tPeriod("all") },
     { value: "this_month", label: tPeriod("thisMonth") },
     { value: "next_month", label: tPeriod("nextMonth") },
+    { value: "past", label: tPeriod("past") },
   ];
 
   const push = (overrides: Partial<Record<string, string>> = {}) => {

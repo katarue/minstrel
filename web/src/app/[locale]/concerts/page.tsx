@@ -45,6 +45,7 @@ function toGenre(val: string | null | undefined): Genre | undefined {
 function getPeriodRange(period: string): { gte?: string; lt?: string } {
   const now = new Date();
   if (period === "upcoming") return { gte: now.toISOString() };
+  if (period === "past") return { lt: now.toISOString() };
   if (period === "this_month") {
     return {
       gte: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
@@ -109,6 +110,7 @@ export default async function ConcertsPage({
       if (error) console.error("Failed to fetch broadcasts:", error);
       else broadcasts = (data ?? []) as unknown as BroadcastRow[];
     } else {
+      const ascending = period !== "past";
       let query = supabase
         .from("events")
         .select(`
@@ -118,7 +120,7 @@ export default async function ConcertsPage({
           event_game_titles ( game_titles ( title_name, english_name ) )
         `)
         .eq("is_published", true)
-        .order("start_datetime", { ascending: true });
+        .order("start_datetime", { ascending });
 
       if (q) query = query.ilike("event_name", `%${q}%`);
       if (prefecture) {
@@ -242,6 +244,7 @@ export default async function ConcertsPage({
                     href={`/events/${event.id}`}
                     gameTitles={gameTitles}
                     tourCount={tourCount}
+                    isPast={period === "past"}
                   />
                 );
               })}

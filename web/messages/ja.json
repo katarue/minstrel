@@ -74,7 +74,8 @@
     "upcoming": "開催予定",
     "all": "全期間",
     "thisMonth": "今月",
-    "nextMonth": "来月"
+    "nextMonth": "来月",
+    "past": "過去のコンサート"
   },
   "organizers": {
     "title": "演奏団体",

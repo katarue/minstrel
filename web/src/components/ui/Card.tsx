@@ -19,6 +19,7 @@ interface CardProps {
   href: string;
   gameTitles?: string[];
   tourCount?: number;
+  isPast?: boolean;
 }
 
 const genreLabels: Record<Genre, string> = {
@@ -30,7 +31,7 @@ const genreLabels: Record<Genre, string> = {
   other:     "その他",
 };
 
-export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount }: CardProps) {
+export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount, isPast }: CardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + (prefecture ? ` ${prefecture}` : ""))}`;
 
   return (
@@ -42,7 +43,12 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
         {/* 画像エリア（16:9）*/}
         <div className="relative w-full aspect-video bg-parchment-dark">
           {imageUrl ? (
-            <Image src={imageUrl} alt={title} fill className="object-cover" />
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              className={`object-cover${isPast ? " grayscale opacity-70" : ""}`}
+            />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="font-heading text-gold/40 text-5xl select-none" aria-hidden>
@@ -63,6 +69,13 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
           {genre && (
             <div className="absolute top-2 right-2">
               <Badge variant={genre}>{genreLabels[genre]}</Badge>
+            </div>
+          )}
+          {isPast && (
+            <div className="absolute bottom-2 right-2">
+              <span className="font-body text-xs font-medium px-2 py-0.5 rounded bg-black/50 text-white/80">
+                終了
+              </span>
             </div>
           )}
         </div>
