@@ -221,7 +221,7 @@ def find_or_create_organizer(
     name = organizer_name.strip()
     result = (
         db.table("organizers")
-        .select("id, x_url, website_url")
+        .select("id, x_url, official_site_url")
         .eq("name", name)
         .limit(1)
         .execute()
@@ -232,8 +232,8 @@ def find_or_create_organizer(
         updates: dict = {}
         if x_url and not result.data[0].get("x_url"):
             updates["x_url"] = x_url
-        if official_url and not result.data[0].get("website_url"):
-            updates["website_url"] = official_url
+        if official_url and not result.data[0].get("official_site_url"):
+            updates["official_site_url"] = official_url
         if updates:
             db.table("organizers").update(updates).eq("id", organizer_id).execute()
         return organizer_id
@@ -242,7 +242,7 @@ def find_or_create_organizer(
     if x_url:
         insert_data["x_url"] = x_url
     if official_url:
-        insert_data["website_url"] = official_url
+        insert_data["official_site_url"] = official_url
     created = db.table("organizers").insert(insert_data).execute()
     if created.data:
         return created.data[0]["id"]
