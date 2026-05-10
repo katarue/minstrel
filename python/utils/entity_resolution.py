@@ -25,8 +25,10 @@ _TICKET_DOMAINS = {
     "l-tike.com",
     "pia.jp",
     "t.livepocket.jp",
+    "livepocket.jp",
     "kokucheese.com",
     "ptix.co",           # peatix の短縮ドメイン
+    "ticket.pia.jp",     # チケットぴあ詳細ページのドメイン
 }
 
 
