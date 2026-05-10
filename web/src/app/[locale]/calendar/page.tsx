@@ -69,7 +69,7 @@ export default async function CalendarPage({
         <div className="grid grid-cols-7">
           {cells.map((day, idx) => (
             <div key={idx}
-              className={`min-h-24 p-2 border-b border-r border-gold/20 last:border-r-0 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
+              className={`min-h-32 p-2 border-b border-r border-gold/20 last:border-r-0 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
               {day && (
                 <>
                   <span className={`text-sm font-body font-medium ${idx % 7 === 0 ? "text-error" : idx % 7 === 6 ? "text-info" : "text-ink-heading"}`}>
