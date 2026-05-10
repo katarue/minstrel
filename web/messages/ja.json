@@ -51,7 +51,16 @@
     "allGenres": "すべてのジャンル",
     "nationwide": "全国",
     "resultsCount": "{count} 件",
-    "empty": "条件に合うコンサートが見つかりませんでした"
+    "empty": "条件に合うコンサートが見つかりませんでした",
+    "tabConcerts": "コンサート",
+    "tabBroadcasts": "放送・配信"
+  },
+  "broadcasts": {
+    "empty": "現在放送予定の情報はありません",
+    "replay": "再放送",
+    "vod": "見逃し配信を見る",
+    "homeTitle": "放送・配信情報",
+    "seeAll": "すべて見る →"
   },
   "genre": {
     "orchestra": "オーケストラ",
