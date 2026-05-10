@@ -5,6 +5,7 @@ from scrapers.scraper_teket import ScraperTeket
 from scrapers.scraper_eplus import ScraperEplus
 from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
+from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_x_search import scrape_x_search
 from processor.claude_extractor import extract_event, score_announcement
 from validator.machine_validator import validate
@@ -49,6 +50,11 @@ def scrape_pia() -> list[dict]:
 @task
 def scrape_lawson() -> list[dict]:
     return ScraperLawson().scrape()
+
+
+@task
+def scrape_peatix() -> list[dict]:
+    return ScraperPeatix().scrape()
 
 
 @task
@@ -302,13 +308,14 @@ def collect_flow():
         raw_eplus = scrape_eplus()
         raw_pia = scrape_pia()
         raw_lawson = scrape_lawson()
+        raw_peatix = scrape_peatix()
         raw_x = scrape_x(since_days=3)
-        raw = raw_2083 + raw_teket + raw_eplus + raw_pia + raw_lawson + raw_x
+        raw = raw_2083 + raw_teket + raw_eplus + raw_pia + raw_lawson + raw_peatix + raw_x
         scraped_count = len(raw)
         print(
             f"scraped: 2083web={len(raw_2083)}, teket={len(raw_teket)}, "
             f"eplus={len(raw_eplus)}, pia={len(raw_pia)}, lawson={len(raw_lawson)}, "
-            f"x={len(raw_x)}, total={scraped_count}"
+            f"peatix={len(raw_peatix)}, x={len(raw_x)}, total={scraped_count}"
         )
 
         extracted = extract_events(raw)
