@@ -77,11 +77,10 @@ def _build_tweet(header: str, events: list[dict], empty_msg: str) -> str:
 def post_monday_flow():
     """月曜投稿: 今週のゲーム音楽コンサート"""
     events = fetch_this_week_events()
-    text = _build_tweet(
-        "🎵 今週のゲーム音楽コンサート",
-        events,
-        "今週は登録コンサートがありません。",
-    )
+    if not events:
+        print("[post_monday] 今週のイベントなし → 投稿スキップ")
+        return
+    text = _build_tweet("🎵 今週のゲーム音楽コンサート", events, "")
     print(f"[post_monday] {len(events)} events, {len(text)} chars")
     post_tweet(text)
 
@@ -90,10 +89,9 @@ def post_monday_flow():
 def post_friday_flow():
     """金曜投稿: 近日開催のゲーム音楽コンサート（30日以内）"""
     events = fetch_upcoming_events()
-    text = _build_tweet(
-        "🎮 近日開催のゲーム音楽コンサート",
-        events,
-        "近日開催の登録コンサートはありません。",
-    )
+    if not events:
+        print("[post_friday] 近日イベントなし → 投稿スキップ")
+        return
+    text = _build_tweet("🎮 近日開催のゲーム音楽コンサート", events, "")
     print(f"[post_friday] {len(events)} events, {len(text)} chars")
     post_tweet(text)
