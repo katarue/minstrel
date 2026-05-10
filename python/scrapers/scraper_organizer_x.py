@@ -9,7 +9,8 @@ import requests
 
 from utils.config import TWITTERAPI_IO_KEY
 
-API_URL = "https://api.twitterapi.io/twitter/tweet/advanced_search"
+# ユーザー自身のタイムライン取得（1リクエストでアイコンURL＋最終投稿日を取得）
+USER_TWEETS_URL = "https://api.twitterapi.io/twitter/user/last_tweets"
 
 
 def _extract_handle(x_url: str) -> str | None:
@@ -18,29 +19,36 @@ def _extract_handle(x_url: str) -> str | None:
     return handle if handle else None
 
 
-def _fetch_latest_tweet(handle: str) -> dict | None:
+def _fetch_user_data(handle: str) -> tuple[str | None, str | None]:
+    """(profile_image_url, last_tweet_created_at) を返す。取得失敗時は (None, None)。"""
     if not TWITTERAPI_IO_KEY:
         print("[organizer_x] TWITTERAPI_IO_KEY 未設定のためスキップ")
-        return None
+        return None, None
 
     headers = {"X-API-Key": TWITTERAPI_IO_KEY}
-    params = {"query": f"from:{handle} -is:retweet", "queryType": "Latest"}
 
     try:
-        resp = requests.get(API_URL, headers=headers, params=params, timeout=15)
+        resp = requests.get(USER_TWEETS_URL, headers=headers, params={"userName": handle, "count": 1}, timeout=15)
         resp.raise_for_status()
         data = resp.json()
         tweets = data.get("tweets") or []
-        return tweets[0] if tweets else None
+        if not tweets:
+            return None, None
+
+        tweet = tweets[0]
+        last_created_at = tweet.get("createdAt") or tweet.get("created_at")
+        author = tweet.get("author") or {}
+        raw_img = author.get("profileImageUrl") or author.get("profile_image_url")
+        profile_image_url = raw_img.replace("_normal", "_400x400") if raw_img else None
+        return profile_image_url, last_created_at
+
     except requests.exceptions.HTTPError as e:
-        if e.response is not None and e.response.status_code == 429:
-            print(f"[organizer_x] @{handle}: rate limited")
-        else:
-            print(f"[organizer_x] @{handle}: HTTP error {e}")
-        return None
+        code = e.response.status_code if e.response is not None else "?"
+        print(f"[organizer_x] @{handle}: HTTP {code}")
+        return None, None
     except Exception as e:
         print(f"[organizer_x] @{handle}: error {e}")
-        return None
+        return None, None
 
 
 def scrape_organizer_x() -> int:
@@ -67,33 +75,27 @@ def scrape_organizer_x() -> int:
             continue
 
         print(f"[organizer_x] @{handle} ({org['name']}) 取得中...")
-        tweet = _fetch_latest_tweet(handle)
+        profile_image_url, last_created_at = _fetch_user_data(handle)
 
-        if tweet:
-            author = tweet.get("author", {})
-            profile_image_url = author.get("profileImageUrl")
-            created_at = tweet.get("createdAt", "")
+        update_data: dict = {}
+        if profile_image_url:
+            update_data["x_profile_image_url"] = profile_image_url
 
+        if last_created_at:
             try:
-                last_active = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                last_active = None
-
-            update_data: dict = {}
-            if profile_image_url:
-                # _normal (48px) → _400x400 (高解像度)
-                update_data["x_profile_image_url"] = profile_image_url.replace("_normal", "_400x400")
-            if last_active:
+                last_active = datetime.fromisoformat(last_created_at.replace("Z", "+00:00"))
                 update_data["x_last_active_at"] = last_active.isoformat()
+            except (ValueError, AttributeError):
+                pass
 
-            if update_data:
-                db.table("organizers").update(update_data).eq("id", org["id"]).execute()
-                print(f"[organizer_x] ✓ {org['name']}: 最終投稿 {last_active}")
-                updated += 1
+        if update_data:
+            db.table("organizers").update(update_data).eq("id", org["id"]).execute()
+            print(f"[organizer_x] ✓ {org['name']}: アイコン={bool(profile_image_url)} 最終投稿={last_created_at or '不明'}")
+            updated += 1
         else:
-            print(f"[organizer_x] ✗ @{handle}: ツイートが取得できませんでした")
+            print(f"[organizer_x] ✗ @{handle}: データ取得できず")
 
-        time.sleep(3)
+        time.sleep(10)
 
     print(f"[organizer_x] 更新完了: {updated}/{len(organizers)} 件")
     return updated
