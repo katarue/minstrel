@@ -79,7 +79,8 @@
   },
   "organizers": {
     "title": "演奏団体",
-    "empty": "現在登録されている演奏団体はありません",
+    "activeGroupsNote": "公式 X アカウントで直近1年以内に活動が確認できた演奏団体・アーティストを掲載しています。",
+    "empty": "現在掲載対象の演奏団体はありません",
     "region": "拠点",
     "officialSite": "公式サイト",
     "officialX": "公式X",

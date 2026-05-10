@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
         hostname: "images.igdb.com",
         pathname: "/igdb/image/upload/**",
       },
+      {
+        protocol: "https",
+        hostname: "pbs.twimg.com",
+        pathname: "/profile_images/**",
+      },
     ],
   },
 };

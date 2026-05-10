@@ -17,6 +17,8 @@ Minstrel スケジューラー
   # 即時テスト実行
   cd python && .venv/Scripts/python run_scheduler.py --run-now
   cd python && .venv/Scripts/python run_scheduler.py --run-broadcasts
+  cd python && .venv/Scripts/python run_scheduler.py --run-broadcasts-weekly
+  cd python && .venv/Scripts/python run_scheduler.py --run-organizer-x
   cd python && .venv/Scripts/python run_scheduler.py --run-post-monday
   cd python && .venv/Scripts/python run_scheduler.py --run-post-friday
 """
@@ -34,6 +36,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from flows.flow_collect import collect_flow
 from flows.flow_collect_broadcasts import collect_broadcasts_flow, collect_broadcasts_weekly_flow
+from flows.flow_collect_organizer_x import collect_organizer_x_flow
 from flows.flow_post_weekly import post_friday_flow, post_monday_flow
 
 if __name__ == "__main__":
@@ -41,6 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-now", action="store_true", help="収集フロー即時実行")
     parser.add_argument("--run-broadcasts", action="store_true", help="放送収集フロー即時実行（X監視）")
     parser.add_argument("--run-broadcasts-weekly", action="store_true", help="bangumi.org 週次収集フロー即時実行")
+    parser.add_argument("--run-organizer-x", action="store_true", help="演奏団体 X プロフィール収集フロー即時実行")
     parser.add_argument("--run-post-monday", action="store_true", help="月曜投稿フロー即時実行")
     parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
     parser.add_argument("--serve-scheduled", action="store_true", help="収集フロー: 3日おき09:00 JST")
@@ -57,6 +61,8 @@ if __name__ == "__main__":
         collect_broadcasts_flow()
     elif args.run_broadcasts_weekly:
         collect_broadcasts_weekly_flow()
+    elif args.run_organizer_x:
+        collect_organizer_x_flow()
     elif args.run_post_monday:
         post_monday_flow()
     elif args.run_post_friday:
@@ -102,6 +108,11 @@ if __name__ == "__main__":
             collect_broadcasts_weekly_flow,
             name="minstrel-collect-broadcasts-weekly-scheduled",
             schedules=[CronSchedule(cron="0 7 */2 * *", timezone="Asia/Tokyo")],
+        )
+        runner.add_flow(
+            collect_organizer_x_flow,
+            name="minstrel-collect-organizer-x-scheduled",
+            schedules=[CronSchedule(cron="0 6 1 * *", timezone="Asia/Tokyo")],
         )
         runner.add_flow(
             post_monday_flow,

@@ -78,8 +78,9 @@
     "past": "Past Concerts"
   },
   "organizers": {
-    "title": "Organizers",
-    "empty": "No organizers are currently registered.",
+    "title": "Performing Groups",
+    "activeGroupsNote": "Showing performing groups and artists with confirmed activity on their official X account within the past year.",
+    "empty": "No performing groups are currently listed.",
     "region": "Region",
     "officialSite": "Official Site",
     "officialX": "Official X",
