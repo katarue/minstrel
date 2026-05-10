@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from prefect import flow, task
 from scrapers.scraper_2083web import Scraper2083Web
 from scrapers.scraper_teket import ScraperTeket
+from scrapers.scraper_eplus import ScraperEplus
 from scrapers.scraper_x_search import scrape_x_search
 from processor.claude_extractor import extract_event, score_announcement
 from validator.machine_validator import validate
@@ -31,6 +32,11 @@ def scrape_2083web() -> list[dict]:
 @task
 def scrape_teket() -> list[dict]:
     return ScraperTeket().scrape()
+
+
+@task
+def scrape_eplus() -> list[dict]:
+    return ScraperEplus().scrape()
 
 
 @task
@@ -67,6 +73,11 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
             # ticket_url がスクレイパーから直接提供されている場合は優先使用
             if raw.get("ticket_url") and not extracted.get("ticket_url"):
                 extracted["ticket_url"] = raw["ticket_url"]
+            # スクレイパーが抽出したオーガナイザーURL（eplus 等）
+            if raw.get("_organizer_x_url"):
+                extracted["_organizer_x_url"] = raw["_organizer_x_url"]
+            if raw.get("_organizer_official_url"):
+                extracted["_organizer_official_url"] = raw["_organizer_official_url"]
             results.append(extracted)
 
     if skipped_low_score:
@@ -105,6 +116,9 @@ def upsert_to_db(events: list[dict]) -> int:
 
         if not source_url:
             continue
+
+        organizer_x_url = event.pop("_organizer_x_url", None)
+        organizer_official_url = event.pop("_organizer_official_url", None)
 
         # ── step 1: source_url が既存なら完全重複 → スキップ ──────────────
         # save_event_source が False を返したら既処理
@@ -152,7 +166,12 @@ def upsert_to_db(events: list[dict]) -> int:
 
             ticket_url = event.get("ticket_url")
             confidence = event.get("confidence_score")
-            organizer_id = find_or_create_organizer(db, event.get("organizer_name"))
+            organizer_id = find_or_create_organizer(
+                db,
+                event.get("organizer_name"),
+                x_url=organizer_x_url,
+                official_url=organizer_official_url,
+            )
             row = {
                 "event_name": event_name,
                 "start_datetime": start_dt,
@@ -268,12 +287,13 @@ def collect_flow():
     try:
         raw_2083 = scrape_2083web()
         raw_teket = scrape_teket()
+        raw_eplus = scrape_eplus()
         raw_x = scrape_x(since_days=3)
-        raw = raw_2083 + raw_teket + raw_x
+        raw = raw_2083 + raw_teket + raw_eplus + raw_x
         scraped_count = len(raw)
         print(
             f"scraped: 2083web={len(raw_2083)}, teket={len(raw_teket)}, "
-            f"x={len(raw_x)}, total={scraped_count}"
+            f"eplus={len(raw_eplus)}, x={len(raw_x)}, total={scraped_count}"
         )
 
         extracted = extract_events(raw)
