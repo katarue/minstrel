@@ -32,7 +32,7 @@ EXTRACTION_SCHEMA = {
     "start_datetime": "ISO8601 string or null",
     "end_datetime": "ISO8601 string or null",
     "venue": "string or null",
-    "prefecture": "string or null",
+    "prefecture": "都道府県名（例: 東京都、神奈川県、大阪府）or null。「関東」「関西」「中部」などの地域名は不可。会場住所から都道府県を推定すること。不明な場合は null。",
     "organizer_name": "string or null",
     "organizer_official_url": "主催者・演奏団体の公式ウェブサイトURL（チケットサイト・SNS・会員管理サービスは除く）or null",
     "ticket_url": "string or null",
