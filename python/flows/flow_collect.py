@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+import json
+import os
+from datetime import datetime, timezone, timedelta
 from prefect import flow, task
 from scrapers.scraper_teket import ScraperTeket
 from scrapers.scraper_eplus import ScraperEplus
@@ -6,7 +8,7 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
-from scrapers.scraper_x_search import scrape_x_search
+from scrapers.scraper_x_search import scrape_x_search, _FOLLOWING_CACHE_PATH
 from processor.claude_extractor import extract_event, score_announcement
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
@@ -55,6 +57,31 @@ def scrape_peatix() -> list[dict]:
 @task
 def scrape_livepocket() -> list[dict]:
     return ScraperLivepocket().scrape()
+
+
+@task
+def sync_following_if_stale(max_age_days: int = 7) -> None:
+    """フォローリスト JSON が max_age_days 以上古い場合、または存在しない場合に再同期する。"""
+    stale = True
+    if os.path.exists(_FOLLOWING_CACHE_PATH):
+        try:
+            with open(_FOLLOWING_CACHE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            synced_at = data.get("synced_at")
+            if synced_at:
+                age = datetime.now(timezone.utc) - datetime.fromisoformat(synced_at)
+                stale = age > timedelta(days=max_age_days)
+        except Exception:
+            stale = True
+
+    if stale:
+        print("[sync_following] フォローリストが古いため再同期します")
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from scripts.sync_x_following import run as sync_run
+        sync_run()
+    else:
+        print("[sync_following] フォローリストは最新です（スキップ）")
 
 
 @task
@@ -309,6 +336,7 @@ def collect_flow():
     scraped_count = 0
     inserted_count = 0
     try:
+        sync_following_if_stale()
         raw_teket = scrape_teket()
         raw_eplus = scrape_eplus()
         raw_pia = scrape_pia()

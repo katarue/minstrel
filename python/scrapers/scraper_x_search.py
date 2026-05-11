@@ -1,9 +1,16 @@
+import json
+import os
 import time
 from datetime import datetime, timezone, timedelta
 
 import requests
 
 from utils.config import TWITTERAPI_IO_KEY
+
+_FOLLOWING_CACHE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data", "x_following_handles.json",
+)
 
 API_URL = "https://api.twitterapi.io/twitter/tweet/advanced_search"
 
@@ -129,6 +136,25 @@ def _build_from_query(handles: list[str], since_days: int) -> str | None:
     return f"({from_parts}) -is:retweet"
 
 
+def _load_following_handles() -> list[str]:
+    """
+    data/x_following_handles.json から @minstrel_live のフォローリストを読み込む。
+    ファイルが存在しない場合は空リストを返す（sync_x_following.py を先に実行すること）。
+    """
+    try:
+        if not os.path.exists(_FOLLOWING_CACHE_PATH):
+            print("[x_search] x_following_handles.json 未生成。python scripts/sync_x_following.py を先に実行してください。")
+            return []
+        with open(_FOLLOWING_CACHE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        handles = data.get("handles", [])
+        print(f"[x_search] フォローリスト読み込み: {len(handles)} アカウント (synced_at: {data.get('synced_at', 'unknown')})")
+        return handles
+    except Exception as e:
+        print(f"[x_search] failed to load following handles: {e}")
+        return []
+
+
 def scrape_x_search(since_days: int = 3) -> list[dict]:
     """
     複数クエリでゲーム音楽コンサート関連ツイートを収集。
@@ -172,6 +198,30 @@ def scrape_x_search(since_days: int = 3) -> list[dict]:
                 print(f"[x_search] monitored accounts ({len(handles)}) => {new_count} new tweets")
             except Exception as e:
                 print(f"[x_search] error for monitored accounts: {e}")
+
+    # ── 3. フォローリスト（バッチ from: 指定）────────────────────────
+    following_handles = _load_following_handles()
+    monitored_set = set(handles)
+    new_following = [h for h in following_handles if h not in monitored_set]
+    BATCH_SIZE = 20
+    for i in range(0, len(new_following), BATCH_SIZE):
+        batch = new_following[i:i + BATCH_SIZE]
+        from_query = _build_from_query(batch, since_days)
+        if from_query:
+            try:
+                tweets = search_tweets(from_query, since_days=since_days)
+                new_count = 0
+                for tweet in tweets:
+                    tid = tweet.get("tweet_id", tweet["source_url"])
+                    if tid not in seen_ids:
+                        seen_ids.add(tid)
+                        tweet["source_name"] = "x_followed"
+                        all_results.append(tweet)
+                        new_count += 1
+                print(f"[x_search] following batch {i // BATCH_SIZE + 1} ({len(batch)} accounts) => {new_count} new tweets")
+            except Exception as e:
+                print(f"[x_search] error for following batch {i // BATCH_SIZE + 1}: {e}")
+            time.sleep(3)
 
     print(f"[x_search] total unique tweets: {len(all_results)}")
     return all_results
