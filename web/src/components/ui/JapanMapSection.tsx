@@ -6,10 +6,10 @@ import type { Region } from "@/utils/regions";
 // 地図画像上の各地域ボタンの位置（画像全体に対するパーセンテージ）
 const REGION_POSITIONS: Record<Region, { top: string; left: string }> = {
   北海道:       { top: "22%", left: "75%" },
-  東北:         { top: "39%", left: "69%" },
-  関東:         { top: "62%", left: "62%" },
-  中部:         { top: "60%", left: "52%" },
-  関西:         { top: "63%", left: "42%" },
+  東北:         { top: "41%", left: "68%" },
+  関東:         { top: "60%", left: "62%" },
+  中部:         { top: "61%", left: "52%" },
+  関西:         { top: "64%", left: "42%" },
   "中国・四国": { top: "69%", left: "28%" },
   "九州・沖縄": { top: "77%", left: "14%" },
 };
