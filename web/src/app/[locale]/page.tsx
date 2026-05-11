@@ -265,7 +265,7 @@ export default async function Home() {
                 );
               })}
             </div>
-            <div className="mt-10 flex justify-center">
+            <div className="mt-10 flex justify-end">
               <Link
                 href="/concerts"
                 className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
@@ -340,17 +340,9 @@ export default async function Home() {
 
       {/* Section 4: カレンダー */}
       <section className="py-12 border-b border-gold/30">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold">
-            {t("calendarTitle")}
-          </h2>
-          <Link
-            href="/calendar"
-            className="font-body text-bordeaux hover:text-bordeaux/70 text-sm transition-colors"
-          >
-            {t("viewCalendar")}
-          </Link>
-        </div>
+        <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
+          {t("calendarTitle")}
+        </h2>
 
         <p className="font-heading text-ink-heading text-base font-semibold mb-4">{monthLabel}</p>
 
@@ -389,6 +381,14 @@ export default async function Home() {
               </div>
             ))}
           </div>
+        </div>
+        <div className="mt-8 flex justify-end">
+          <Link
+            href="/calendar"
+            className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
+          >
+            {t("viewCalendar")} →
+          </Link>
         </div>
       </section>
 
