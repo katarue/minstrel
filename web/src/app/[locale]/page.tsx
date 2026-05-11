@@ -5,6 +5,7 @@ import { formatDateShort } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
+import HeroSearch from "./HeroSearch";
 import { REGIONS, prefectureToRegion } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
@@ -222,6 +223,7 @@ export default async function Home() {
           <p className="font-body text-ink-body/80 text-base md:text-lg max-w-xl leading-relaxed">
             {t("heroDescription")}
           </p>
+          <HeroSearch />
         </div>
       </section>
 
