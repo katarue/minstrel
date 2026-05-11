@@ -51,8 +51,9 @@ export default function JapanMapSection({ regionCounts }: Props) {
               <p className={`font-heading text-base font-semibold leading-tight ${count > 0 ? "text-ink-heading" : "text-ink-body/40"}`}>
                 {region}
               </p>
-              <p className={`font-body text-lg font-bold mt-0.5 tabular-nums ${count > 0 ? "text-bordeaux" : "text-ink-body/30"}`}>
-                {count > 0 ? `${count}件` : "0件"}
+              <p className={`mt-0.5 ${count > 0 ? "text-bordeaux" : "text-ink-body/30"}`}>
+                <span className="font-sans text-2xl font-bold tabular-nums">{count}</span>
+                <span className="font-body text-base font-medium">件</span>
               </p>
             </Link>
           );
