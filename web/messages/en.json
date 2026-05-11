@@ -43,7 +43,8 @@
     "addToGoogleCal": "Add to Google Calendar",
     "addToIcal": "Add to Calendar (.ics)",
     "mapsLink": "View on map",
-    "tourOtherDates": "Other dates in this tour"
+    "tourOtherDates": "Other dates in this tour",
+    "performanceList": "Performances"
   },
   "concerts": {
     "title": "Concert List",
