@@ -284,6 +284,7 @@ export default async function Home() {
         {topTitles.length === 0 ? (
           <p className="font-body text-ink-body/70 text-sm">{t("empty")}</p>
         ) : (
+          <>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-5">
             {topTitles.map((title) => (
               <Link
@@ -316,6 +317,15 @@ export default async function Home() {
               </Link>
             ))}
           </div>
+          <div className="mt-8 flex justify-end">
+            <Link
+              href="/titles"
+              className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
+            >
+              {t("seeAll")} →
+            </Link>
+          </div>
+          </>
         )}
       </section>
 
