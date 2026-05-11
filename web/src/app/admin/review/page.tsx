@@ -83,6 +83,35 @@ export default async function ReviewPage() {
         </span>
       </div>
 
+      {/* ボタンの説明 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-parchment rounded-md border border-gold/30 px-5 py-4 space-y-2">
+          <p className="text-sm font-medium text-ink-heading flex items-center gap-2">
+            <span className="inline-block bg-bordeaux text-parchment text-xs px-2 py-0.5 rounded">採用</span>
+            を押すと…
+          </p>
+          <ol className="text-xs text-ink-body/70 space-y-1.5 list-none">
+            <li className="flex gap-2"><span className="text-bordeaux font-bold shrink-0">1.</span>同じイベント名・同じ日付のイベントがすでにDBにあるか自動検索（重複チェック）</li>
+            <li className="flex gap-2"><span className="text-bordeaux font-bold shrink-0">2a.</span>重複あり → 既存イベントにこのツイートを紐付けて終了（新規作成しない）</li>
+            <li className="flex gap-2"><span className="text-bordeaux font-bold shrink-0">2b.</span>重複なし → 新規イベントとしてDBに登録（<span className="font-medium">未公開状態</span>で保存）</li>
+            <li className="flex gap-2"><span className="text-bordeaux font-bold shrink-0">3.</span>未公開イベントは Supabase の管理画面で内容を確認し、<code className="bg-parchment-dark px-1 rounded">is_published = true</code> にすると公開される</li>
+          </ol>
+          <p className="text-xs text-ink-body/40 pt-1">※ タイトルまたは日時が取得できていない場合はエラーになります</p>
+        </div>
+        <div className="bg-parchment rounded-md border border-gold/30 px-5 py-4 space-y-2">
+          <p className="text-sm font-medium text-ink-heading flex items-center gap-2">
+            <span className="inline-block border border-ink-body/20 text-ink-body/60 text-xs px-2 py-0.5 rounded">却下</span>
+            を押すと…
+          </p>
+          <ol className="text-xs text-ink-body/70 space-y-1.5 list-none">
+            <li className="flex gap-2"><span className="text-ink-body/40 font-bold shrink-0">1.</span>このアイテムのステータスを「却下済み」に変更してリューキューから除外</li>
+            <li className="flex gap-2"><span className="text-ink-body/40 font-bold shrink-0">2.</span>DBからは削除しない（<code className="bg-parchment-dark px-1 rounded">event_sources</code> テーブルに記録は残る）</li>
+            <li className="flex gap-2"><span className="text-ink-body/40 font-bold shrink-0">3.</span>公開サイトには一切影響しない</li>
+          </ol>
+          <p className="text-xs text-ink-body/40 pt-1">※ ノイズ・無関係なツイート・すでにDBにある情報はすべて却下でOK</p>
+        </div>
+      </div>
+
       {/* アイテムリスト */}
       {items.length === 0 ? (
         <div className="bg-parchment rounded-md border border-gold/30 px-6 py-12 text-center">
