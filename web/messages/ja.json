@@ -156,7 +156,7 @@
     "fieldPrefecturePlaceholder": "例：神奈川県",
     "fieldOrganizer": "主催・演奏団体名",
     "fieldOrganizerPlaceholder": "例：〇〇大学管弦楽団",
-    "fieldGameTitles": "演奏するゲームタイトル（任意）",
+    "fieldGameTitles": "演奏するゲームタイトル",
     "fieldGameTitlesPlaceholder": "例：ファイナルファンタジー、ゼルダの伝説",
     "fieldGameTitlesHint": "複数の場合は読点（、）またはカンマ（,）で区切ってください",
     "fieldTicketUrl": "チケット・詳細URL（任意）",

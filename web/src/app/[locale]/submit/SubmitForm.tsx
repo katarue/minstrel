@@ -90,9 +90,9 @@ export default function SubmitForm() {
 
       <div className="flex flex-col gap-1.5">
         <label className={labelClass} htmlFor="game_titles">
-          {t("fieldGameTitles")}
+          {t("fieldGameTitles")} <span className="text-error">*</span>
         </label>
-        <input id="game_titles" name="game_titles" type="text" className={inputClass}
+        <input id="game_titles" name="game_titles" type="text" required className={inputClass}
           placeholder={t("fieldGameTitlesPlaceholder")} />
         <p className="text-xs text-ink-body/50">{t("fieldGameTitlesHint")}</p>
       </div>

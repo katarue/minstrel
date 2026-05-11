@@ -156,7 +156,7 @@
     "fieldPrefecturePlaceholder": "e.g. Kanagawa",
     "fieldOrganizer": "Organizer / Ensemble Name",
     "fieldOrganizerPlaceholder": "e.g. XX University Orchestra",
-    "fieldGameTitles": "Game Titles Performed (optional)",
+    "fieldGameTitles": "Game Titles Performed",
     "fieldGameTitlesPlaceholder": "e.g. Final Fantasy, The Legend of Zelda",
     "fieldGameTitlesHint": "Separate multiple titles with commas",
     "fieldTicketUrl": "Ticket / Detail URL (optional)",

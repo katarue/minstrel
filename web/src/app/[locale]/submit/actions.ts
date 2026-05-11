@@ -20,7 +20,7 @@ export async function submitEvent(formData: FormData): Promise<SubmitResult> {
   const email = (formData.get("email") as string | null)?.trim();
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
-  if (!eventName || !date || !venue || !prefecture || !organizerName || !email) {
+  if (!eventName || !date || !venue || !prefecture || !organizerName || !gameTitlesRaw || !email) {
     return { ok: false, error: "必須項目が入力されていません" };
   }
 
