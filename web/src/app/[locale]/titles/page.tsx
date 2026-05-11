@@ -56,7 +56,8 @@ export default async function TitlesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-20 py-12">
-      <h1 className="font-heading text-ink-heading text-3xl md:text-4xl font-bold mb-10">{t("title")}</h1>
+      <h1 className="font-heading text-ink-heading text-3xl md:text-4xl font-bold mb-3">{t("title")}</h1>
+      <p className="font-body text-ink-body/50 text-sm mb-8">{t("sortNote")}</p>
       {titles.length === 0 ? (
         <p className="font-body text-ink-body/70 text-base py-12 text-center">{t("empty")}</p>
       ) : (

@@ -92,6 +92,7 @@
   "titles": {
     "title": "Game Titles",
     "empty": "No game titles are currently registered.",
+    "sortNote": "Sorted by number of upcoming concerts.",
     "series": "Series",
     "publisher": "Publisher",
     "backToList": "← Back to game titles",
