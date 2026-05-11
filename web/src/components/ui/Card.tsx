@@ -20,6 +20,7 @@ interface CardProps {
   href: string;
   gameTitles?: string[];
   tourCount?: number;
+  tourId?: string;
   isPast?: boolean;
 }
 
@@ -32,7 +33,7 @@ const genreLabels: Record<Genre, string> = {
   other:     "その他",
 };
 
-export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount, isPast }: CardProps) {
+export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount, tourId, isPast }: CardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + (prefecture ? ` ${prefecture}` : ""))}`;
   const region = prefectureToRegion(prefecture);
 
@@ -97,10 +98,14 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
             {prefecture && (
               <p className="font-body text-ink-body/60 text-sm truncate">{prefecture}</p>
             )}
-            {tourCount && tourCount > 1 && (
-              <span className="shrink-0 font-body text-xs text-bordeaux border border-bordeaux/40 rounded px-1.5 py-0.5 leading-none">
-                全{tourCount}公演
-              </span>
+            {tourCount && tourCount > 1 && tourId && (
+              <Link
+                href={`/tours/${tourId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0 font-body text-xs text-bordeaux border border-bordeaux/40 rounded px-1.5 py-0.5 leading-none hover:bg-bordeaux/10 transition-colors"
+              >
+                全{tourCount}公演 →
+              </Link>
             )}
           </div>
 

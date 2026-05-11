@@ -240,35 +240,48 @@ export default async function ConcertsPage({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-              {events.map((event) => {
-                const gameTitles = event.event_game_titles
-                  .map((egt) => {
-                    const gt = egt.game_titles;
-                    if (!gt) return null;
-                    return (locale === "en" && gt.english_name) ? gt.english_name : gt.title_name;
-                  })
-                  .filter((t): t is string => t != null);
-                const tourCount = event.tour_id
-                  ? events.filter((e) => e.tour_id === event.tour_id).length
-                  : undefined;
-                return (
-                  <Card
-                    key={event.id}
-                    title={event.event_name}
-                    titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
-                    date={formatDateShort(event.start_datetime, locale)}
-                    venue={event.venue_name ?? "—"}
-                    prefecture={event.prefecture ?? undefined}
-                    organizer={event.organizers?.name}
-                    genre={toGenre(event.performance_type)}
-                    imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}
-                    href={`/events/${event.id}`}
-                    gameTitles={gameTitles}
-                    tourCount={tourCount}
-                    isPast={period === "past"}
-                  />
-                );
-              })}
+              {(() => {
+                // ツアー内の公演数を集計
+                const tourCounts = new Map<string, number>();
+                events.forEach((e) => {
+                  if (e.tour_id) tourCounts.set(e.tour_id, (tourCounts.get(e.tour_id) ?? 0) + 1);
+                });
+                // tour_id ごとに代表1枚のみ表示
+                const seenTourIds = new Set<string>();
+                return events.filter((e) => {
+                  if (!e.tour_id) return true;
+                  if (seenTourIds.has(e.tour_id)) return false;
+                  seenTourIds.add(e.tour_id);
+                  return true;
+                }).map((event) => {
+                  const gameTitles = event.event_game_titles
+                    .map((egt) => {
+                      const gt = egt.game_titles;
+                      if (!gt) return null;
+                      return (locale === "en" && gt.english_name) ? gt.english_name : gt.title_name;
+                    })
+                    .filter((t): t is string => t != null);
+                  const tourCount = event.tour_id ? tourCounts.get(event.tour_id) : undefined;
+                  return (
+                    <Card
+                      key={event.id}
+                      title={event.event_name}
+                      titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
+                      date={formatDateShort(event.start_datetime, locale)}
+                      venue={event.venue_name ?? "—"}
+                      prefecture={event.prefecture ?? undefined}
+                      organizer={event.organizers?.name}
+                      genre={toGenre(event.performance_type)}
+                      imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}
+                      href={`/events/${event.id}`}
+                      gameTitles={gameTitles}
+                      tourCount={tourCount}
+                      tourId={event.tour_id ?? undefined}
+                      isPast={period === "past"}
+                    />
+                  );
+                });
+              })()}
             </div>
           )}
         </>
