@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
 import HeroSearch from "./HeroSearch";
+import JapanMapSection from "@/components/ui/JapanMapSection";
 import { REGIONS, prefectureToRegion } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
@@ -334,33 +335,7 @@ export default async function Home() {
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
           {t("regionTitle")}
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          {REGIONS.map((region) => {
-            const count = regionCounts.get(region) ?? 0;
-            return (
-              <Link
-                key={region}
-                href={`/concerts?region=${encodeURIComponent(region)}`}
-                className={`flex flex-col items-center justify-center px-3 py-5 border rounded-lg text-center transition-colors ${
-                  count > 0
-                    ? "border-gold/40 hover:border-bordeaux hover:text-bordeaux"
-                    : "border-gold/20 pointer-events-none"
-                }`}
-              >
-                <span className={`font-body text-sm ${count > 0 ? "text-ink-body" : "text-ink-body/40"}`}>
-                  {region}
-                </span>
-                <span
-                  className={`font-heading text-2xl font-bold mt-1 ${
-                    count > 0 ? "text-bordeaux" : "text-ink-body/25"
-                  }`}
-                >
-                  {count}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        <JapanMapSection regionCounts={regionCounts} />
       </section>
 
       {/* Section 4: カレンダー */}
