@@ -261,6 +261,7 @@ export default async function Home() {
                     href={`/events/${ev.id}`}
                     gameTitles={gameTitles}
                     tourCount={tourCount}
+                    tourId={ev.tour_id ?? undefined}
                   />
                 );
               })}
