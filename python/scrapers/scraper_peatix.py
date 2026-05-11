@@ -10,12 +10,12 @@ robots.txt 確認済み: /search/ および /event/ は禁止対象外。
 """
 
 import time
-from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, Browser
 
 from scrapers.base import BaseScraper
+from scrapers.url_utils import collect_x_url, collect_candidate_official_urls
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 
 def _q(kw: str) -> str:
@@ -29,64 +29,6 @@ SEARCH_URLS = [
     _q("ゲーム コンサート"),
 ]
 
-_SKIP_DOMAINS = {
-    "peatix.com",
-    "ptix.co",
-    "google.com",
-    "maps.google.com",
-    "apple.com",
-    "facebook.com",
-    "fb.com",
-    "twitter.com",
-    "x.com",
-    "instagram.com",
-    "youtube.com",
-    "youtu.be",
-    "line.me",
-    "lin.ee",
-    "tiktok.com",
-    "cookiepro.com",
-    "onetrust.com",
-}
-
-_SKIP_PATH_PREFIXES = (
-    "/intent/", "/share", "/sharer", "/oauth",
-)
-
-
-def _is_x_account_url(href: str) -> bool:
-    parsed = urlparse(href)
-    domain = parsed.netloc.lstrip("www.")
-    if domain not in ("twitter.com", "x.com"):
-        return False
-    path = parsed.path
-    if any(path.startswith(p) for p in _SKIP_PATH_PREFIXES):
-        return False
-    segments = [s for s in path.split("/") if s]
-    return len(segments) == 1
-
-
-def _is_skip_domain(href: str) -> bool:
-    try:
-        domain = urlparse(href).netloc.lstrip("www.")
-        return any(domain == s or domain.endswith("." + s) for s in _SKIP_DOMAINS)
-    except Exception:
-        return True
-
-
-def _extract_urls_from_soup(soup: BeautifulSoup) -> tuple[str | None, str | None]:
-    x_url: str | None = None
-    official_url: str | None = None
-    for a in soup.find_all("a", href=True):
-        href: str = a["href"]
-        if not href.startswith("http"):
-            continue
-        if _is_x_account_url(href):
-            if not x_url:
-                x_url = href
-        elif not _is_skip_domain(href) and not official_url:
-            official_url = href
-    return x_url, official_url
 
 
 class ScraperPeatix(BaseScraper):
@@ -159,7 +101,8 @@ class ScraperPeatix(BaseScraper):
             page.close()
 
         soup = BeautifulSoup(content, "lxml")
-        x_url, official_url = _extract_urls_from_soup(soup)
+        x_url = collect_x_url(soup)
+        candidate_urls = collect_candidate_official_urls(soup)
 
         for tag in soup(["script", "style", "noscript"]):
             tag.decompose()
@@ -171,6 +114,9 @@ class ScraperPeatix(BaseScraper):
         if not raw_text:
             return None
 
+        if candidate_urls:
+            raw_text += "\n\n【外部リンク候補】\n" + "\n".join(candidate_urls)
+
         return {
             "source_url": url,
             "source_name": self.source_name,
@@ -178,5 +124,4 @@ class ScraperPeatix(BaseScraper):
             "raw_text": raw_text,
             "ticket_url": url,
             "_organizer_x_url": x_url,
-            "_organizer_official_url": official_url,
         }

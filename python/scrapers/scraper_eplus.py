@@ -7,77 +7,16 @@ robots.txt 確認済み: /sf/live/ は禁止対象外（/sf/search 等のみ禁�
 """
 
 import time
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
 from scrapers.base import BaseScraper
+from scrapers.url_utils import collect_x_url, collect_candidate_official_urls
 from utils.config import SCRAPE_RATE_LIMIT_SEC
 
 BASE_URL = "https://eplus.jp"
 LIST_URL = f"{BASE_URL}/sf/live/game-music"
-
-# 公式サイトとして扱わないドメイン・パスパターン
-_SKIP_DOMAINS = {
-    "eplus.jp", "eplus.co.jp",
-    "google.com", "maps.google.com", "maps.app.goo.gl",
-    "apple.com", "goo.gl",
-    "facebook.com", "fb.com",
-    "twitter.com",   # x_url として取れないものはスキップ
-    "x.com",
-    "instagram.com",
-    "youtube.com", "youtu.be",
-    "line.me", "lin.ee",
-    "linkedin.com",
-    "tiktok.com",
-    "note.com",
-}
-# SNS 共有・OAuth 系パスプレフィックス（ドメインが一致しても除外）
-_SKIP_PATH_PREFIXES = (
-    "/intent/", "/share", "/sharer", "/oauth",
-)
-
-
-def _is_x_account_url(href: str) -> bool:
-    """twitter.com/<username> または x.com/<username> 形式か判定する（共有ボタン除外）。"""
-    parsed = urlparse(href)
-    domain = parsed.netloc.lstrip("www.")
-    if domain not in ("twitter.com", "x.com"):
-        return False
-    path = parsed.path
-    # /intent/ /share /oauth 等は除外
-    if any(path.startswith(p) for p in _SKIP_PATH_PREFIXES):
-        return False
-    # パスが /<username> 形式（1セグメント）であること
-    segments = [s for s in path.split("/") if s]
-    return len(segments) == 1
-
-
-def _is_skip_domain(href: str) -> bool:
-    try:
-        domain = urlparse(href).netloc.lstrip("www.")
-        return any(domain == s or domain.endswith("." + s) for s in _SKIP_DOMAINS)
-    except Exception:
-        return True
-
-
-def _extract_urls_from_soup(soup: BeautifulSoup) -> tuple[str | None, str | None]:
-    """(x_url, official_url) を抽出する。"""
-    x_url: str | None = None
-    official_url: str | None = None
-
-    for a in soup.find_all("a", href=True):
-        href: str = a["href"]
-        if not href.startswith("http"):
-            continue
-
-        if _is_x_account_url(href):
-            if not x_url:
-                x_url = href
-        elif not _is_skip_domain(href) and not official_url:
-            official_url = href
-
-    return x_url, official_url
 
 
 class ScraperEplus(BaseScraper):
@@ -140,7 +79,10 @@ class ScraperEplus(BaseScraper):
         if not raw_text:
             return None
 
-        x_url, official_url = _extract_urls_from_soup(soup)
+        x_url = collect_x_url(soup)
+        candidate_urls = collect_candidate_official_urls(soup)
+        if candidate_urls:
+            raw_text += "\n\n【外部リンク候補】\n" + "\n".join(candidate_urls)
 
         return {
             "source_url": url,
@@ -149,5 +91,4 @@ class ScraperEplus(BaseScraper):
             "raw_text": raw_text,
             "ticket_url": url,
             "_organizer_x_url": x_url,
-            "_organizer_official_url": official_url,
         }
