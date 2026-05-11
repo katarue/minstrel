@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import Badge from "./Badge";
+import { prefectureToRegion } from "@/utils/regions";
 
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 
@@ -33,9 +34,10 @@ const genreLabels: Record<Genre, string> = {
 
 export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount, isPast }: CardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + (prefecture ? ` ${prefecture}` : ""))}`;
+  const region = prefectureToRegion(prefecture);
 
   return (
-    <Link href={href} className="block group">
+    <Link href={href} className="block group relative">
       <article
         className="bg-parchment rounded-md overflow-hidden transition-all duration-200 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
@@ -124,6 +126,15 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
           )}
         </div>
       </article>
+
+      {/* 地域バッジ：cardの枠をはみ出してポストイット風に表示 */}
+      {region && (
+        <div className="absolute -top-3 right-3 z-10">
+          <span className="inline-block bg-parchment-dark border border-gold/50 text-ink-heading font-body text-xs font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap">
+            {region}
+          </span>
+        </div>
+      )}
     </Link>
   );
 }
