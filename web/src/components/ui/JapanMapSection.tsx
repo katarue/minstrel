@@ -22,7 +22,7 @@ export default function JapanMapSection({ regionCounts }: Props) {
   return (
     <>
       {/* 地図（md以上） */}
-      <div className="hidden md:block relative w-full max-w-lg mx-auto select-none">
+      <div className="hidden md:block relative w-full max-w-3xl mx-auto select-none">
         <Image
           src="/images/japan-map.png"
           alt="日本地図"
