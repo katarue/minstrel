@@ -21,11 +21,11 @@ export async function submitEvent(formData: FormData): Promise<SubmitResult> {
   const email = (formData.get("email") as string | null)?.trim();
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
-  if (!eventName || !date || !venue || !prefecture || !organizerName || !gameTitlesRaw || !email) {
+  if (!eventName || !date || !time || !venue || !prefecture || !organizerName || !gameTitlesRaw || !email) {
     return { ok: false, error: "必須項目が入力されていません" };
   }
 
-  const startDatetime = time ? `${date}T${time}:00+09:00` : `${date}T00:00:00+09:00`;
+  const startDatetime = `${date}T${time}:00+09:00`;
   const gameTitles = gameTitlesRaw
     ? gameTitlesRaw.split(/[,、，]/).map((s) => s.trim()).filter(Boolean)
     : [];
@@ -63,7 +63,9 @@ export async function submitEvent(formData: FormData): Promise<SubmitResult> {
     if (gmailUser && gmailPass) {
       try {
         const transporter = nodemailer.createTransport({
-          service: "gmail",
+          host: "smtp.gmail.com",
+          port: 587,
+          secure: false,
           auth: { user: gmailUser, pass: gmailPass },
         });
         const body = [
