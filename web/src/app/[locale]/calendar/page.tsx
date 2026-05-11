@@ -66,7 +66,7 @@ export default async function CalendarPage({
           ))}
         </div>
 
-        <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(8rem, auto)" }}>
+        <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(10rem, auto)" }}>
           {cells.map((day, idx) => (
             <div key={idx}
               className={`p-2 border-b border-r border-gold/20 last:border-r-0 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
@@ -78,7 +78,7 @@ export default async function CalendarPage({
                   <div className="mt-1 flex flex-col gap-1">
                     {(eventsByDay[day] ?? []).map((ev) => (
                       <Link key={ev.id} href={`/events/${ev.id}`}
-                        className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug truncate transition-colors"
+                        className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug line-clamp-2 transition-colors"
                         title={ev.event_name}>
                         {ev.event_name}
                       </Link>
