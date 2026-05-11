@@ -21,12 +21,35 @@ export default async function TitlesPage() {
   try {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    const { data, error } = await supabase
-      .from("game_titles")
-      .select("id, title_name, english_name, series_name, publisher, igdb_cover_url")
-      .order("title_name", { ascending: true });
-    if (error) console.error("Failed to fetch game_titles:", error);
-    else titles = (data ?? []) as GameTitleRow[];
+
+    const now = new Date().toISOString();
+
+    const [titlesResult, linksResult] = await Promise.all([
+      supabase
+        .from("game_titles")
+        .select("id, title_name, english_name, series_name, publisher, igdb_cover_url"),
+      supabase
+        .from("event_game_titles")
+        .select("game_title_id, events!inner(id)")
+        .eq("events.is_published", true)
+        .gte("events.start_datetime", now),
+    ]);
+
+    if (titlesResult.error) console.error("Failed to fetch game_titles:", titlesResult.error);
+    else titles = (titlesResult.data ?? []) as GameTitleRow[];
+
+    const upcomingCount: Record<string, number> = {};
+    for (const link of (linksResult.data ?? [])) {
+      const id = link.game_title_id as string;
+      upcomingCount[id] = (upcomingCount[id] ?? 0) + 1;
+    }
+
+    titles.sort((a, b) => {
+      const ca = upcomingCount[a.id] ?? 0;
+      const cb = upcomingCount[b.id] ?? 0;
+      if (ca !== cb) return cb - ca;
+      return a.title_name.localeCompare(b.title_name, "ja");
+    });
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
