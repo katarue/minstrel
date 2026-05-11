@@ -5,10 +5,10 @@ import type { Region } from "@/utils/regions";
 
 // 地図画像上の各地域ボタンの位置（画像全体に対するパーセンテージ）
 const REGION_POSITIONS: Record<Region, { top: string; left: string }> = {
-  北海道:       { top: "16%", left: "72%" },
-  東北:         { top: "31%", left: "69%" },
-  関東:         { top: "64%", left: "69%" },
-  中部:         { top: "54%", left: "58%" },
+  北海道:       { top: "19%", left: "74%" },
+  東北:         { top: "34%", left: "69%" },
+  関東:         { top: "63%", left: "62%" },
+  中部:         { top: "59%", left: "55%" },
   関西:         { top: "63%", left: "46%" },
   "中国・四国": { top: "70%", left: "30%" },
   "九州・沖縄": { top: "75%", left: "14%" },
@@ -48,10 +48,10 @@ export default function JapanMapSection({ regionCounts }: Props) {
                   : "border-gold/30 opacity-50 pointer-events-none"
                 }`}
             >
-              <p className={`font-heading text-sm font-semibold leading-tight ${count > 0 ? "text-ink-heading" : "text-ink-body/40"}`}>
+              <p className={`font-heading text-base font-semibold leading-tight ${count > 0 ? "text-ink-heading" : "text-ink-body/40"}`}>
                 {region}
               </p>
-              <p className={`font-body text-xs mt-0.5 tabular-nums ${count > 0 ? "text-bordeaux font-medium" : "text-ink-body/30"}`}>
+              <p className={`font-body text-lg font-bold mt-0.5 tabular-nums ${count > 0 ? "text-bordeaux" : "text-ink-body/30"}`}>
                 {count > 0 ? `${count}件` : "0件"}
               </p>
             </Link>
