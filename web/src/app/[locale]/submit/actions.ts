@@ -42,7 +42,7 @@ export async function submitEvent(formData: FormData): Promise<SubmitResult> {
     description: notes,
     _submitter_email: email,
     source_rank: "C",
-    confidence_score: 80,
+    confidence_score: 0.8,
   };
 
   const sourceUrl = `submission:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
