@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
-import { formatDateShort } from "@/utils/formatDate";
+import { formatDateShort, formatDateRange } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
@@ -137,8 +137,16 @@ export default async function Home() {
 
   // Section 1: tour_id でグループ化し、代表イベント6件を選ぶ
   const tourCounts = new Map<string, number>();
+  const tourRanges = new Map<string, { first: string; last: string }>();
   for (const ev of topEvents) {
-    if (ev.tour_id) tourCounts.set(ev.tour_id, (tourCounts.get(ev.tour_id) ?? 0) + 1);
+    if (!ev.tour_id) continue;
+    tourCounts.set(ev.tour_id, (tourCounts.get(ev.tour_id) ?? 0) + 1);
+    const r = tourRanges.get(ev.tour_id);
+    if (!r) tourRanges.set(ev.tour_id, { first: ev.start_datetime, last: ev.start_datetime });
+    else {
+      if (ev.start_datetime < r.first) r.first = ev.start_datetime;
+      if (ev.start_datetime > r.last) r.last = ev.start_datetime;
+    }
   }
   const displayEvents: CardEvent[] = [];
   const seenTourIds = new Set<string>();
@@ -247,18 +255,22 @@ export default async function Home() {
                   })
                   .filter((item): item is string => item != null);
                 const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
+                const tourRange = ev.tour_id ? tourRanges.get(ev.tour_id) : null;
+                const dateDisplay = tourRange
+                  ? formatDateRange(tourRange.first, tourRange.last, locale)
+                  : formatDateShort(ev.start_datetime, locale);
                 return (
                   <Card
                     key={ev.id}
                     title={ev.event_name}
                     titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
-                    date={formatDateShort(ev.start_datetime, locale)}
+                    date={dateDisplay}
                     venue={ev.venue_name ?? "—"}
                     prefecture={ev.prefecture ?? undefined}
                     organizer={ev.organizers?.name}
                     genre={toGenre(ev.performance_type)}
                     imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
-                    href={`/events/${ev.id}`}
+                    href={ev.tour_id ? `/tours/${ev.tour_id}` : `/events/${ev.id}`}
                     gameTitles={gameTitles}
                     tourCount={tourCount}
                     tourId={ev.tour_id ?? undefined}

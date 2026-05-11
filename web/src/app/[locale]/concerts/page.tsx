@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
-import { formatDateShort } from "@/utils/formatDate";
+import { formatDateShort, formatDateRange } from "@/utils/formatDate";
 import Card from "@/components/ui/Card";
 import FilterForm from "./FilterForm";
 import ConcertsTabs from "./ConcertsTabs";
@@ -241,10 +241,18 @@ export default async function ConcertsPage({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
               {(() => {
-                // ツアー内の公演数を集計
+                // ツアー内の公演数・日程レンジを集計
                 const tourCounts = new Map<string, number>();
+                const tourRanges = new Map<string, { first: string; last: string }>();
                 events.forEach((e) => {
-                  if (e.tour_id) tourCounts.set(e.tour_id, (tourCounts.get(e.tour_id) ?? 0) + 1);
+                  if (!e.tour_id) return;
+                  tourCounts.set(e.tour_id, (tourCounts.get(e.tour_id) ?? 0) + 1);
+                  const r = tourRanges.get(e.tour_id);
+                  if (!r) tourRanges.set(e.tour_id, { first: e.start_datetime, last: e.start_datetime });
+                  else {
+                    if (e.start_datetime < r.first) r.first = e.start_datetime;
+                    if (e.start_datetime > r.last) r.last = e.start_datetime;
+                  }
                 });
                 // tour_id ごとに代表1枚のみ表示
                 const seenTourIds = new Set<string>();
@@ -262,18 +270,22 @@ export default async function ConcertsPage({
                     })
                     .filter((t): t is string => t != null);
                   const tourCount = event.tour_id ? tourCounts.get(event.tour_id) : undefined;
+                  const tourRange = event.tour_id ? tourRanges.get(event.tour_id) : null;
+                  const dateDisplay = tourRange
+                    ? formatDateRange(tourRange.first, tourRange.last, locale)
+                    : formatDateShort(event.start_datetime, locale);
                   return (
                     <Card
                       key={event.id}
                       title={event.event_name}
                       titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
-                      date={formatDateShort(event.start_datetime, locale)}
+                      date={dateDisplay}
                       venue={event.venue_name ?? "—"}
                       prefecture={event.prefecture ?? undefined}
                       organizer={event.organizers?.name}
                       genre={toGenre(event.performance_type)}
                       imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}
-                      href={`/events/${event.id}`}
+                      href={event.tour_id ? `/tours/${event.tour_id}` : `/events/${event.id}`}
                       gameTitles={gameTitles}
                       tourCount={tourCount}
                       tourId={event.tour_id ?? undefined}
