@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/utils/supabase/admin";
+import { Resend } from "resend";
 
 type SubmitResult = { ok: true } | { ok: false; error: string };
 
@@ -55,6 +56,38 @@ export async function submitEvent(formData: FormData): Promise<SubmitResult> {
       match_status: "review_needed",
     });
     if (error) throw error;
+
+    // 管理者への通知メール（失敗しても送信成功扱い）
+    const resendKey = process.env.RESEND_API_KEY;
+    if (resendKey) {
+      try {
+        const resend = new Resend(resendKey);
+        await resend.emails.send({
+          from: "Minstrel <noreply@minstrel.live>",
+          to: "katarue@gmail.com",
+          subject: `[Minstrel] 掲載申請: ${eventName}`,
+          text: [
+            `新しい掲載申請が届きました。`,
+            ``,
+            `コンサート名: ${eventName}`,
+            `開催日: ${date}${time ? " " + time : ""}`,
+            `会場: ${venue}（${prefecture}）`,
+            `主催・演奏団体: ${organizerName}`,
+            `ゲームタイトル: ${gameTitlesRaw}`,
+            ticketUrl ? `チケットURL: ${ticketUrl}` : "",
+            officialUrl ? `公式URL: ${officialUrl}` : "",
+            notes ? `備考: ${notes}` : "",
+            ``,
+            `連絡先: ${email}`,
+            ``,
+            `レビューキュー: https://minstrel.live/admin/review`,
+          ].filter((line) => line !== "").join("\n"),
+        });
+      } catch (mailErr) {
+        console.error("[submit] mail error:", mailErr);
+      }
+    }
+
     return { ok: true };
   } catch (e) {
     console.error("[submit]", e);
