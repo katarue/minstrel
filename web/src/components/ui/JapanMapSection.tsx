@@ -1,6 +1,6 @@
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
-import { REGIONS } from "@/utils/regions";
+import { REGIONS, REGION_COLORS } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
 // 地図画像上の各地域ボタンの位置（画像全体に対するパーセンテージ）
@@ -39,21 +39,33 @@ export default function JapanMapSection({ regionCounts }: Props) {
             <Link
               key={region}
               href={count > 0 ? `/concerts?region=${encodeURIComponent(region)}` : "#"}
-              style={{ top: pos.top, left: pos.left }}
+              style={{
+                top: pos.top,
+                left: pos.left,
+                ...(count > 0 ? { borderColor: REGION_COLORS[region] } : {}),
+              }}
               className={`absolute -translate-x-1/2 -translate-y-1/2 z-10
                 bg-parchment/90 backdrop-blur-sm border rounded-lg shadow-md
                 px-3 py-2 text-center whitespace-nowrap transition-all duration-150
                 ${count > 0
-                  ? "border-gold/70 hover:border-bordeaux hover:shadow-lg hover:-translate-y-[calc(50%+2px)] cursor-pointer"
+                  ? "hover:shadow-lg hover:-translate-y-[calc(50%+2px)] cursor-pointer"
                   : "border-gold/30 opacity-50 pointer-events-none"
                 }`}
             >
-              <p className={`font-heading text-base font-semibold leading-tight ${count > 0 ? "text-ink-heading" : "text-ink-body/40"}`}>
+              <p
+                className={`font-heading text-base font-semibold leading-tight ${count > 0 ? "" : "text-ink-body/40"}`}
+                style={count > 0 ? { color: REGION_COLORS[region] } : undefined}
+              >
                 {region}
               </p>
-              <p className={`mt-0.5 ${count > 0 ? "text-bordeaux" : "text-ink-body/30"}`}>
-                <span className="font-sans text-2xl font-bold tabular-nums">{count}</span>
-                <span className="font-body text-base font-medium">件</span>
+              <p className={`mt-0.5 ${count > 0 ? "" : "text-ink-body/30"}`}>
+                <span
+                  className="font-sans text-2xl font-bold tabular-nums"
+                  style={count > 0 ? { color: REGION_COLORS[region] } : undefined}
+                >
+                  {count}
+                </span>
+                <span className="font-body text-base font-medium" style={count > 0 ? { color: REGION_COLORS[region] } : undefined}>件</span>
               </p>
             </Link>
           );

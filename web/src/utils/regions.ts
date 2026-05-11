@@ -20,6 +20,16 @@ export const REGION_PREFECTURES: Record<Region, string[]> = {
   "九州・沖縄": ["福岡", "佐賀", "長崎", "熊本", "大分", "宮崎", "鹿児島", "沖縄"],
 };
 
+export const REGION_COLORS: Record<Region, string> = {
+  北海道:       "#2C5F7A",
+  東北:         "#3D6642",
+  関東:         "#5A3572",
+  中部:         "#7A5C2E",
+  関西:         "#2E6460",
+  "中国・四国": "#5C7A35",
+  "九州・沖縄": "#7A3D55",
+};
+
 export function prefectureToRegion(prefecture: string | null | undefined): Region | null {
   if (!prefecture) return null;
   for (const [region, keywords] of Object.entries(REGION_PREFECTURES) as [Region, string[]][]) {

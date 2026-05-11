@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import Badge from "./Badge";
-import { prefectureToRegion } from "@/utils/regions";
+import { prefectureToRegion, REGION_COLORS } from "@/utils/regions";
 
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
 
@@ -58,16 +58,6 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
               </span>
             </div>
           )}
-          {gameTitles && gameTitles.length > 0 && (
-            <div className="absolute top-2 left-2">
-              <span className="inline-flex items-center gap-1 bg-bordeaux text-white font-body text-xs font-medium px-2 py-0.5 rounded shadow-sm max-w-[10rem]">
-                <span className="truncate">{gameTitles[0]}</span>
-                {gameTitles.length > 1 && (
-                  <span className="opacity-80 shrink-0">+{gameTitles.length - 1}</span>
-                )}
-              </span>
-            </div>
-          )}
           {genre && (
             <div className="absolute top-2 right-2">
               <Badge variant={genre}>{genreLabels[genre]}</Badge>
@@ -84,6 +74,14 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
 
         {/* 情報エリア */}
         <div className="p-4 flex flex-col gap-2">
+          {gameTitles && gameTitles.length > 0 && (
+            <span className="inline-flex items-center gap-1 self-start bg-bordeaux text-white font-body text-xs font-medium px-2 py-0.5 rounded max-w-full">
+              <span className="truncate">{gameTitles[0]}</span>
+              {gameTitles.length > 1 && (
+                <span className="opacity-80 shrink-0">+{gameTitles.length - 1}</span>
+              )}
+            </span>
+          )}
           <h3 className="font-heading text-ink-heading text-base font-semibold leading-snug line-clamp-2">
             {title}
           </h3>
@@ -130,7 +128,10 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
       {/* 地域バッジ：cardの枠をはみ出してポストイット風に表示 */}
       {region && (
         <div className="absolute -top-3 right-3 z-10">
-          <span className="inline-block bg-parchment-dark border border-gold/50 text-ink-heading font-body text-xs font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap">
+          <span
+            className="inline-block font-body text-xs font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap text-white"
+            style={{ backgroundColor: REGION_COLORS[region] }}
+          >
             {region}
           </span>
         </div>

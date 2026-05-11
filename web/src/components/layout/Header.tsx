@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
+import { Globe } from "lucide-react";
 
 export default function Header() {
   const t = useTranslations("nav");
@@ -18,7 +19,7 @@ export default function Header() {
   ];
 
   const otherLocale = locale === "ja" ? "en" : "ja";
-  const langLabel = locale === "ja" ? "EN" : "日本語";
+  const langLabel = locale === "ja" ? "English" : "日本語";
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-parchment border-b border-gold/50">
@@ -49,8 +50,9 @@ export default function Header() {
           <Link
             href={pathname}
             locale={otherLocale}
-            className="font-body text-ink-body/60 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2 py-1"
+            className="inline-flex items-center gap-1.5 font-body text-ink-body/60 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2.5 py-1"
           >
+            <Globe size={12} strokeWidth={1.6} />
             {langLabel}
           </Link>
         </nav>
