@@ -24,11 +24,11 @@
     "heroTagline": "Game Music Concert Portal",
     "heroDescription": "The dedicated portal for game music concerts in Japan.",
     "upcomingTitle": "Upcoming Concerts",
-    "seeAll": "View all →",
+    "seeAll": "View all",
     "gameTitlesTitle": "Browse by Game Title",
     "regionTitle": "Browse by Region",
     "calendarTitle": "Check the Calendar",
-    "viewCalendar": "View Calendar →",
+    "viewCalendar": "View Calendar",
     "empty": "No concerts are currently listed."
   },
   "event": {
@@ -61,7 +61,7 @@
     "replay": "Rerun",
     "vod": "Watch on demand",
     "homeTitle": "Broadcasts",
-    "seeAll": "View all →"
+    "seeAll": "View all"
   },
   "genre": {
     "orchestra": "Orchestra",

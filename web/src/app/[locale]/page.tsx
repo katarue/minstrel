@@ -270,7 +270,7 @@ export default async function Home() {
                 href="/concerts"
                 className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
               >
-                {t("seeAll")} →
+                {t("seeAll")}
               </Link>
             </div>
           </>
@@ -323,7 +323,7 @@ export default async function Home() {
               href="/titles"
               className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
             >
-              {t("seeAll")} →
+              {t("seeAll")}
             </Link>
           </div>
           </>
@@ -387,7 +387,7 @@ export default async function Home() {
             href="/calendar"
             className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
           >
-            {t("viewCalendar")} →
+            {t("viewCalendar")}
           </Link>
         </div>
       </section>
