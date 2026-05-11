@@ -41,6 +41,12 @@ export default function Header() {
             </Link>
           ))}
           <Link
+            href="/submit"
+            className="font-body text-sm bg-bordeaux text-parchment hover:bg-bordeaux/80 transition-colors rounded px-3 py-1.5 tracking-wide"
+          >
+            {t("submit")}
+          </Link>
+          <Link
             href={pathname}
             locale={otherLocale}
             className="font-body text-ink-body/60 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2 py-1"
@@ -76,6 +82,13 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          <Link
+            href="/submit"
+            className="font-body text-sm bg-bordeaux text-parchment hover:bg-bordeaux/80 transition-colors rounded px-3 py-2 self-start"
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("submit")}
+          </Link>
           <Link
             href={pathname}
             locale={otherLocale}

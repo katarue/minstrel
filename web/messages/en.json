@@ -7,7 +7,8 @@
     "menuOpen": "Open menu",
     "menuClose": "Close menu",
     "main": "Main navigation",
-    "mobile": "Mobile navigation"
+    "mobile": "Mobile navigation",
+    "submit": "Submit Event"
   },
   "footer": {
     "tagline": "Game Music Concert Portal",
@@ -140,6 +141,34 @@
     "collectionBody2": "Always check each concert's official sources for the latest information on schedules, tickets, and cancellations.",
     "removalTitle": "Removal and Correction Requests",
     "removalBody": "If you find incorrect information, or if you are a rights holder or organizer requesting removal, we will respond promptly. Please contact us via the Contact page."
+  },
+  "submit": {
+    "title": "Submit a Concert",
+    "subtitle": "Submit concerts that aren't listed on major ticket sites — such as student ensembles or self-produced events.",
+    "note": "Submissions are reviewed by our staff and will only be listed if they meet our listing criteria. Listing is not guaranteed.",
+    "fieldEventName": "Concert Name",
+    "fieldEventNamePlaceholder": "e.g. 10th Annual Orchestra Concert",
+    "fieldDate": "Date",
+    "fieldTime": "Start Time (optional)",
+    "fieldVenue": "Venue",
+    "fieldVenuePlaceholder": "e.g. Yokohama Minato Mirai Hall, Grand Hall",
+    "fieldPrefecture": "Prefecture",
+    "fieldPrefecturePlaceholder": "e.g. Kanagawa",
+    "fieldOrganizer": "Organizer / Ensemble Name",
+    "fieldOrganizerPlaceholder": "e.g. XX University Orchestra",
+    "fieldGameTitles": "Game Titles Performed (optional)",
+    "fieldGameTitlesPlaceholder": "e.g. Final Fantasy, The Legend of Zelda",
+    "fieldGameTitlesHint": "Separate multiple titles with commas",
+    "fieldTicketUrl": "Ticket / Detail URL (optional)",
+    "fieldOfficialUrl": "Official Site / SNS URL (optional)",
+    "fieldNotes": "Notes (optional)",
+    "fieldNotesPlaceholder": "Program, admission fee, or anything else you'd like to share",
+    "fieldEmail": "Your Email Address",
+    "fieldEmailHint": "Used only for listing confirmation or follow-up questions. Will not be published.",
+    "submit": "Submit",
+    "sending": "Sending...",
+    "successTitle": "Submission received",
+    "successBody": "Thank you for your submission. We will review it and list it if it meets our criteria."
   },
   "lang": {
     "switch": "JA"

@@ -91,11 +91,9 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
             # ticket_url がスクレイパーから直接提供されている場合は優先使用
             if raw.get("ticket_url") and not extracted.get("ticket_url"):
                 extracted["ticket_url"] = raw["ticket_url"]
-            # スクレイパーが抽出したオーガナイザーURL（eplus 等）
+            # スクレイパーが抽出した X アカウント URL
             if raw.get("_organizer_x_url"):
                 extracted["_organizer_x_url"] = raw["_organizer_x_url"]
-            if raw.get("_organizer_official_url"):
-                extracted["_organizer_official_url"] = raw["_organizer_official_url"]
             results.append(extracted)
 
     if skipped_low_score:
@@ -137,7 +135,7 @@ def upsert_to_db(events: list[dict]) -> int:
             continue
 
         organizer_x_url = event.pop("_organizer_x_url", None)
-        organizer_official_url = event.pop("_organizer_official_url", None)
+        organizer_official_url = event.pop("organizer_official_url", None)
 
         # ── step 1: source_url が既存なら完全重複 → スキップ ──────────────
         # save_event_source が False を返したら既処理

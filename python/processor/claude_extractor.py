@@ -15,6 +15,16 @@ game_titles には「ゲームが原作（発祥）のタイトル」のみを�
 - 除外する例: ラブライブ！（アニメ原作）、アイマス（アニメ・メディアミックス原作）、進撃の巨人（漫画原作）、鬼滅の刃（漫画原作）
 - 判断基準: そのIPが「最初にゲームとしてリリースされたか」。後からゲーム化されたアニメ・漫画・映画原作は除外。
 - 演奏するゲーム音楽が一切ない（アニメ・映画・ポップス等のみ）場合は空リスト [] を返してください。
+
+【organizer_official_url の判定基準】
+テキスト末尾に「【外部リンク候補】」として URL リストが提示される場合があります。
+その中から主催者・演奏団体自身が運営する公式ウェブサイトの URL を1つだけ選んでください。
+- 含める: 楽団・主催団体の独自ドメインサイト（例: musicengine-info.net, orch-example.jp）
+- 除外: チケット販売サイト（eplus, teket, pia, lawson, peatix, livepocket 等）
+- 除外: SNS（Twitter/X, Instagram, YouTube, Facebook 等）
+- 除外: ファンクラブ・会員管理サービス（ftaj.jp, fanicon.net 等）
+- 除外: 地図・ユーティリティサービス
+候補に公式サイトらしき URL がなければ null を返してください。
 """
 
 EXTRACTION_SCHEMA = {
@@ -24,6 +34,7 @@ EXTRACTION_SCHEMA = {
     "venue": "string or null",
     "prefecture": "string or null",
     "organizer_name": "string or null",
+    "organizer_official_url": "主催者・演奏団体の公式ウェブサイトURL（チケットサイト・SNS・会員管理サービスは除く）or null",
     "ticket_url": "string or null",
     "description": "100〜200字の日本語要約 or null",
     "game_titles": ["ゲームが原作（発祥）のタイトル名のみ。アニメ・漫画・映画原作は除く。"],

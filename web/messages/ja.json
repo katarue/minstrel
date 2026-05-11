@@ -7,7 +7,8 @@
     "menuOpen": "メニューを開く",
     "menuClose": "メニューを閉じる",
     "main": "メインナビゲーション",
-    "mobile": "モバイルナビゲーション"
+    "mobile": "モバイルナビゲーション",
+    "submit": "掲載申請"
   },
   "footer": {
     "tagline": "Game Music Concert Portal",
@@ -140,6 +141,34 @@
     "collectionBody2": "最新の公演情報・チケット販売状況・開催有無については、必ず各コンサートの公式情報をご確認ください。",
     "removalTitle": "掲載情報の削除・修正について",
     "removalBody": "掲載内容に誤りがある場合や、権利者・主催者からの削除要請については、速やかに対応いたします。お問い合わせページよりご連絡ください。"
+  },
+  "submit": {
+    "title": "掲載申請",
+    "subtitle": "チケット販売サイトを利用しない学生団体・自主公演など、スクレイピングで拾えないコンサートの掲載申請を受け付けています。",
+    "note": "申請内容はスタッフが確認後、掲載基準を満たす場合のみ掲載いたします。掲載をお約束するものではありません。",
+    "fieldEventName": "コンサート名",
+    "fieldEventNamePlaceholder": "例：第10回 〇〇オーケストラ演奏会",
+    "fieldDate": "開催日",
+    "fieldTime": "開演時刻（任意）",
+    "fieldVenue": "会場名",
+    "fieldVenuePlaceholder": "例：横浜みなとみらいホール 大ホール",
+    "fieldPrefecture": "都道府県",
+    "fieldPrefecturePlaceholder": "例：神奈川県",
+    "fieldOrganizer": "主催・演奏団体名",
+    "fieldOrganizerPlaceholder": "例：〇〇大学管弦楽団",
+    "fieldGameTitles": "演奏するゲームタイトル（任意）",
+    "fieldGameTitlesPlaceholder": "例：ファイナルファンタジー、ゼルダの伝説",
+    "fieldGameTitlesHint": "複数の場合は読点（、）またはカンマ（,）で区切ってください",
+    "fieldTicketUrl": "チケット・詳細URL（任意）",
+    "fieldOfficialUrl": "公式サイト・SNS URL（任意）",
+    "fieldNotes": "備考（任意）",
+    "fieldNotesPlaceholder": "プログラム、入場料、その他お伝えしたいことがあれば",
+    "fieldEmail": "ご連絡先メールアドレス",
+    "fieldEmailHint": "掲載確認や不明点のご連絡に使用します。公開はされません。",
+    "submit": "申請を送信する",
+    "sending": "送信中...",
+    "successTitle": "申請を受け付けました",
+    "successBody": "ご申請ありがとうございます。内容を確認のうえ、掲載基準を満たす場合は順次掲載いたします。"
   },
   "lang": {
     "switch": "EN"
