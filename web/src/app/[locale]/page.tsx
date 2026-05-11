@@ -229,48 +229,50 @@ export default async function Home() {
 
       {/* Section 1: 直近6件 */}
       <section className="py-12 border-b border-gold/30">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold">
-            {t("upcomingTitle")}
-          </h2>
-          <Link
-            href="/concerts"
-            className="font-body text-bordeaux hover:text-bordeaux/70 text-sm transition-colors"
-          >
-            {t("seeAll")}
-          </Link>
-        </div>
+        <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
+          {t("upcomingTitle")}
+        </h2>
         {displayEvents.length === 0 ? (
           <p className="font-body text-ink-body/70 text-base py-12 text-center">{t("empty")}</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {displayEvents.map((ev) => {
-              const gameTitles = ev.event_game_titles
-                .map((egt) => {
-                  const gt = egt.game_titles;
-                  if (!gt) return null;
-                  return locale === "en" && gt.english_name ? gt.english_name : gt.title_name;
-                })
-                .filter((item): item is string => item != null);
-              const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
-              return (
-                <Card
-                  key={ev.id}
-                  title={ev.event_name}
-                  titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
-                  date={formatDateShort(ev.start_datetime, locale)}
-                  venue={ev.venue_name ?? "—"}
-                  prefecture={ev.prefecture ?? undefined}
-                  organizer={ev.organizers?.name}
-                  genre={toGenre(ev.performance_type)}
-                  imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
-                  href={`/events/${ev.id}`}
-                  gameTitles={gameTitles}
-                  tourCount={tourCount}
-                />
-              );
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {displayEvents.map((ev) => {
+                const gameTitles = ev.event_game_titles
+                  .map((egt) => {
+                    const gt = egt.game_titles;
+                    if (!gt) return null;
+                    return locale === "en" && gt.english_name ? gt.english_name : gt.title_name;
+                  })
+                  .filter((item): item is string => item != null);
+                const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
+                return (
+                  <Card
+                    key={ev.id}
+                    title={ev.event_name}
+                    titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
+                    date={formatDateShort(ev.start_datetime, locale)}
+                    venue={ev.venue_name ?? "—"}
+                    prefecture={ev.prefecture ?? undefined}
+                    organizer={ev.organizers?.name}
+                    genre={toGenre(ev.performance_type)}
+                    imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
+                    href={`/events/${ev.id}`}
+                    gameTitles={gameTitles}
+                    tourCount={tourCount}
+                  />
+                );
+              })}
+            </div>
+            <div className="mt-10 flex justify-center">
+              <Link
+                href="/concerts"
+                className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
+              >
+                {t("seeAll")} →
+              </Link>
+            </div>
+          </>
         )}
       </section>
 
