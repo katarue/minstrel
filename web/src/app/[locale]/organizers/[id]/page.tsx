@@ -18,7 +18,7 @@ type OrganizerDetail = {
   x_url: string | null; region: string | null; description: string | null;
 };
 type EventRow = {
-  id: string; event_name: string; start_datetime: string;
+  id: string; tour_id: string | null; event_name: string; start_datetime: string;
   venue_name: string; prefecture: string; performance_type: string | null;
 };
 
@@ -33,7 +33,7 @@ export default async function OrganizerDetailPage({ params }: { params: Promise<
 
   const [orgResult, eventsResult] = await Promise.all([
     supabase.from("organizers").select("id, name, official_site_url, x_url, region, description").eq("id", id).single(),
-    supabase.from("events").select("id, event_name, start_datetime, venue_name, prefecture, performance_type")
+    supabase.from("events").select("id, tour_id, event_name, start_datetime, venue_name, prefecture, performance_type")
       .eq("organizer_id", id).eq("is_published", true).order("start_datetime", { ascending: true }),
   ]);
 
@@ -99,7 +99,7 @@ export default async function OrganizerDetailPage({ params }: { params: Promise<
         ) : (
           <div className="flex flex-col gap-3">
             {events.map((event) => (
-              <Link key={event.id} href={`/events/${event.id}`} className="block group">
+              <Link key={event.id} href={`/tours/${event.tour_id ?? event.id}`} className="block group">
                 <div className="bg-parchment-dark rounded-md p-4 md:p-5 transition-all duration-200 ease-in-out group-hover:-translate-y-0.5 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
                   style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}>
                   <div className="flex flex-col gap-2">

@@ -25,13 +25,13 @@ export default async function CalendarPage({
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, event_name, start_datetime, venue_name, prefecture")
+    .select("id, tour_id, event_name, start_datetime, venue_name, prefecture")
     .eq("is_published", true)
     .gte("start_datetime", monthStart.toISOString())
     .lt("start_datetime", monthEnd.toISOString())
     .order("start_datetime", { ascending: true });
 
-  const eventsByDay: Record<number, { id: string; event_name: string; venue_name: string | null; prefecture: string | null }[]> = {};
+  const eventsByDay: Record<number, { id: string; tour_id: string | null; event_name: string; venue_name: string | null; prefecture: string | null }[]> = {};
   for (const event of events ?? []) {
     const jst = new Date(new Date(event.start_datetime).getTime() + 9 * 3600 * 1000);
     const day = jst.getUTCDate();
@@ -77,7 +77,7 @@ export default async function CalendarPage({
                   </span>
                   <div className="mt-1 flex flex-col gap-1">
                     {(eventsByDay[day] ?? []).map((ev) => (
-                      <Link key={ev.id} href={`/events/${ev.id}`}
+                      <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
                         className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug truncate transition-colors"
                         title={ev.event_name}>
                         {ev.event_name}
@@ -109,7 +109,7 @@ export default async function CalendarPage({
               const dateStr = `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}（${"日月火水木金土"[jst.getUTCDay()]}）`;
               const timeStr = `${String(jst.getUTCHours()).padStart(2, "0")}:${String(jst.getUTCMinutes()).padStart(2, "0")}`;
               return (
-                <Link key={ev.id} href={`/events/${ev.id}`}
+                <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
                   className="flex items-center gap-4 bg-parchment-dark hover:bg-gold/10 border border-gold/20 rounded-md px-4 py-3 transition-colors group">
                   <span className="font-body text-sm text-ink-body/60 shrink-0 w-28">{dateStr} {timeStr}</span>
                   <span className="font-heading text-ink-heading text-sm font-semibold flex-1 group-hover:text-bordeaux transition-colors">{ev.event_name}</span>
