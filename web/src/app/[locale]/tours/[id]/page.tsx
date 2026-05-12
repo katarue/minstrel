@@ -58,7 +58,6 @@ export default async function TourPage({
 
   const tourName = (locale === "en" && first.event_name_en) ? first.event_name_en : first.event_name;
   const imageUrl = first.flyer_image_url ?? first.key_visual_url;
-  const ticketUrl = first.ticket_urls?.primary ?? null;
   const gameTitles = first.event_game_titles
     .map((egt) => {
       const gt = egt.game_titles;
@@ -139,6 +138,16 @@ export default async function TourPage({
                   >
                     {t("addToIcal")}
                   </a>
+                  {ev.ticket_urls?.primary && (
+                    <a
+                      href={ev.ticket_urls.primary}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer bg-bordeaux text-parchment hover:bg-bordeaux/80 px-3 py-1.5 text-xs"
+                    >
+                      {t("buyTicket")}
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
@@ -187,19 +196,6 @@ export default async function TourPage({
           </div>
         )}
 
-        {/* チケット購入（中央寄せ） */}
-        {ticketUrl && (
-          <div className="border-t border-gold/30 pt-6 flex justify-center">
-            <a
-              href={ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer bg-bordeaux text-parchment hover:bg-bordeaux/80 px-8 py-3 text-base"
-            >
-              {t("buyTicket")}
-            </a>
-          </div>
-        )}
       </div>
     </div>
   );

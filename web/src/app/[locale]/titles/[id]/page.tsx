@@ -14,7 +14,7 @@ type GameTitleDetail = {
   publisher: string | null;
   igdb_cover_url: string | null;
 };
-type EventRow = { id: string; event_name: string; start_datetime: string; venue_name: string; prefecture: string };
+type EventRow = { id: string; tour_id: string | null; event_name: string; start_datetime: string; venue_name: string; prefecture: string };
 
 export default async function TitleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,7 +37,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
 
   const { data: eventLinks } = await supabase
     .from("event_game_titles")
-    .select(`events ( id, event_name, start_datetime, venue_name, prefecture )`)
+    .select(`events ( id, tour_id, event_name, start_datetime, venue_name, prefecture )`)
     .eq("game_title_id", id)
     .eq("events.is_published", true)
     .order("created_at", { ascending: true });
@@ -100,7 +100,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
         ) : (
           <div className="flex flex-col gap-3">
             {events.map((event) => (
-              <Link key={event.id} href={`/events/${event.id}`} className="block group">
+              <Link key={event.id} href={`/tours/${event.tour_id ?? event.id}`} className="block group">
                 <div
                   className="bg-parchment-dark rounded-md p-4 md:p-5 transition-all duration-200 ease-in-out group-hover:-translate-y-0.5 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
                   style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}

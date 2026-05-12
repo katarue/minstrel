@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
-import { formatDateShort, formatDateRange } from "@/utils/formatDate";
+import { formatDateShort } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
@@ -47,7 +47,7 @@ type LightEvent = {
   }>;
 };
 
-type CalendarEvent = { id: string; event_name: string; start_datetime: string };
+type CalendarEvent = { id: string; tour_id: string | null; event_name: string; start_datetime: string };
 
 function toGenre(val: string | null | undefined): Genre | undefined {
   if (val && (VALID_GENRES as readonly string[]).includes(val)) return val as Genre;
@@ -113,7 +113,7 @@ export default async function Home() {
         .limit(3),
       supabase
         .from("events")
-        .select("id, event_name, start_datetime")
+        .select("id, tour_id, event_name, start_datetime")
         .eq("is_published", true)
         .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
         .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
@@ -191,7 +191,7 @@ export default async function Home() {
   }
 
   // Section 4: events per day for full calendar grid
-  const eventsByDay: Record<number, { id: string; event_name: string }[]> = {};
+  const eventsByDay: Record<number, { id: string; tour_id: string | null; event_name: string }[]> = {};
   for (const ev of calendarEvents) {
     const evJst = new Date(new Date(ev.start_datetime).getTime() + 9 * 60 * 60 * 1000);
     const day = evJst.getUTCDate();
@@ -255,10 +255,7 @@ export default async function Home() {
                   })
                   .filter((item): item is string => item != null);
                 const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
-                const tourRange = ev.tour_id ? tourRanges.get(ev.tour_id) : null;
-                const dateDisplay = tourRange
-                  ? formatDateRange(tourRange.first, tourRange.last, locale)
-                  : formatDateShort(ev.start_datetime, locale);
+                const dateDisplay = `${formatDateShort(ev.start_datetime, locale)}${(tourCount ?? 1) > 1 ? "　他" : ""}`;
                 return (
                   <Card
                     key={ev.id}
@@ -270,7 +267,7 @@ export default async function Home() {
                     organizer={ev.organizers?.name}
                     genre={toGenre(ev.performance_type)}
                     imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
-                    href={ev.tour_id ? `/tours/${ev.tour_id}` : `/events/${ev.id}`}
+                    href={`/tours/${ev.tour_id ?? ev.id}`}
                     gameTitles={gameTitles}
                     tourCount={tourCount}
                     tourId={ev.tour_id ?? undefined}
@@ -382,7 +379,7 @@ export default async function Home() {
                     </span>
                     <div className="mt-1 flex flex-col gap-1">
                       {(eventsByDay[day] ?? []).map((ev) => (
-                        <Link key={ev.id} href={`/events/${ev.id}`}
+                        <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
                           className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug truncate transition-colors"
                           title={ev.event_name}>
                           {ev.event_name}

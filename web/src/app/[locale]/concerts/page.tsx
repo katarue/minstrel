@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
-import { formatDateShort, formatDateRange } from "@/utils/formatDate";
+import { formatDateShort } from "@/utils/formatDate";
 import Card from "@/components/ui/Card";
 import FilterForm from "./FilterForm";
 import ConcertsTabs from "./ConcertsTabs";
@@ -270,10 +270,7 @@ export default async function ConcertsPage({
                     })
                     .filter((t): t is string => t != null);
                   const tourCount = event.tour_id ? tourCounts.get(event.tour_id) : undefined;
-                  const tourRange = event.tour_id ? tourRanges.get(event.tour_id) : null;
-                  const dateDisplay = tourRange
-                    ? formatDateRange(tourRange.first, tourRange.last, locale)
-                    : formatDateShort(event.start_datetime, locale);
+                  const dateDisplay = `${formatDateShort(event.start_datetime, locale)}${(tourCount ?? 1) > 1 ? "　他" : ""}`;
                   return (
                     <Card
                       key={event.id}
@@ -285,7 +282,7 @@ export default async function ConcertsPage({
                       organizer={event.organizers?.name}
                       genre={toGenre(event.performance_type)}
                       imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}
-                      href={event.tour_id ? `/tours/${event.tour_id}` : `/events/${event.id}`}
+                      href={`/tours/${event.tour_id ?? event.id}`}
                       gameTitles={gameTitles}
                       tourCount={tourCount}
                       tourId={event.tour_id ?? undefined}
