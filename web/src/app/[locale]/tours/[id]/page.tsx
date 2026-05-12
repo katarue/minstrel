@@ -10,7 +10,7 @@ import { notFound } from "next/navigation";
 
 export const revalidate = 60;
 
-const WEEKDAYS_JA_FULL = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"] as const;
+const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
 function toJST(iso: string): Date {
   return new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000);
@@ -26,8 +26,8 @@ function formatPerformanceDate(iso: string, locale: string): string {
   const y = jst.getUTCFullYear();
   const m = jst.getUTCMonth() + 1;
   const d = jst.getUTCDate();
-  const w = WEEKDAYS_JA_FULL[jst.getUTCDay()];
-  return `${y}年${m}月${d}日${w}`;
+  const w = WEEKDAYS_JA[jst.getUTCDay()];
+  return `${y}年${m}月${d}日（${w}）`;
 }
 
 function formatPerformanceTime(iso: string, locale: string): string | null {
