@@ -16,7 +16,6 @@ type TourEvent = {
   event_name: string;
   event_name_en: string | null;
   start_datetime: string;
-  end_datetime: string | null;
   venue_name: string | null;
   prefecture: string | null;
   flyer_image_url: string | null;
@@ -41,7 +40,7 @@ export default async function TourPage({
   const { data: rawEvents } = await supabase
     .from("events")
     .select(`
-      id, event_name, event_name_en, start_datetime, end_datetime,
+      id, event_name, event_name_en, start_datetime,
       venue_name, prefecture, flyer_image_url, key_visual_url,
       ticket_urls, description,
       organizers ( name, official_site_url ),
@@ -122,7 +121,6 @@ export default async function TourPage({
                       id: ev.id,
                       event_name: ev.event_name,
                       start_datetime: ev.start_datetime,
-                      end_datetime: ev.end_datetime,
                       description: ev.description,
                       venue_name: ev.venue_name,
                     })}
