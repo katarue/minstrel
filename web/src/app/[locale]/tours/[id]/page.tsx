@@ -128,12 +128,12 @@ export default async function TourPage({
         {/* 公演リスト */}
         <div className="flex flex-col gap-3">
           <p className="font-body text-ink-body/60 text-xs tracking-wide">{t("performanceList")}</p>
-          <div className="flex flex-col divide-y divide-gold/20">
+          <div className="flex flex-col gap-3">
             {events.map((ev) => {
               const dateStr = formatPerformanceDate(ev.start_datetime, locale);
               const timeStr = formatPerformanceTime(ev.start_datetime, locale);
               return (
-                <div key={ev.id} className="py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div key={ev.id} className="border border-gold rounded-md p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                   {/* 左：日時・会場・カレンダーボタン */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div>
