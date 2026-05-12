@@ -147,7 +147,7 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
       </div>
 
       {/* 右: 詳細パネル */}
-      <div className="flex-1 overflow-y-auto rounded-lg border border-gold/30 bg-parchment">
+      <div className="flex-1 flex flex-col rounded-lg border border-gold/30 bg-parchment overflow-hidden">
         {!selectedItem ? (
           <div className="flex items-center justify-center h-full text-ink-body/30 text-sm">
             左のリストからアイテムを選択してください
@@ -188,7 +188,7 @@ function DetailPanel({
   const scoreLabel = !score ? "不明" : score >= 0.7 ? "高" : score >= 0.4 ? "中" : "低";
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 flex flex-col h-full gap-4">
       {/* ヘッダー行 */}
       <div className="flex flex-wrap items-center gap-2">
         <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${src.color}`}>
@@ -233,18 +233,23 @@ function DetailPanel({
         </div>
       )}
 
-      {/* 説明文（AI抽出） */}
+      {/* 説明文 */}
       {rd.description && (
         <div className="bg-parchment-dark rounded-md px-4 py-3">
-          <p className="text-xs text-ink-body/70 font-medium mb-1.5">説明（AI抽出）</p>
           <p className="text-sm text-ink-body/80 leading-relaxed whitespace-pre-wrap">
             {rd.description}
           </p>
         </div>
       )}
 
-      {/* Twitterプレビュー */}
-      {isXUrl(item.source_url) && <TwitterEmbed url={item.source_url} />}
+      {/* Twitterプレビュー — 残り高さをすべて使う */}
+      {isXUrl(item.source_url) ? (
+        <div className="flex-1 min-h-0">
+          <TwitterEmbed url={item.source_url} />
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       {/* アクション結果 */}
       {result && (
@@ -314,7 +319,7 @@ function TwitterEmbed({ url }: { url: string }) {
   if (!tweetId) return null;
 
   return (
-    <div className="rounded-md overflow-hidden border border-gold/20 bg-white" style={{ height: 360 }}>
+    <div className="h-full rounded-md overflow-hidden border border-gold/20 bg-white">
       <iframe
         src={`https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&dnt=true&lang=ja`}
         style={{ width: "100%", height: "100%", border: "none" }}
