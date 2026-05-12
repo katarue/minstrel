@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cinzel, EB_Garamond, Noto_Serif_JP } from "next/font/google";
+import { Cinzel, Lora, Noto_Serif_JP } from "next/font/google";
 import { getLocale } from "next-intl/server";
 import "./globals.css";
 
@@ -10,10 +10,10 @@ const cinzel = Cinzel({
   display: "swap",
 });
 
-const ebGaramond = EB_Garamond({
+const lora = Lora({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-eb-garamond",
+  variable: "--font-lora",
   display: "swap",
 });
 
@@ -55,7 +55,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${cinzel.variable} ${ebGaramond.variable} ${notoSerifJP.variable}`}
+      className={`${cinzel.variable} ${lora.variable} ${notoSerifJP.variable}`}
     >
       <body className="font-body bg-parchment text-ink-body min-h-screen flex flex-col">
         {children}

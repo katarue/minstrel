@@ -10,7 +10,7 @@
   --color-gold: #B89D5E;
 
   /* ── テキスト色 ── */
-  --color-ink-body: #3B2F1D;
+  --color-ink-body: #1A1208;
   --color-ink-heading: #1F1A12;
 
   /* ── ステータスカラー ── */
@@ -21,7 +21,7 @@
 
   /* ── フォント（next/font が html 要素に注入する CSS 変数を参照）── */
   --font-heading: var(--font-cinzel), "Noto Serif JP", serif;
-  --font-body: var(--font-eb-garamond), "Noto Serif JP", serif;
+  --font-body: var(--font-lora), "Noto Serif JP", serif;
 }
 
 /* ── ベーススタイル（ライトモードのみ：design_system 2-5） ── */
@@ -30,7 +30,7 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   background-color: #F5EFE0;
-  color: #3B2F1D;
+  color: #1A1208;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
