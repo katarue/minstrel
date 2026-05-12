@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
-import { formatDateShort } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
 import Badge from "@/components/ui/Badge";
 import { googleCalendarUrl } from "@/utils/ical";
@@ -10,6 +9,36 @@ import { ArrowLeft, MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export const revalidate = 60;
+
+const WEEKDAYS_JA_FULL = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"] as const;
+
+function toJST(iso: string): Date {
+  return new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000);
+}
+
+function formatPerformanceDate(iso: string, locale: string): string {
+  const jst = toJST(iso);
+  if (locale === "en") {
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric", month: "long", day: "numeric", weekday: "long", timeZone: "UTC",
+    }).format(jst);
+  }
+  const y = jst.getUTCFullYear();
+  const m = jst.getUTCMonth() + 1;
+  const d = jst.getUTCDate();
+  const w = WEEKDAYS_JA_FULL[jst.getUTCDay()];
+  return `${y}年${m}月${d}日${w}`;
+}
+
+function formatPerformanceTime(iso: string, locale: string): string | null {
+  const jst = toJST(iso);
+  const h = jst.getUTCHours();
+  const min = jst.getUTCMinutes();
+  if (h === 0 && min === 0) return null;
+  const hh = String(h).padStart(2, "0");
+  const mm = String(min).padStart(2, "0");
+  return locale === "en" ? `Starts ${hh}:${mm}` : `開演 ${hh}:${mm}`;
+}
 
 type TourEvent = {
   id: string;
@@ -100,55 +129,66 @@ export default async function TourPage({
         <div className="flex flex-col gap-3">
           <p className="font-body text-ink-body/60 text-xs tracking-wide">{t("performanceList")}</p>
           <div className="flex flex-col divide-y divide-gold/20">
-            {events.map((ev) => (
-              <div key={ev.id} className="py-4 flex flex-col gap-2.5">
-                <div>
-                  <p className="font-body text-ink-body text-sm font-medium">
-                    {formatDateShort(ev.start_datetime, locale)}
-                  </p>
-                  {(ev.venue_name || ev.prefecture) && (
-                    <p className="font-body text-ink-body/60 text-xs mt-0.5 flex items-center gap-1">
-                      <MapPin size={10} strokeWidth={1.6} className="shrink-0" />
-                      {ev.venue_name
-                        ? `${ev.venue_name}${ev.prefecture ? `（${ev.prefecture}）` : ""}`
-                        : ev.prefecture}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <a
-                    href={googleCalendarUrl({
-                      id: ev.id,
-                      event_name: ev.event_name,
-                      start_datetime: ev.start_datetime,
-                      description: ev.description,
-                      venue_name: ev.venue_name,
-                    })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer border border-gold text-bordeaux hover:bg-gold/10 px-3 py-1.5 text-xs"
-                  >
-                    {t("addToGoogleCal")}
-                  </a>
-                  <a
-                    href={`/api/events/${ev.id}/ical`}
-                    className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer border border-gold/50 text-ink-body hover:bg-parchment px-3 py-1.5 text-xs"
-                  >
-                    {t("addToIcal")}
-                  </a>
+            {events.map((ev) => {
+              const dateStr = formatPerformanceDate(ev.start_datetime, locale);
+              const timeStr = formatPerformanceTime(ev.start_datetime, locale);
+              return (
+                <div key={ev.id} className="py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  {/* 左：日時・会場・カレンダーボタン */}
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div>
+                      <p className="font-body text-ink-body text-sm font-semibold">{dateStr}</p>
+                      {timeStr && (
+                        <p className="font-body text-ink-body/70 text-xs mt-0.5">{timeStr}</p>
+                      )}
+                      {(ev.venue_name || ev.prefecture) && (
+                        <p className="font-body text-ink-body/60 text-xs mt-0.5 flex items-center gap-1">
+                          <MapPin size={10} strokeWidth={1.6} className="shrink-0" />
+                          {ev.venue_name
+                            ? `${ev.venue_name}${ev.prefecture ? `（${ev.prefecture}）` : ""}`
+                            : ev.prefecture}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={googleCalendarUrl({
+                          id: ev.id,
+                          event_name: ev.event_name,
+                          start_datetime: ev.start_datetime,
+                          description: ev.description,
+                          venue_name: ev.venue_name,
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer border border-gold text-bordeaux hover:bg-gold/10 px-3 py-1.5 text-xs"
+                      >
+                        {t("addToGoogleCal")}
+                      </a>
+                      <a
+                        href={`/api/events/${ev.id}/ical`}
+                        className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer border border-gold/50 text-ink-body hover:bg-parchment px-3 py-1.5 text-xs"
+                      >
+                        {t("addToIcal")}
+                      </a>
+                    </div>
+                  </div>
+                  {/* 右：チケットボタン（独立列） */}
                   {ev.ticket_urls?.primary && (
-                    <a
-                      href={ev.ticket_urls.primary}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer bg-bordeaux text-parchment hover:bg-bordeaux/80 px-3 py-1.5 text-xs"
-                    >
-                      {t("buyTicket")}
-                    </a>
+                    <div className="sm:pl-4 sm:border-l sm:border-gold/20 sm:self-stretch sm:flex sm:items-center">
+                      <a
+                        href={ev.ticket_urls.primary}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer bg-bordeaux text-parchment hover:bg-bordeaux/80 px-5 py-2.5 text-sm w-full sm:w-auto sm:min-w-[9rem]"
+                      >
+                        {t("buyTicket")}
+                      </a>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
