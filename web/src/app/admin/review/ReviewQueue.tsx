@@ -102,7 +102,7 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
     >
       {/* 左: コンパクトリスト */}
       <div className="w-60 shrink-0 flex flex-col rounded-lg border border-gold/30 overflow-hidden">
-        <div className="px-3 py-2 border-b border-gold/20 bg-parchment-dark text-xs text-ink-body/50 font-medium shrink-0">
+        <div className="px-3 py-2 border-b border-gold/20 bg-parchment-dark text-sm text-ink-body/70 font-medium shrink-0">
           残り {pendingCount} / {items.length} 件
         </div>
         <div className="overflow-y-auto flex-1 bg-parchment">
@@ -124,15 +124,15 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
                   <span
                     className={`w-1.5 h-1.5 rounded-full shrink-0 ${confidenceColor(rd.confidence_score)}`}
                   />
-                  <p className="text-xs font-semibold text-ink-heading truncate flex-1 leading-tight">
+                  <p className="text-sm font-semibold text-ink-heading truncate flex-1 leading-tight">
                     {rd.title ?? (
-                      <span className="text-ink-body/30 font-normal italic">タイトル未取得</span>
+                      <span className="text-ink-body/60 font-normal italic">タイトル未取得</span>
                     )}
                   </p>
                 </div>
-                <p className="text-xs text-ink-body/40 pl-3">{formatDate(rd.start_datetime)}</p>
+                <p className="text-sm text-ink-body/60 pl-3">{formatDate(rd.start_datetime)}</p>
                 {result && (
-                  <p className="text-xs pl-3 mt-0.5 text-ink-body/40">
+                  <p className="text-xs pl-3 mt-0.5 text-ink-body/60">
                     {result.type === "rejected"
                       ? "✕ 却下"
                       : result.type === "error"
@@ -194,24 +194,24 @@ function DetailPanel({
         <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded border ${src.color}`}>
           {src.label}
         </span>
-        <span className="flex items-center gap-1.5 text-xs text-ink-body/60">
+        <span className="flex items-center gap-1.5 text-sm text-ink-body/75">
           <span className={`w-2 h-2 rounded-full ${confidenceColor(score)}`} />
           信頼度 {scoreLabel}
           {score != null && (
-            <span className="text-ink-body/40">({Math.round(score * 100)}%)</span>
+            <span className="text-ink-body/60">({Math.round(score * 100)}%)</span>
           )}
         </span>
-        <span className="text-xs text-ink-body/40 ml-auto">{formatDate(rd.start_datetime)}</span>
+        <span className="text-sm text-ink-body/60 ml-auto">{formatDate(rd.start_datetime)}</span>
       </div>
 
       {/* タイトル・会場 */}
       <div>
         <p className="font-heading text-ink-heading text-lg font-semibold leading-snug">
           {rd.title ?? (
-            <span className="text-ink-body/30 font-normal italic">タイトル未取得</span>
+            <span className="text-ink-body/60 font-normal italic">タイトル未取得</span>
           )}
         </p>
-        <div className="text-sm text-ink-body/60 flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+        <div className="text-sm text-ink-body/75 flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
           {rd.organizer_name && <span>主催: {rd.organizer_name}</span>}
           {(rd.venue || rd.prefecture) && (
             <span>{[rd.venue, rd.prefecture].filter(Boolean).join(" / ")}</span>
@@ -236,7 +236,7 @@ function DetailPanel({
       {/* 説明文（AI抽出） */}
       {rd.description && (
         <div className="bg-parchment-dark rounded-md px-4 py-3">
-          <p className="text-xs text-ink-body/50 font-medium mb-1.5">説明（AI抽出）</p>
+          <p className="text-xs text-ink-body/70 font-medium mb-1.5">説明（AI抽出）</p>
           <p className="text-sm text-ink-body/80 leading-relaxed whitespace-pre-wrap">
             {rd.description}
           </p>
@@ -289,20 +289,20 @@ function DetailPanel({
             <button
               disabled={isPending}
               onClick={onApprove}
-              className="text-xs px-4 py-1.5 bg-bordeaux text-parchment rounded hover:bg-bordeaux/80 transition-colors disabled:opacity-40"
+              className="text-sm px-4 py-2 bg-bordeaux text-parchment rounded hover:bg-bordeaux/80 transition-colors disabled:opacity-40"
             >
               {isPending ? "処理中..." : "採用"}
             </button>
             <button
               disabled={isPending}
               onClick={onReject}
-              className="text-xs px-4 py-1.5 border border-ink-body/20 text-ink-body/60 rounded hover:border-error/50 hover:text-error hover:bg-error/5 transition-colors disabled:opacity-40"
+              className="text-sm px-4 py-2 border border-ink-body/20 text-ink-body/75 rounded hover:border-error/50 hover:text-error hover:bg-error/5 transition-colors disabled:opacity-40"
             >
               却下
             </button>
           </div>
         ) : (
-          <span className="text-xs text-ink-body/40">処理済み</span>
+          <span className="text-sm text-ink-body/60">処理済み</span>
         )}
       </div>
     </div>
