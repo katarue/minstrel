@@ -219,29 +219,6 @@ function DetailPanel({
         </div>
       </div>
 
-      {/* ゲームタイトル */}
-      {rd.game_titles && rd.game_titles.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {rd.game_titles.map((t) => (
-            <span
-              key={t}
-              className="text-xs bg-bordeaux/10 text-bordeaux border border-bordeaux/20 px-2 py-0.5 rounded"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* 説明文 */}
-      {rd.description && (
-        <div className="bg-parchment-dark rounded-md px-4 py-3">
-          <p className="text-sm text-ink-body/80 leading-relaxed whitespace-pre-wrap">
-            {rd.description}
-          </p>
-        </div>
-      )}
-
       {/* Twitterプレビュー — 残り高さをすべて使う */}
       {isXUrl(item.source_url) ? (
         <div className="flex-1 min-h-0">
