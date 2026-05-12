@@ -137,13 +137,13 @@ export default async function TourPage({
                   {/* 左：日時・会場・カレンダーボタン */}
                   <div className="flex-1 flex flex-col gap-2">
                     <div>
-                      <p className="font-body text-ink-body text-sm font-semibold">{dateStr}</p>
+                      <p className="font-heading text-ink-heading text-base font-bold leading-snug">{dateStr}</p>
                       {timeStr && (
-                        <p className="font-body text-ink-body/70 text-xs mt-0.5">{timeStr}</p>
+                        <p className="font-body text-ink-body text-sm mt-1">{timeStr}</p>
                       )}
                       {(ev.venue_name || ev.prefecture) && (
-                        <p className="font-body text-ink-body/60 text-xs mt-0.5 flex items-center gap-1">
-                          <MapPin size={10} strokeWidth={1.6} className="shrink-0" />
+                        <p className="font-body text-ink-body/80 text-sm mt-0.5 flex items-center gap-1">
+                          <MapPin size={12} strokeWidth={1.6} className="shrink-0" />
                           {ev.venue_name
                             ? `${ev.venue_name}${ev.prefecture ? `（${ev.prefecture}）` : ""}`
                             : ev.prefecture}
