@@ -98,7 +98,7 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
   return (
     <div
       className="flex gap-3"
-      style={{ height: "calc(100vh - 380px)", minHeight: "480px" }}
+      style={{ height: "calc(100vh - 240px)", minHeight: "624px" }}
     >
       {/* 左: コンパクトリスト */}
       <div className="w-60 shrink-0 flex flex-col rounded-lg border border-gold/30 overflow-hidden">
