@@ -21,8 +21,12 @@ type EnrichedFields = {
   organizer_name?: string | null;
 };
 
-async function enrichFromUrl(url: string): Promise<EnrichedFields | null> {
-  // フェッチ
+type EnrichResult =
+  | { ok: true; data: EnrichedFields }
+  | { ok: false; reason: string };
+
+async function enrichFromUrl(url: string): Promise<EnrichResult> {
+  // ── フェッチ ─────────────────────────────────────────────────────
   let html: string;
   try {
     const resp = await fetch(url, {
@@ -33,13 +37,16 @@ async function enrichFromUrl(url: string): Promise<EnrichedFields | null> {
       },
       signal: AbortSignal.timeout(15000),
     });
-    if (!resp.ok) return null;
+    if (!resp.ok) {
+      return { ok: false, reason: `URLの取得に失敗しました（HTTP ${resp.status}: ${resp.statusText}）` };
+    }
     html = await resp.text();
-  } catch {
-    return null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: `URLへの接続に失敗しました（${msg}）` };
   }
 
-  // script / style を除去してからタグを剥がす
+  // ── HTML → テキスト ────────────────────────────────────────────
   const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -49,12 +56,12 @@ async function enrichFromUrl(url: string): Promise<EnrichedFields | null> {
     .trim()
     .slice(0, 6000);
 
-  if (!text) return null;
+  if (!text) return { ok: false, reason: "ページからテキストを取得できませんでした" };
 
-  // Claude で構造化抽出
-  let result;
+  // ── Claude で構造化抽出 ────────────────────────────────────────
+  let claudeResult;
   try {
-    result = await anthropic.messages.create({
+    claudeResult = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 400,
       messages: [{
@@ -72,23 +79,27 @@ async function enrichFromUrl(url: string): Promise<EnrichedFields | null> {
 ${text}`,
       }],
     });
-  } catch {
-    return null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: `Claude APIの呼び出しに失敗しました（${msg}）` };
   }
 
-  const block = result.content[0];
-  if (block.type !== "text") return null;
+  const block = claudeResult.content[0];
+  if (block.type !== "text") return { ok: false, reason: "Claude から予期しない形式のレスポンスが返りました" };
 
-  // JSON を取り出す（貪欲マッチで最外側の {} を取得）
+  // ── JSON パース ────────────────────────────────────────────────
   const raw = block.text.trim();
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
+  if (start === -1 || end === -1 || end <= start) {
+    return { ok: false, reason: `Claude がJSONを返しませんでした（応答: "${raw.slice(0, 100)}"）` };
+  }
 
   try {
-    return JSON.parse(raw.slice(start, end + 1)) as EnrichedFields;
-  } catch {
-    return null;
+    const data = JSON.parse(raw.slice(start, end + 1)) as EnrichedFields;
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, reason: `JSONの解析に失敗しました（${raw.slice(0, 100)}）` };
   }
 }
 
@@ -141,12 +152,15 @@ export async function approveSource(id: string, manualEnrichUrl?: string, manual
     const autoUrls = tweetText ? extractExternalUrls(tweetText) : [];
     const urlToFetch = manualEnrichUrl || autoUrls[0];
     if (urlToFetch) {
-      const fetched = await enrichFromUrl(urlToFetch);
-      if (fetched) {
+      const enrichResult = await enrichFromUrl(urlToFetch);
+      if (enrichResult.ok) {
+        const fetched = enrichResult.data;
         if (fetched.start_datetime) { startDatetime = fetched.start_datetime; enriched = true; }
         if (fetched.venue && !venue) venue = fetched.venue;
         if (fetched.prefecture && !prefecture) prefecture = fetched.prefecture;
         if (fetched.organizer_name && !organizerName) organizerName = fetched.organizer_name;
+      } else {
+        return { status: "error", message: enrichResult.reason };
       }
     }
   }
