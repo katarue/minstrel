@@ -170,6 +170,17 @@ export async function approveSource(id: string, manualEnrichUrl?: string, manual
   if (!eventName) return { status: "error", message: "タイトルが取得できませんでした" };
   if (!startDatetime) return { status: "error", message: "日時を取得できませんでした。公式ページのURLがツイートに含まれているか確認してください" };
 
+  // ── 複数会場チェック（1公演=1レコードルール） ────────────────────────
+  const MULTI_SEPARATORS = ["・", "、", "，", "／"];
+  const hasMultiPrefecture = prefecture && MULTI_SEPARATORS.some(s => prefecture!.includes(s));
+  const hasMultiVenue = venue && MULTI_SEPARATORS.some(s => venue!.includes(s));
+  if (hasMultiPrefecture || hasMultiVenue) {
+    return {
+      status: "error",
+      message: "複数会場のツアーイベントです。CLAUDE.md「1公演=1レコード」ルールに従い、会場ごとに個別に登録してください。このソースは却下してください。",
+    };
+  }
+
   // ── 重複検知 ────────────────────────────────────────────────────────
   const dateStr = startDatetime.substring(0, 10);
   const { data: existing } = await supabase

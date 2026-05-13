@@ -66,20 +66,35 @@ export default async function TourPage({
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: rawEvents } = await supabase
+  const SELECT_FIELDS = `
+    id, event_name, event_name_en, start_datetime,
+    venue_name, prefecture, flyer_image_url, key_visual_url,
+    ticket_urls, description,
+    organizers ( name, official_site_url ),
+    event_game_titles ( game_titles ( title_name, english_name ) )
+  `;
+
+  // まず tour_id で検索。なければ event.id で単件フォールバック
+  const { data: byTour } = await supabase
     .from("events")
-    .select(`
-      id, event_name, event_name_en, start_datetime,
-      venue_name, prefecture, flyer_image_url, key_visual_url,
-      ticket_urls, description,
-      organizers ( name, official_site_url ),
-      event_game_titles ( game_titles ( title_name, english_name ) )
-    `)
+    .select(SELECT_FIELDS)
     .eq("tour_id", id)
     .eq("is_published", true)
     .order("start_datetime", { ascending: true });
 
-  if (!rawEvents || rawEvents.length === 0) notFound();
+  let rawEvents;
+  if (byTour && byTour.length > 0) {
+    rawEvents = byTour;
+  } else {
+    const { data: single } = await supabase
+      .from("events")
+      .select(SELECT_FIELDS)
+      .eq("id", id)
+      .eq("is_published", true)
+      .maybeSingle();
+    if (!single) notFound();
+    rawEvents = [single];
+  }
 
   const events = rawEvents as unknown as TourEvent[];
   const first = events[0];
