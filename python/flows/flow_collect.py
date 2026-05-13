@@ -65,8 +65,24 @@ ANNOUNCEMENT_SCORE_THRESHOLD = 70  # X ツイートの告知確度足切り閾�
 def extract_events(raw_events: list[dict]) -> list[dict]:
     results = []
     skipped_low_score = 0
+    pre_parsed_count = 0
 
     for raw in raw_events:
+        # ── 構造化済みデータがある場合は Claude をスキップ ──────────────
+        pre = raw.get("_pre_parsed")
+        if pre and pre.get("title") and pre.get("start_datetime"):
+            pre["source_rank"] = raw.get("source_rank", "A")
+            pre["_image_url"] = raw.get("image_url")
+            pre["_source_name"] = raw.get("source_name", "unknown")
+            pre["_raw_source_url"] = raw.get("source_url", "")
+            if raw.get("ticket_url") and not pre.get("ticket_url"):
+                pre["ticket_url"] = raw["ticket_url"]
+            if raw.get("_organizer_x_url"):
+                pre["_organizer_x_url"] = raw["_organizer_x_url"]
+            results.append(pre)
+            pre_parsed_count += 1
+            continue
+
         content = raw.get("raw_html") or raw.get("raw_text") or ""
         if not content:
             continue
@@ -96,6 +112,8 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
 
     if skipped_low_score:
         print(f"[extract] skipped {skipped_low_score} low-score X tweets")
+    if pre_parsed_count:
+        print(f"[extract] pre-parsed (Claude skipped): {pre_parsed_count} items")
     return results
 
 

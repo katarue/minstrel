@@ -108,12 +108,16 @@
       "WebFetch(domain:www.mobygames.com)",
       "WebFetch(domain:superfamicom.org)",
       "WebFetch(domain:www.1101.com)",
-      "Read(//g/マイドライブ/GoogleDrive ダウンロード/**)"
+      "Read(//g/マイドライブ/GoogleDrive ダウンロード/**)",
+      "WebFetch(domain:diskgarage.com)",
+      "WebFetch(domain:lalaarenatokyo-bay.com)",
+      "WebFetch(domain:www.songkick.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\katar\\repos\\active\\minstrel\\supabase",
       "C:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\scripts",
-      "C:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\tools"
+      "C:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\tools",
+      "C:\\Users\\katar\\.claude"
     ]
   }
 }
