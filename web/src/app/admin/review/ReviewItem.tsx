@@ -57,11 +57,15 @@ function formatDate(dt: string | null | undefined): string {
 export function ReviewItem({ item }: { item: ReviewSource }) {
   const [result, setResult] = useState<ActionResult | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [enrichUrl, setEnrichUrl] = useState("");
   const rd = item.raw_data;
   const src = SOURCE_LABELS[item.source_name] ?? {
     label: item.source_name,
     color: "bg-ink-body/10 text-ink-body/60 border-ink-body/20",
   };
+
+  // 日時未取得の場合は URL 入力欄を表示する
+  const needsUrl = !rd.start_datetime;
 
   const handleReject = () => {
     startTransition(async () => {
@@ -72,7 +76,7 @@ export function ReviewItem({ item }: { item: ReviewSource }) {
 
   const handleApprove = () => {
     startTransition(async () => {
-      const res = await approveSource(item.id);
+      const res = await approveSource(item.id, enrichUrl.trim() || undefined);
       if (res.status === "merged") setResult({ type: "merged", eventId: res.eventId });
       else if (res.status === "created") setResult({ type: "created", eventId: res.eventId, enriched: res.enriched });
       else setResult({ type: "error", message: res.message });
@@ -152,6 +156,23 @@ export function ReviewItem({ item }: { item: ReviewSource }) {
           <span className="text-ink-body/30">会場・主催情報なし</span>
         )}
       </div>
+
+      {/* 日時未取得時の公式URL入力欄 */}
+      {needsUrl && (
+        <div className="mb-3">
+          <label className="block text-xs text-ink-body/50 mb-1">
+            公式ページURL（日時補完に使用）
+          </label>
+          <input
+            type="url"
+            placeholder="https://example.com/event/..."
+            value={enrichUrl}
+            onChange={(e) => setEnrichUrl(e.target.value)}
+            className="w-full text-xs px-3 py-2 rounded border border-gold/30 bg-parchment-dark/30 text-ink-body placeholder:text-ink-body/30 focus:outline-none focus:border-bordeaux/50"
+          />
+          <p className="text-xs text-ink-body/40 mt-1">ツイートに載っている公式ページのURLを貼り付けてください</p>
+        </div>
+      )}
 
       {/* エラー表示 */}
       {result?.type === "error" && (

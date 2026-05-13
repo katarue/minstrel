@@ -70,7 +70,7 @@ type ApproveResult =
   | { status: "created"; eventId: string; enriched: boolean }
   | { status: "error"; message: string };
 
-export async function approveSource(id: string): Promise<ApproveResult> {
+export async function approveSource(id: string, manualEnrichUrl?: string): Promise<ApproveResult> {
   const supabase = createAdminClient();
 
   const { data: source } = await supabase
@@ -89,12 +89,14 @@ export async function approveSource(id: string): Promise<ApproveResult> {
   let organizerName = typeof raw.organizer_name === "string" ? raw.organizer_name.trim() : null;
   let enriched = false;
 
-  // ── 日時が未取得の場合、ツイート内URLから補完を試みる ──────────────
+  // ── 日時が未取得の場合、URLから補完を試みる ────────────────────────
+  // 優先順: 1) 手動入力URL  2) ツイート本文に含まれるURL（自動抽出）
   if (!startDatetime) {
     const tweetText = typeof raw._tweet_text === "string" ? raw._tweet_text : null;
-    const urls = tweetText ? extractExternalUrls(tweetText) : [];
-    if (urls.length > 0) {
-      const fetched = await enrichFromUrl(urls[0]);
+    const autoUrls = tweetText ? extractExternalUrls(tweetText) : [];
+    const urlToFetch = manualEnrichUrl || autoUrls[0];
+    if (urlToFetch) {
+      const fetched = await enrichFromUrl(urlToFetch);
       if (fetched) {
         if (fetched.start_datetime) { startDatetime = fetched.start_datetime; enriched = true; }
         if (fetched.venue && !venue) venue = fetched.venue;
