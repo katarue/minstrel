@@ -108,6 +108,9 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
                 extracted["_organizer_x_url"] = raw["_organizer_x_url"]
             if raw.get("_author_handle"):
                 extracted["_author_handle"] = raw["_author_handle"]
+            # X ソースはツイート原文を保持（採用時のURL抽出・補完に使用）
+            if raw.get("source_name") in ("x_search", "x_monitored", "x_followed"):
+                extracted["_tweet_text"] = raw.get("raw_text", "")
             results.append(extracted)
 
     if skipped_low_score:

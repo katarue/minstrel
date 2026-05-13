@@ -25,7 +25,7 @@ type ReviewSource = {
 type ActionResult =
   | { type: "rejected" }
   | { type: "merged"; eventId: string }
-  | { type: "created"; eventId: string }
+  | { type: "created"; eventId: string; enriched: boolean }
   | { type: "error"; message: string };
 
 const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
@@ -74,7 +74,7 @@ export function ReviewItem({ item }: { item: ReviewSource }) {
     startTransition(async () => {
       const res = await approveSource(item.id);
       if (res.status === "merged") setResult({ type: "merged", eventId: res.eventId });
-      else if (res.status === "created") setResult({ type: "created", eventId: res.eventId });
+      else if (res.status === "created") setResult({ type: "created", eventId: res.eventId, enriched: res.enriched });
       else setResult({ type: "error", message: res.message });
     });
   };
@@ -101,6 +101,9 @@ export function ReviewItem({ item }: { item: ReviewSource }) {
     return (
       <div className="bg-success/5 rounded-md border border-success/30 px-5 py-4">
         <p className="text-sm text-success font-medium">✓ 新規登録しました（未公開）</p>
+        {result.enriched && (
+          <p className="text-xs text-info mt-0.5">公式ページから日時・会場を自動補完しました</p>
+        )}
         <p className="text-xs text-ink-body/50 mt-0.5">Supabase で内容を確認後、is_published を true にすると公開されます</p>
       </div>
     );
