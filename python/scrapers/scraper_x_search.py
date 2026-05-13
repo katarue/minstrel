@@ -87,6 +87,7 @@ def search_tweets(query: str, since_days: int = 3) -> list[dict]:
                 "raw_text": _build_raw_text(tweet),
                 "tweet_id": tweet.get("id"),
                 "created_at": tweet.get("createdAt"),
+                "_author_handle": tweet.get("author", {}).get("userName", "").lower(),
             })
 
         if not data.get("has_next_page"):

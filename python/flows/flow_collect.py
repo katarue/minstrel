@@ -121,6 +121,8 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
             # スクレイパーが抽出した X アカウント URL
             if raw.get("_organizer_x_url"):
                 extracted["_organizer_x_url"] = raw["_organizer_x_url"]
+            if raw.get("_author_handle"):
+                extracted["_author_handle"] = raw["_author_handle"]
             results.append(extracted)
 
     if skipped_low_score:
@@ -153,10 +155,19 @@ def upsert_to_db(events: list[dict]) -> int:
     merged = 0
     review_queued = 0
 
+    # trust_tier=exclusive のハンドルを一括取得（ループ内で DB を叩かないため）
+    exclusive_result = db.table("organizers").select("x_handle").eq("trust_tier", "exclusive").execute()
+    exclusive_handles: set[str] = {
+        r["x_handle"].lstrip("@").lower()
+        for r in (exclusive_result.data or [])
+        if r.get("x_handle")
+    }
+
     for event in events:
         source_url = event.get("_raw_source_url") or event.get("source_url") or ""
         source_name = event.pop("_source_name", "unknown")
         event.pop("_raw_source_url", None)
+        author_handle = event.pop("_author_handle", "")
 
         if not source_url:
             continue
@@ -209,11 +220,13 @@ def upsert_to_db(events: list[dict]) -> int:
                 review_queued += 1
                 continue
 
-            # X ソースかつハードキーなし → チケット確認なしで新規作成しない
+            # X ソースかつハードキーなし → exclusive 以外はレビューへ
             if source_name == "x_search" and not hard_keys:
-                save_event_source(db, source_url, source_name, event, None, "review_needed")
-                review_queued += 1
-                continue
+                is_exclusive = bool(author_handle and author_handle in exclusive_handles)
+                if not is_exclusive or not event.get("auto_publish_eligible"):
+                    save_event_source(db, source_url, source_name, event, None, "review_needed")
+                    review_queued += 1
+                    continue
 
             ticket_url = event.get("ticket_url")
             confidence = event.get("confidence_score")
