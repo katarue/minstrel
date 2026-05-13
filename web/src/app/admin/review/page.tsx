@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { ReviewQueue } from "./ReviewQueue";
+import { UnpublishedEvents } from "./UnpublishedEvents";
 
 export const revalidate = 0;
 
@@ -38,8 +39,37 @@ async function getReviewItems(): Promise<ReviewSource[]> {
   return (data ?? []) as ReviewSource[];
 }
 
+type UnpublishedEvent = {
+  id: string;
+  event_name: string;
+  start_datetime: string | null;
+  venue_name: string | null;
+  prefecture: string | null;
+  source_rank: string | null;
+  confidence_score: number | null;
+  source_url: string | null;
+};
+
+async function getUnpublishedEvents(): Promise<UnpublishedEvent[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, event_name, start_datetime, venue_name, prefecture, source_rank, confidence_score, source_url")
+    .eq("is_published", false)
+    .order("start_datetime", { ascending: true });
+
+  if (error) {
+    console.error("[admin/unpublished]", error);
+    return [];
+  }
+  return (data ?? []) as UnpublishedEvent[];
+}
+
 export default async function ReviewPage() {
-  const items = await getReviewItems();
+  const [items, unpublished] = await Promise.all([
+    getReviewItems(),
+    getUnpublishedEvents(),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -92,6 +122,19 @@ export default async function ReviewPage() {
       ) : (
         <ReviewQueue items={items} />
       )}
+
+      {/* 未公開イベント一覧 */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-heading text-ink-heading text-base font-semibold">
+            未公開イベント
+          </h2>
+          <span className="text-xs text-ink-body/40">{unpublished.length} 件 — 「公開する」で公式サイトに掲載</span>
+        </div>
+        <div className="bg-parchment rounded-md border border-gold/30 px-5 py-3">
+          <UnpublishedEvents events={unpublished} />
+        </div>
+      </div>
     </div>
   );
 }
