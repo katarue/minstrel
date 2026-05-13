@@ -82,7 +82,7 @@ export async function approveSource(id: string, manualEnrichUrl?: string): Promi
   if (!source) return { status: "error", message: "レコードが見つかりません" };
 
   const raw = source.raw_data as Record<string, unknown>;
-  let eventName = typeof raw.title === "string" ? raw.title.trim() : null;
+  const eventName = typeof raw.title === "string" ? raw.title.trim() : null;
   let startDatetime = typeof raw.start_datetime === "string" ? raw.start_datetime : null;
   let venue = typeof raw.venue === "string" ? raw.venue : null;
   let prefecture = typeof raw.prefecture === "string" ? raw.prefecture : null;
