@@ -107,7 +107,7 @@ type ApproveResult =
   | { status: "created"; eventId: string; enriched: boolean }
   | { status: "error"; message: string };
 
-export async function approveSource(id: string, manualEnrichUrl?: string): Promise<ApproveResult> {
+export async function approveSource(id: string, manualEnrichUrl?: string, manualDatetime?: string, manualVenue?: string): Promise<ApproveResult> {
   const supabase = createAdminClient();
 
   const { data: source } = await supabase
@@ -126,8 +126,16 @@ export async function approveSource(id: string, manualEnrichUrl?: string): Promi
   let organizerName = typeof raw.organizer_name === "string" ? raw.organizer_name.trim() : null;
   let enriched = false;
 
-  // ── 日時が未取得の場合、URLから補完を試みる ────────────────────────
-  // 優先順: 1) 手動入力URL  2) ツイート本文に含まれるURL（自動抽出）
+  // ── 日時が未取得の場合、補完を試みる ────────────────────────────
+  // 優先順: 1) 手動入力の日時  2) URL自動補完  3) ツイート本文URL自動抽出
+  if (!startDatetime && manualDatetime) {
+    // datetime-local の値 "2026-08-11T17:30" を JST ISO8601 に変換
+    startDatetime = manualDatetime.length === 16
+      ? `${manualDatetime}:00+09:00`
+      : manualDatetime;
+    enriched = true;
+  }
+
   if (!startDatetime) {
     const tweetText = typeof raw._tweet_text === "string" ? raw._tweet_text : null;
     const autoUrls = tweetText ? extractExternalUrls(tweetText) : [];
@@ -142,6 +150,8 @@ export async function approveSource(id: string, manualEnrichUrl?: string): Promi
       }
     }
   }
+
+  if (manualVenue && !venue) venue = manualVenue;
 
   if (!eventName) return { status: "error", message: "タイトルが取得できませんでした" };
   if (!startDatetime) return { status: "error", message: "日時を取得できませんでした。公式ページのURLがツイートに含まれているか確認してください" };

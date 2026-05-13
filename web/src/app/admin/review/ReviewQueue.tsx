@@ -83,9 +83,9 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
     });
   };
 
-  const handleApprove = (id: string, enrichUrl?: string) => {
+  const handleApprove = (id: string, enrichUrl?: string, manualDatetime?: string, manualVenue?: string) => {
     startTransition(async () => {
-      const res = await approveSource(id, enrichUrl);
+      const res = await approveSource(id, enrichUrl, manualDatetime, manualVenue);
       let result: ActionResult;
       if (res.status === "merged") result = { type: "merged", eventId: res.eventId };
       else if (res.status === "created") result = { type: "created", eventId: res.eventId, enriched: res.enriched };
@@ -158,7 +158,7 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
             item={selectedItem}
             result={selectedResult}
             isPending={isPending}
-            onApprove={(enrichUrl) => handleApprove(selectedItem.id, enrichUrl)}
+            onApprove={(enrichUrl, manualDatetime, manualVenue) => handleApprove(selectedItem.id, enrichUrl, manualDatetime, manualVenue)}
             onReject={() => handleReject(selectedItem.id)}
           />
         )}
@@ -177,10 +177,12 @@ function DetailPanel({
   item: ReviewSource;
   result: ActionResult | null;
   isPending: boolean;
-  onApprove: (enrichUrl?: string) => void;
+  onApprove: (enrichUrl?: string, manualDatetime?: string, manualVenue?: string) => void;
   onReject: () => void;
 }) {
   const [enrichUrl, setEnrichUrl] = useState("");
+  const [manualDate, setManualDate] = useState("");
+  const [manualVenue, setManualVenue] = useState("");
   const rd = item.raw_data;
   const needsUrl = !rd.start_datetime;
   const src = SOURCE_LABELS[item.source_name] ?? {
@@ -231,20 +233,44 @@ function DetailPanel({
         <div className="flex-1" />
       )}
 
-      {/* 日時未取得時の公式URL入力欄 */}
+      {/* 日時未取得時の補完フォーム */}
       {needsUrl && (!result || result.type === "error") && (
-        <div>
-          <label className="block text-xs text-ink-body/50 mb-1">
-            公式ページURL（日時補完に使用）
-          </label>
-          <input
-            type="url"
-            placeholder="https://example.com/event/..."
-            value={enrichUrl}
-            onChange={(e) => setEnrichUrl(e.target.value)}
-            className="w-full text-sm px-3 py-2 rounded border border-gold/30 bg-white text-ink-body placeholder:text-ink-body/30 focus:outline-none focus:border-bordeaux/50"
-          />
-          <p className="text-xs text-ink-body/40 mt-1">ツイートに載っている公式ページのURLを貼り付けてください</p>
+        <div className="flex flex-col gap-2 border border-gold/30 rounded-md px-3 py-3 bg-parchment-dark/20">
+          <p className="text-xs font-medium text-ink-body/60">日時補完</p>
+          {/* 公式URL（自動補完） */}
+          <div>
+            <label className="block text-xs text-ink-body/40 mb-0.5">公式ページURL（自動補完）</label>
+            <input
+              type="url"
+              placeholder="https://example.com/event/..."
+              value={enrichUrl}
+              onChange={(e) => setEnrichUrl(e.target.value)}
+              className="w-full text-xs px-2 py-1.5 rounded border border-gold/30 bg-white text-ink-body placeholder:text-ink-body/30 focus:outline-none focus:border-bordeaux/40"
+            />
+          </div>
+          {/* 手動入力（フォールバック） */}
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs text-ink-body/40 mb-0.5">開催日時（手動）</label>
+              <input
+                type="datetime-local"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+                className="w-full text-xs px-2 py-1.5 rounded border border-gold/30 bg-white text-ink-body focus:outline-none focus:border-bordeaux/40"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-ink-body/40 mb-0.5">会場名（手動）</label>
+              <input
+                type="text"
+                placeholder="LINE CUBE SHIBUYA"
+                value={manualVenue}
+                onChange={(e) => setManualVenue(e.target.value)}
+                className="w-full text-xs px-2 py-1.5 rounded border border-gold/30 bg-white text-ink-body placeholder:text-ink-body/30 focus:outline-none focus:border-bordeaux/40"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-ink-body/35">URLを入力して自動補完、または日時・会場を直接入力してください</p>
         </div>
       )}
 
@@ -294,7 +320,11 @@ function DetailPanel({
           <div className="flex gap-2 shrink-0">
             <button
               disabled={isPending}
-              onClick={() => onApprove(enrichUrl.trim() || undefined)}
+              onClick={() => onApprove(
+                enrichUrl.trim() || undefined,
+                manualDate.trim() || undefined,
+                manualVenue.trim() || undefined,
+              )}
               className="text-sm px-4 py-2 bg-bordeaux text-parchment rounded hover:bg-bordeaux/80 transition-colors disabled:opacity-40"
             >
               {isPending ? "処理中..." : "採用"}
