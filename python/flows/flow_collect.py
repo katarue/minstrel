@@ -182,10 +182,27 @@ def upsert_to_db(events: list[dict]) -> int:
         # ── step 2: ハードキーで既存 event を検索 ──────────────────────────
         existing_event_id = find_existing_event(db, hard_keys)
 
-        # ── step 2b: ファジーマッチ（同名 + 同日）で重複チェック ────────────
+        # ── step 2b: ファジーマッチ（同名 + 同日 [+ オーガナイザー]）────────
         if not existing_event_id:
+            # オーガナイザーを先行ルックアップ（作成はせず ID のみ取得）
+            org_name = (event.get("organizer_name") or "").strip()
+            organizer_id_hint: str | None = None
+            if org_name:
+                org_res = (
+                    db.table("organizers")
+                    .select("id")
+                    .eq("name", org_name)
+                    .limit(1)
+                    .execute()
+                )
+                if org_res.data:
+                    organizer_id_hint = org_res.data[0]["id"]
+
             existing_event_id = find_existing_event_by_name_date(
-                db, event.get("title"), event.get("start_datetime")
+                db,
+                event.get("title"),
+                event.get("start_datetime"),
+                organizer_id=organizer_id_hint,
             )
 
         if existing_event_id:

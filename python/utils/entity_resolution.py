@@ -13,7 +13,17 @@
 """
 
 import re
+import unicodedata
 from urllib.parse import urlparse, urlunparse
+
+
+def _normalize_title(title: str) -> str:
+    """重複検知用タイトル正規化（比較専用）。
+    NFKC 正規化（全角→半角統一）+ 空白除去 + 小文字化。
+    DB 保存値は変更しない。
+    """
+    normalized = unicodedata.normalize("NFKC", title)
+    return "".join(normalized.split()).lower()
 
 
 # チケット・公式URLとして認識するドメイン
@@ -116,28 +126,38 @@ def find_existing_event(db, hard_keys: list[tuple[str, str]]) -> str | None:
     return None
 
 
-def find_existing_event_by_name_date(db, event_name: str, start_datetime: str) -> str | None:
+def find_existing_event_by_name_date(
+    db,
+    event_name: str,
+    start_datetime: str,
+    organizer_id: str | None = None,
+) -> str | None:
     """
-    イベント名 + 開催日が一致する既存イベントを検索する（ファジーマッチ）。
+    イベント名（正規化後一致）+ 開催日 [+ オーガナイザー] で既存イベントを検索する。
     ハードキーで見つからなかった場合の重複防止として使用。
-    同名・同日で会場が異なる別公演（例: 東京/大阪同日開催）は
-    venue_name が異なるため誤マージは起きにくいが、念のため呼び出し元で確認を推奨。
+
+    organizer_id が渡された場合はオーガナイザーも一致条件に加える（誤マージ防止）。
+    正規化: NFKC（全角→半角）+ 空白除去 + 小文字化。
     """
     if not event_name or not start_datetime:
         return None
 
     date_str = start_datetime[:10]
-    result = (
+    normalized_query = _normalize_title(event_name)
+
+    query = (
         db.table("events")
-        .select("id")
-        .eq("event_name", event_name.strip())
+        .select("id, event_name")
         .gte("start_datetime", f"{date_str}T00:00:00+00:00")
         .lt("start_datetime", f"{date_str}T23:59:59+00:00")
-        .limit(1)
-        .execute()
     )
-    if result.data:
-        return result.data[0]["id"]
+    if organizer_id:
+        query = query.eq("organizer_id", organizer_id)
+
+    result = query.execute()
+    for row in result.data or []:
+        if _normalize_title(row["event_name"]) == normalized_query:
+            return row["id"]
     return None
 
 
