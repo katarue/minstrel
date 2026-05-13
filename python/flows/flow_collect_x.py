@@ -18,6 +18,7 @@ from datetime import datetime, timezone, timedelta
 from prefect import flow, task
 
 from scrapers.scraper_x_search import scrape_x_search, _FOLLOWING_CACHE_PATH
+from scripts.sync_x_lists import _SYNC_STATE_PATH as _LISTS_SYNC_STATE_PATH
 from flows.flow_collect import (
     extract_events,
     validate_events,
@@ -57,6 +58,29 @@ def sync_following_if_stale(max_age_days: int = 7) -> None:
 
 
 @task
+def sync_x_lists_if_stale(max_age_days: int = 7) -> None:
+    """X リスト（exclusive / partial）の trust_tier が max_age_days 以上古い場合に再同期する。"""
+    stale = True
+    if os.path.exists(_LISTS_SYNC_STATE_PATH):
+        try:
+            with open(_LISTS_SYNC_STATE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            synced_at = data.get("synced_at")
+            if synced_at:
+                age = datetime.now(timezone.utc) - datetime.fromisoformat(synced_at)
+                stale = age > timedelta(days=max_age_days)
+        except Exception:
+            stale = True
+
+    if stale:
+        print("[sync_x_lists] X リストが古いため trust_tier を再同期します")
+        from scripts.sync_x_lists import sync as lists_sync
+        lists_sync()
+    else:
+        print("[sync_x_lists] X リストは最新です（スキップ）")
+
+
+@task
 def scrape_x(since_days: int = 1) -> list[dict]:
     return scrape_x_search(since_days=since_days)
 
@@ -68,6 +92,7 @@ def collect_x_flow(since_days: int = 1):
     inserted_count = 0
     try:
         sync_following_if_stale()
+        sync_x_lists_if_stale()
         raw_x = scrape_x(since_days=since_days)
         scraped_count = len(raw_x)
         print(f"scraped: x={scraped_count}")

@@ -10,9 +10,11 @@ organizers テーブルの trust_tier を同期する。
   - partial リストのメンバー   → trust_tier = 'partial'
   - どちらにも属さない既存オーガナイザー → trust_tier = 'unknown' にリセット
 """
+import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 
 import requests
 
@@ -21,6 +23,11 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from utils.config import TWITTERAPI_IO_KEY
 from utils.db import get_client
+
+_SYNC_STATE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data", "x_lists_sync_state.json",
+)
 
 LIST_IDS = {
     "exclusive": "2054334048143909013",
@@ -126,6 +133,11 @@ def sync(dry_run: bool = False) -> None:
         print("  ※ これらはイベント登録時に自動追加されます")
 
     print(f"\n[sync] 完了: 更新={updated} / 変更なし={skipped_no_change} / handle未設定={skipped_no_handle} / リスト外リセット={not_found_in_list}")
+
+    if not dry_run:
+        os.makedirs(os.path.dirname(_SYNC_STATE_PATH), exist_ok=True)
+        with open(_SYNC_STATE_PATH, "w", encoding="utf-8") as f:
+            json.dump({"synced_at": datetime.now(timezone.utc).isoformat()}, f)
 
 
 if __name__ == "__main__":

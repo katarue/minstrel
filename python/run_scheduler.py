@@ -22,6 +22,7 @@ Minstrel スケジューラー
   cd python && .venv/Scripts/python run_scheduler.py --run-post-monday
   cd python && .venv/Scripts/python run_scheduler.py --run-post-friday
   cd python && .venv/Scripts/python run_scheduler.py --run-sync-following
+  cd python && .venv/Scripts/python run_scheduler.py --run-sync-lists
 """
 import argparse
 import os
@@ -51,6 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-post-monday", action="store_true", help="月曜投稿フロー即時実行")
     parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
     parser.add_argument("--run-sync-following", action="store_true", help="@minstrel_live フォローリスト同期")
+    parser.add_argument("--run-sync-lists", action="store_true", help="X リスト → trust_tier 同期（即時）")
     parser.add_argument("--serve-scheduled", action="store_true", help="チケット収集フロー: 3日おき09:00 JST")
     parser.add_argument("--serve-x", action="store_true", help="X 収集フロー: 毎日07:00 JST")
     parser.add_argument("--serve-broadcasts", action="store_true", help="放送収集フロー: 毎日08:00 JST")
@@ -63,6 +65,9 @@ if __name__ == "__main__":
     if args.run_sync_following:
         from scripts.sync_x_following import run as sync_run
         sync_run()
+    elif args.run_sync_lists:
+        from scripts.sync_x_lists import sync as lists_sync
+        lists_sync()
     elif args.run_now:
         collect_flow()
     elif args.run_x:
