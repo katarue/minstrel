@@ -6,10 +6,10 @@ import { revalidatePath } from "next/cache";
 export async function publishEvent(id: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
 
-  // 公開前に重複チェック（同名+同日 / 同会場+同日）
+  // 公開前に重複チェック（同名+同日 / 同会場+同日 / 会場なし同主催+同日）
   const { data: target } = await supabase
     .from("events")
-    .select("event_name, start_datetime, venue_name")
+    .select("event_name, start_datetime, venue_name, organizer_id")
     .eq("id", id)
     .single();
 
@@ -47,6 +47,22 @@ export async function publishEvent(id: string): Promise<{ ok: boolean; message?:
       );
       if (venueMatch) {
         return { ok: false, message: `同日・同会場のイベントが既に公開されています:「${venueMatch.event_name}」` };
+      }
+    }
+
+    // チェック3: 会場情報なし + 同主催 + 同日
+    if (!target.venue_name && target.organizer_id) {
+      const { data: sameOrgDay } = await supabase
+        .from("events")
+        .select("id, event_name")
+        .eq("organizer_id", target.organizer_id)
+        .eq("is_published", true)
+        .gte("start_datetime", `${dateStr}T00:00:00+00:00`)
+        .lt("start_datetime", `${dateStr}T23:59:59+00:00`)
+        .neq("id", id)
+        .limit(1);
+      if (sameOrgDay && sameOrgDay.length > 0) {
+        return { ok: false, message: `同日・同主催のイベントが既に公開されています:「${sameOrgDay[0].event_name}」（会場未確定のため要確認）` };
       }
     }
   }
