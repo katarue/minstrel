@@ -22,34 +22,71 @@ type EnrichedFields = {
 };
 
 async function enrichFromUrl(url: string): Promise<EnrichedFields | null> {
+  // フェッチ
+  let html: string;
   try {
     const resp = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; Minstrel/1.0; +https://minstrel.live)" },
-      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+      },
+      signal: AbortSignal.timeout(15000),
     });
     if (!resp.ok) return null;
-    const html = await resp.text();
-    const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 4000);
+    html = await resp.text();
+  } catch {
+    return null;
+  }
 
-    const result = await anthropic.messages.create({
+  // script / style を除去してからタグを剥がす
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 6000);
+
+  if (!text) return null;
+
+  // Claude で構造化抽出
+  let result;
+  try {
+    result = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
+      max_tokens: 400,
       messages: [{
         role: "user",
-        content: `以下のイベントページのテキストから、開催日時・会場・都道府県・主催者名を抽出してください。
-JSON形式のみで返してください（説明不要）:
-{"start_datetime":"ISO8601形式またはnull","venue":"string or null","prefecture":"都道府県名（例:東京都）or null","organizer_name":"string or null"}
+        content: `以下はイベントページのテキストです。開催日時・会場・都道府県・主催者名を抽出して、必ずJSONのみを返してください（説明文・コードブロック不要）。
+
+出力形式の例:
+{"start_datetime":"2026-08-11T17:30:00+09:00","venue":"LINE CUBE SHIBUYA","prefecture":"東京都","organizer_name":"スパイク・チュンソフト"}
+
+ルール:
+- start_datetime は ISO 8601（+09:00 付き）。開演時刻が不明なら T00:00:00+09:00
+- 情報がなければ null
 
 テキスト:
 ${text}`,
       }],
     });
+  } catch {
+    return null;
+  }
 
-    const block = result.content[0];
-    if (block.type !== "text") return null;
-    const jsonMatch = block.text.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) return null;
-    return JSON.parse(jsonMatch[0]) as EnrichedFields;
+  const block = result.content[0];
+  if (block.type !== "text") return null;
+
+  // JSON を取り出す（貪欲マッチで最外側の {} を取得）
+  const raw = block.text.trim();
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  try {
+    return JSON.parse(raw.slice(start, end + 1)) as EnrichedFields;
   } catch {
     return null;
   }
