@@ -25,7 +25,7 @@ type ReviewSource = {
 type ActionResult =
   | { type: "rejected" }
   | { type: "merged"; eventId: string }
-  | { type: "created"; eventId: string }
+  | { type: "created"; eventId: string; enriched: boolean }
   | { type: "error"; message: string };
 
 const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
@@ -83,12 +83,12 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
     });
   };
 
-  const handleApprove = (id: string) => {
+  const handleApprove = (id: string, enrichUrl?: string) => {
     startTransition(async () => {
-      const res = await approveSource(id);
+      const res = await approveSource(id, enrichUrl);
       let result: ActionResult;
       if (res.status === "merged") result = { type: "merged", eventId: res.eventId };
-      else if (res.status === "created") result = { type: "created", eventId: res.eventId };
+      else if (res.status === "created") result = { type: "created", eventId: res.eventId, enriched: res.enriched };
       else result = { type: "error", message: res.message };
       setResults((prev) => new Map(prev).set(id, result));
       if (result.type !== "error") advanceSelection(id);
@@ -154,10 +154,11 @@ export function ReviewQueue({ items }: { items: ReviewSource[] }) {
           </div>
         ) : (
           <DetailPanel
+            key={selectedItem.id}
             item={selectedItem}
             result={selectedResult}
             isPending={isPending}
-            onApprove={() => handleApprove(selectedItem.id)}
+            onApprove={(enrichUrl) => handleApprove(selectedItem.id, enrichUrl)}
             onReject={() => handleReject(selectedItem.id)}
           />
         )}
@@ -176,10 +177,12 @@ function DetailPanel({
   item: ReviewSource;
   result: ActionResult | null;
   isPending: boolean;
-  onApprove: () => void;
+  onApprove: (enrichUrl?: string) => void;
   onReject: () => void;
 }) {
+  const [enrichUrl, setEnrichUrl] = useState("");
   const rd = item.raw_data;
+  const needsUrl = !rd.start_datetime;
   const src = SOURCE_LABELS[item.source_name] ?? {
     label: item.source_name,
     color: "bg-ink-body/10 text-ink-body/60 border-ink-body/20",
@@ -228,6 +231,23 @@ function DetailPanel({
         <div className="flex-1" />
       )}
 
+      {/* 日時未取得時の公式URL入力欄 */}
+      {needsUrl && (!result || result.type === "error") && (
+        <div>
+          <label className="block text-xs text-ink-body/50 mb-1">
+            公式ページURL（日時補完に使用）
+          </label>
+          <input
+            type="url"
+            placeholder="https://example.com/event/..."
+            value={enrichUrl}
+            onChange={(e) => setEnrichUrl(e.target.value)}
+            className="w-full text-sm px-3 py-2 rounded border border-gold/30 bg-white text-ink-body placeholder:text-ink-body/30 focus:outline-none focus:border-bordeaux/50"
+          />
+          <p className="text-xs text-ink-body/40 mt-1">ツイートに載っている公式ページのURLを貼り付けてください</p>
+        </div>
+      )}
+
       {/* アクション結果 */}
       {result && (
         <div
@@ -246,9 +266,13 @@ function DetailPanel({
             </p>
           )}
           {result.type === "created" && (
-            <p className="text-sm text-success font-medium">
-              ✓ 新規登録しました（未公開）— Supabase で is_published = true にすると公開
-            </p>
+            <>
+              <p className="text-sm text-success font-medium">✓ 新規登録しました（未公開）</p>
+              {result.enriched && (
+                <p className="text-xs text-info mt-0.5">公式ページから日時・会場を自動補完しました</p>
+              )}
+              <p className="text-xs text-ink-body/50 mt-0.5">Supabase で is_published = true にすると公開されます</p>
+            </>
           )}
           {result.type === "error" && (
             <p className="text-sm text-error">⚠ {result.message}</p>
@@ -270,7 +294,7 @@ function DetailPanel({
           <div className="flex gap-2 shrink-0">
             <button
               disabled={isPending}
-              onClick={onApprove}
+              onClick={() => onApprove(enrichUrl.trim() || undefined)}
               className="text-sm px-4 py-2 bg-bordeaux text-parchment rounded hover:bg-bordeaux/80 transition-colors disabled:opacity-40"
             >
               {isPending ? "処理中..." : "採用"}
