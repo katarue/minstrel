@@ -12,6 +12,7 @@ robots.txt 確認済み: イベント一覧・詳細ページはスクレイピ�
 import time
 from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC
+from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text
 
 # teket API の実測: 正常レスポンスは 1〜3 秒。
 # (connect_timeout, read_timeout) 形式で設定。
@@ -100,13 +101,46 @@ class ScraperTeket(BaseScraper):
         flyer = item.get("flyer") or ""
         image_url = (BASE_URL + flyer) if flyer else None
 
+        # ── 構造化パース（Claude extraction をスキップするための _pre_parsed） ──
+        event_name = item.get("event_name") or ""
+        theater = item.get("theater") or ""
+        region = item.get("region") or ""
+        summary = item.get("summary_program") or ""
+        catch_copy = item.get("catch_copy") or ""
+
+        start_dt = build_iso8601(item.get("event_date"), item.get("start"))
+        end_dt = build_iso8601(item.get("event_date"), item.get("close"))
+        prefecture = region_to_prefecture(region, theater)
+
+        description_base = catch_copy or summary
+        description = description_base[:100] if description_base else None
+
+        search_text = f"{event_name} {summary}"
+        titles = game_titles_from_text(search_text)
+
+        pre_parsed: dict = {
+            "title": event_name or None,
+            "start_datetime": start_dt,
+            "end_datetime": end_dt,
+            "venue": theater or None,
+            "prefecture": prefecture,
+            "organizer_name": item.get("group_name") or None,
+            "organizer_official_url": None,
+            "ticket_url": url,
+            "description": description,
+            "game_titles": titles,
+            "is_cancelled": False,
+            "source_url": url,
+        }
+
         return {
             "source_url": url,
             "source_name": self.source_name,
             "source_rank": self.source_rank,
             "raw_text": raw_text,
             "image_url": image_url,
-            "ticket_url": url,  # teket URL はそのままチケット購入ページ
+            "ticket_url": url,
+            "_pre_parsed": pre_parsed,
         }
 
     def _format_raw_text(self, item: dict) -> str | None:

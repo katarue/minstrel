@@ -1,6 +1,5 @@
-import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from prefect import flow, task
 from scrapers.scraper_teket import ScraperTeket
 from scrapers.scraper_eplus import ScraperEplus
@@ -8,7 +7,6 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
-from scrapers.scraper_x_search import scrape_x_search, _FOLLOWING_CACHE_PATH
 from processor.claude_extractor import extract_event, score_announcement
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
@@ -59,35 +57,6 @@ def scrape_livepocket() -> list[dict]:
     return ScraperLivepocket().scrape()
 
 
-@task
-def sync_following_if_stale(max_age_days: int = 7) -> None:
-    """フォローリスト JSON が max_age_days 以上古い場合、または存在しない場合に再同期する。"""
-    stale = True
-    if os.path.exists(_FOLLOWING_CACHE_PATH):
-        try:
-            with open(_FOLLOWING_CACHE_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            synced_at = data.get("synced_at")
-            if synced_at:
-                age = datetime.now(timezone.utc) - datetime.fromisoformat(synced_at)
-                stale = age > timedelta(days=max_age_days)
-        except Exception:
-            stale = True
-
-    if stale:
-        print("[sync_following] フォローリストが古いため再同期します")
-        import sys
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from scripts.sync_x_following import run as sync_run
-        sync_run()
-    else:
-        print("[sync_following] フォローリストは最新です（スキップ）")
-
-
-@task
-def scrape_x(since_days: int = 3) -> list[dict]:
-    return scrape_x_search(since_days=since_days)
-
 
 ANNOUNCEMENT_SCORE_THRESHOLD = 70  # X ツイートの告知確度足切り閾値
 
@@ -96,8 +65,24 @@ ANNOUNCEMENT_SCORE_THRESHOLD = 70  # X ツイートの告知確度足切り閾�
 def extract_events(raw_events: list[dict]) -> list[dict]:
     results = []
     skipped_low_score = 0
+    pre_parsed_count = 0
 
     for raw in raw_events:
+        # ── 構造化済みデータがある場合は Claude をスキップ ──────────────
+        pre = raw.get("_pre_parsed")
+        if pre and pre.get("title") and pre.get("start_datetime"):
+            pre["source_rank"] = raw.get("source_rank", "A")
+            pre["_image_url"] = raw.get("image_url")
+            pre["_source_name"] = raw.get("source_name", "unknown")
+            pre["_raw_source_url"] = raw.get("source_url", "")
+            if raw.get("ticket_url") and not pre.get("ticket_url"):
+                pre["ticket_url"] = raw["ticket_url"]
+            if raw.get("_organizer_x_url"):
+                pre["_organizer_x_url"] = raw["_organizer_x_url"]
+            results.append(pre)
+            pre_parsed_count += 1
+            continue
+
         content = raw.get("raw_html") or raw.get("raw_text") or ""
         if not content:
             continue
@@ -121,10 +106,14 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
             # スクレイパーが抽出した X アカウント URL
             if raw.get("_organizer_x_url"):
                 extracted["_organizer_x_url"] = raw["_organizer_x_url"]
+            if raw.get("_author_handle"):
+                extracted["_author_handle"] = raw["_author_handle"]
             results.append(extracted)
 
     if skipped_low_score:
         print(f"[extract] skipped {skipped_low_score} low-score X tweets")
+    if pre_parsed_count:
+        print(f"[extract] pre-parsed (Claude skipped): {pre_parsed_count} items")
     return results
 
 
@@ -153,10 +142,19 @@ def upsert_to_db(events: list[dict]) -> int:
     merged = 0
     review_queued = 0
 
+    # trust_tier=exclusive のハンドルを一括取得（ループ内で DB を叩かないため）
+    exclusive_result = db.table("organizers").select("x_handle").eq("trust_tier", "exclusive").execute()
+    exclusive_handles: set[str] = {
+        r["x_handle"].lstrip("@").lower()
+        for r in (exclusive_result.data or [])
+        if r.get("x_handle")
+    }
+
     for event in events:
         source_url = event.get("_raw_source_url") or event.get("source_url") or ""
         source_name = event.pop("_source_name", "unknown")
         event.pop("_raw_source_url", None)
+        author_handle = event.pop("_author_handle", "")
 
         if not source_url:
             continue
@@ -171,10 +169,27 @@ def upsert_to_db(events: list[dict]) -> int:
         # ── step 2: ハードキーで既存 event を検索 ──────────────────────────
         existing_event_id = find_existing_event(db, hard_keys)
 
-        # ── step 2b: ファジーマッチ（同名 + 同日）で重複チェック ────────────
+        # ── step 2b: ファジーマッチ（同名 + 同日 [+ オーガナイザー]）────────
         if not existing_event_id:
+            # オーガナイザーを先行ルックアップ（作成はせず ID のみ取得）
+            org_name = (event.get("organizer_name") or "").strip()
+            organizer_id_hint: str | None = None
+            if org_name:
+                org_res = (
+                    db.table("organizers")
+                    .select("id")
+                    .eq("name", org_name)
+                    .limit(1)
+                    .execute()
+                )
+                if org_res.data:
+                    organizer_id_hint = org_res.data[0]["id"]
+
             existing_event_id = find_existing_event_by_name_date(
-                db, event.get("title"), event.get("start_datetime")
+                db,
+                event.get("title"),
+                event.get("start_datetime"),
+                organizer_id=organizer_id_hint,
             )
 
         if existing_event_id:
@@ -209,11 +224,13 @@ def upsert_to_db(events: list[dict]) -> int:
                 review_queued += 1
                 continue
 
-            # X ソースかつハードキーなし → チケット確認なしで新規作成しない
+            # X ソースかつハードキーなし → exclusive 以外はレビューへ
             if source_name == "x_search" and not hard_keys:
-                save_event_source(db, source_url, source_name, event, None, "review_needed")
-                review_queued += 1
-                continue
+                is_exclusive = bool(author_handle and author_handle in exclusive_handles)
+                if not is_exclusive or not event.get("auto_publish_eligible"):
+                    save_event_source(db, source_url, source_name, event, None, "review_needed")
+                    review_queued += 1
+                    continue
 
             ticket_url = event.get("ticket_url")
             confidence = event.get("confidence_score")
@@ -336,20 +353,18 @@ def collect_flow():
     scraped_count = 0
     inserted_count = 0
     try:
-        sync_following_if_stale()
         raw_teket = scrape_teket()
         raw_eplus = scrape_eplus()
         raw_pia = scrape_pia()
         raw_lawson = scrape_lawson()
         raw_peatix = scrape_peatix()
         raw_livepocket = scrape_livepocket()
-        raw_x = scrape_x(since_days=3)
-        raw = raw_teket + raw_eplus + raw_pia + raw_lawson + raw_peatix + raw_livepocket + raw_x
+        raw = raw_teket + raw_eplus + raw_pia + raw_lawson + raw_peatix + raw_livepocket
         scraped_count = len(raw)
         print(
             f"scraped: teket={len(raw_teket)}, "
             f"eplus={len(raw_eplus)}, pia={len(raw_pia)}, lawson={len(raw_lawson)}, "
-            f"peatix={len(raw_peatix)}, livepocket={len(raw_livepocket)}, x={len(raw_x)}, total={scraped_count}"
+            f"peatix={len(raw_peatix)}, livepocket={len(raw_livepocket)}, total={scraped_count}"
         )
 
         extracted = extract_events(raw)
