@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { publishEvent } from "./publish-actions";
+import { publishEvent, deleteEvent } from "./publish-actions";
 
 type UnpublishedEvent = {
   id: string;
@@ -48,6 +48,33 @@ function PublishButton({ id }: { id: string }) {
   );
 }
 
+function DeleteButton({ id }: { id: string }) {
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      const res = await deleteEvent(id);
+      if (res.ok) setDone(true);
+      else setError(res.message ?? "エラー");
+    });
+  };
+
+  if (done) return <span className="text-xs text-ink-body/40">削除済み</span>;
+  if (error) return <span className="text-xs text-error">{error}</span>;
+
+  return (
+    <button
+      disabled={isPending}
+      onClick={handleDelete}
+      className="text-xs px-3 py-1 border border-error/30 text-error/70 rounded hover:bg-error/10 hover:text-error disabled:opacity-40 transition-colors whitespace-nowrap"
+    >
+      {isPending ? "..." : "削除する"}
+    </button>
+  );
+}
+
 export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
   if (events.length === 0) {
     return (
@@ -64,7 +91,7 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
             <th className="text-left py-2 pr-4 font-medium">開催日</th>
             <th className="text-left py-2 pr-4 font-medium">会場</th>
             <th className="text-left py-2 pr-4 font-medium">ランク</th>
-            <th className="py-2 font-medium"></th>
+            <th className="py-2 font-medium" colSpan={2}></th>
           </tr>
         </thead>
         <tbody>
@@ -100,8 +127,11 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
                   {ev.source_rank ?? "C"}
                 </span>
               </td>
-              <td className="py-2.5 text-right">
+              <td className="py-2.5 pr-2 text-right">
                 <PublishButton id={ev.id} />
+              </td>
+              <td className="py-2.5 text-right">
+                <DeleteButton id={ev.id} />
               </td>
             </tr>
           ))}

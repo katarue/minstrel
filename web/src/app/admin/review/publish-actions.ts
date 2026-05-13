@@ -28,3 +28,16 @@ export async function unpublishEvent(id: string): Promise<{ ok: boolean; message
   revalidatePath("/admin");
   return { ok: true };
 }
+
+export async function deleteEvent(id: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  revalidatePath("/admin");
+  return { ok: true };
+}
