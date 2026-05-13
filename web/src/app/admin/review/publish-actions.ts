@@ -6,12 +6,25 @@ import { revalidatePath } from "next/cache";
 export async function publishEvent(id: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
 
-  // 公開前に重複チェック（同名+同日 / 同会場+同日 / 会場なし同主催+同日）
+  // 対象イベント取得（品質チェック + 重複チェック用）
   const { data: target } = await supabase
     .from("events")
-    .select("event_name, start_datetime, venue_name, organizer_id")
+    .select("event_name, start_datetime, venue_name, prefecture, organizer_id, event_game_titles(id)")
     .eq("id", id)
     .single();
+
+  if (!target) return { ok: false, message: "イベントが見つかりません" };
+
+  // ── 品質ゲート ────────────────────────────────────────────────────────
+  // 会場・都道府県のどちらもない → ユーザーに価値なし
+  if (!target.venue_name && !target.prefecture) {
+    return { ok: false, message: "会場・都道府県が取得できていません。場所情報のないイベントは公開できません" };
+  }
+  // ゲームタイトルが1件もない → ゲーム音楽コンサートとして掲載できない
+  const gameTitleCount = (target.event_game_titles as { id: string }[]).length;
+  if (gameTitleCount === 0) {
+    return { ok: false, message: "ゲームタイトルが登録されていません。掲載に値するか確認してください" };
+  }
 
   if (target?.start_datetime) {
     const dateStr = target.start_datetime.substring(0, 10);
