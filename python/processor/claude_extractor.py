@@ -4,18 +4,25 @@ from utils.config import ANTHROPIC_API_KEY
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
+_GAME_TITLES_CRITERIA = """
+【game_titles の判定基準】
+game_titles には「ビデオゲーム・コンピューターゲームが最初の発表媒体であるタイトル」のみを含めてください。
+- 含める: RPG、アクション、ADV、ビジュアルノベル、ノベルゲーム等すべてのゲームジャンル
+  例: ファイナルファンタジー、ゼルダの伝説、ポケモン、ドラゴンクエスト、モンスターハンター、
+      Steins;Gate（ビジュアルノベル）、逆転裁判、ダンガンロンパ、ヴァルキリープロファイル
+- 除外: アニメ・漫画・映画・ライトノベルが「最初の発表媒体」であるもの
+  例: ラブライブ！（アニメ原作）、進撃の巨人（漫画原作）、鬼滅の刃（漫画原作）
+- 判断基準: 「そのIPが最初にゲームとしてリリースされたか」。ゲームと同時・ゲームが先ならば含める。
+- 演奏するゲーム音楽が一切ない（アニメ・映画・ポップス等のみ）場合は空リスト [] を返してください。
+- シリーズものはナンバリングではなくシリーズ名で統一すること。
+  例:「ファイナルファンタジーXIV」→「ファイナルファンタジー」、「ゼルダの伝説 ブレス オブ ザ ワイルド」→「ゼルダの伝説」。
+"""
+
 EXTRACTION_SYSTEM = """
 あなたはゲーム音楽コンサートの情報を構造化するアシスタントです。
 与えられたHTMLまたはテキストから、以下のJSONスキーマに従って情報を抽出してください。
 抽出できない項目はnullにしてください。日時はISO 8601形式（JST）で返してください。
-
-【game_titles の判定基準】
-game_titles には「ゲームが原作（発祥）のタイトル」のみを含めてください。
-- 含める例: ファイナルファンタジー、ゼルダの伝説、ポケモン、ドラゴンクエスト、モンスターハンター、プリンセスコネクト
-- 除外する例: ラブライブ！（アニメ原作）、アイマス（アニメ・メディアミックス原作）、進撃の巨人（漫画原作）、鬼滅の刃（漫画原作）
-- 判断基準: そのIPが「最初にゲームとしてリリースされたか」。後からゲーム化されたアニメ・漫画・映画原作は除外。
-- 演奏するゲーム音楽が一切ない（アニメ・映画・ポップス等のみ）場合は空リスト [] を返してください。
-- シリーズものはナンバリングではなくシリーズ名で統一すること。例:「ファイナルファンタジーXIV」「ファイナルファンタジーVII」→「ファイナルファンタジー」、「ゼルダの伝説 ブレス オブ ザ ワイルド」→「ゼルダの伝説」、「ドラゴンクエストXI」→「ドラゴンクエスト」。
+""" + _GAME_TITLES_CRITERIA + """
 
 【organizer_official_url の判定基準】
 テキスト末尾に「【外部リンク候補】」として URL リストが提示される場合があります。
@@ -109,6 +116,45 @@ JSONのみ返してください。"""
         return int(parsed.get("announcement_score", 0))
     except Exception:
         return 0
+
+
+GAME_TITLES_SYSTEM = """
+あなたはゲーム音楽コンサートのテキストから演奏対象ゲームタイトルを抽出するアシスタントです。
+""" + _GAME_TITLES_CRITERIA
+
+
+def extract_game_titles(raw_text: str, source_url: str = "") -> list[str]:
+    """テキストからゲームタイトルのみを抽出する。pre_parsed イベント専用。"""
+    if not raw_text:
+        return []
+    prompt = f"""以下のテキストから演奏されるゲームタイトルを抽出してください。
+
+出典URL: {source_url}
+
+テキスト:
+{raw_text[:3000]}
+
+以下のJSON形式で返してください:
+{{"game_titles": ["タイトル名1", "タイトル名2"]}}
+
+JSONのみ返してください。"""
+
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=256,
+            messages=[{"role": "user", "content": prompt}],
+            system=GAME_TITLES_SYSTEM,
+        )
+        text = resp.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        parsed = json.loads(text.strip())
+        return parsed.get("game_titles", [])
+    except Exception:
+        return []
 
 
 def extract_event(raw_text: str, source_url: str) -> dict | None:

@@ -7,7 +7,7 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
-from processor.claude_extractor import extract_event, score_announcement
+from processor.claude_extractor import extract_event, extract_game_titles, score_announcement
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
 from utils.db import get_client
@@ -79,6 +79,9 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
                 pre["ticket_url"] = raw["ticket_url"]
             if raw.get("_organizer_x_url"):
                 pre["_organizer_x_url"] = raw["_organizer_x_url"]
+            # ゲームタイトルは常に Claude で抽出（キーワードマッチを使わない）
+            content = raw.get("raw_html") or raw.get("raw_text") or ""
+            pre["game_titles"] = extract_game_titles(content, raw.get("source_url", ""))
             results.append(pre)
             pre_parsed_count += 1
             continue
