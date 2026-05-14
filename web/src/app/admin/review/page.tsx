@@ -45,16 +45,23 @@ type UnpublishedEvent = {
   start_datetime: string | null;
   venue_name: string | null;
   prefecture: string | null;
-  source_rank: string | null;
-  confidence_score: number | null;
   source_url: string | null;
+  flyer_image_url: string | null;
+  key_visual_url: string | null;
+  organizers: { name: string } | null;
+  event_game_titles: Array<{ game_titles: { title_name: string } | null }>;
 };
 
 async function getUnpublishedEvents(): Promise<UnpublishedEvent[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("events")
-    .select("id, event_name, start_datetime, venue_name, prefecture, source_rank, confidence_score, source_url")
+    .select(`
+      id, event_name, start_datetime, venue_name, prefecture,
+      source_url, flyer_image_url, key_visual_url,
+      organizers(name),
+      event_game_titles(game_titles(title_name))
+    `)
     .eq("is_published", false)
     .order("start_datetime", { ascending: true });
 
@@ -62,7 +69,7 @@ async function getUnpublishedEvents(): Promise<UnpublishedEvent[]> {
     console.error("[admin/unpublished]", error);
     return [];
   }
-  return (data ?? []) as UnpublishedEvent[];
+  return (data ?? []) as unknown as UnpublishedEvent[];
 }
 
 export default async function ReviewPage() {

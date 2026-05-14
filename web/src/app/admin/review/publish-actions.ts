@@ -9,16 +9,25 @@ export async function publishEvent(id: string): Promise<{ ok: boolean; message?:
   // 対象イベント取得
   const { data: target, error: targetError } = await supabase
     .from("events")
-    .select("event_name, start_datetime, venue_name, prefecture, organizer_id")
+    .select("event_name, start_datetime, venue_name, prefecture, organizer_id, flyer_image_url, key_visual_url, source_url")
     .eq("id", id)
     .single();
 
   if (!target) return { ok: false, message: targetError?.message ?? "イベントが見つかりません" };
 
-  // ── 品質ゲート ────────────────────────────────────────────────────────
-  if (!target.venue_name && !target.prefecture) {
-    return { ok: false, message: "会場・都道府県が取得できていません。場所情報のないイベントは公開できません" };
-  }
+  // ── 品質ゲート（8必須フィールド） ─────────────────────────────────────
+  if (!target.flyer_image_url && !target.key_visual_url)
+    return { ok: false, message: "フライヤー/キービジュアルが登録されていません" };
+  if (!target.organizer_id)
+    return { ok: false, message: "主催者が登録されていません" };
+  if (!target.venue_name)
+    return { ok: false, message: "会場名が登録されていません" };
+  if (!target.prefecture)
+    return { ok: false, message: "都道府県が登録されていません" };
+  if (!target.start_datetime)
+    return { ok: false, message: "開催日時が登録されていません" };
+  if (!target.source_url)
+    return { ok: false, message: "ソースURLが登録されていません" };
 
   const { count: gameTitleCount } = await supabase
     .from("event_game_titles")
