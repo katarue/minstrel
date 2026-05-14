@@ -1,7 +1,5 @@
 "use server";
 
-export const maxDuration = 60;
-
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";

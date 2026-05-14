@@ -4,6 +4,7 @@ import { ReviewQueue } from "./ReviewQueue";
 import { UnpublishedEvents } from "./UnpublishedEvents";
 
 export const revalidate = 0;
+export const maxDuration = 60;
 
 type RawData = {
   title?: string | null;
