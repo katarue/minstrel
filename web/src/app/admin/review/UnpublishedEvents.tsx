@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { publishEvent, deleteEvent } from "./publish-actions";
+import { reresearchEvent } from "./research-actions";
 
 type UnpublishedEvent = {
   id: string;
@@ -79,7 +80,9 @@ function ActionButtons({ ev }: { ev: UnpublishedEvent }) {
   const [publishDone, setPublishDone] = useState(false);
   const [deleteDone, setDeleteDone] = useState(false);
   const [error, setError] = useState("");
+  const [researchMsg, setResearchMsg] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [isResearching, startResearch] = useTransition();
 
   const missing = getMissingFields(ev);
   const canPublish = missing.length === 0;
@@ -100,14 +103,34 @@ function ActionButtons({ ev }: { ev: UnpublishedEvent }) {
     });
   };
 
+  const handleResearch = () => {
+    setResearchMsg("");
+    startResearch(async () => {
+      const res = await reresearchEvent(ev.id);
+      setResearchMsg(res.message ?? (res.ok ? "完了" : "エラー"));
+    });
+  };
+
   if (publishDone) return <span className="text-xs text-success font-medium">✓ 公開済み</span>;
   if (deleteDone)  return <span className="text-xs text-ink-body/40">削除済み</span>;
   if (error)       return <span className="text-xs text-error">{error}</span>;
 
   return (
     <div className="flex flex-col gap-1.5 items-end">
+      {researchMsg && (
+        <span className="text-xs text-ink-body/50 text-right leading-tight">{researchMsg}</span>
+      )}
+      {!canPublish && (
+        <button
+          disabled={isPending || isResearching}
+          onClick={handleResearch}
+          className="text-xs px-3 py-1 border border-gold/40 text-ink-body/60 rounded hover:bg-gold/10 disabled:opacity-40 transition-colors whitespace-nowrap"
+        >
+          {isResearching ? "検索中..." : "再リサーチ"}
+        </button>
+      )}
       <button
-        disabled={isPending || !canPublish}
+        disabled={isPending || isResearching || !canPublish}
         onClick={handlePublish}
         title={!canPublish ? `不足: ${missing.join("、")}` : ""}
         className="text-xs px-3 py-1 bg-bordeaux text-parchment rounded hover:bg-bordeaux/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
@@ -115,7 +138,7 @@ function ActionButtons({ ev }: { ev: UnpublishedEvent }) {
         {isPending ? "..." : "公開する"}
       </button>
       <button
-        disabled={isPending}
+        disabled={isPending || isResearching}
         onClick={handleDelete}
         className="text-xs px-3 py-1 border border-error/30 text-error/70 rounded hover:bg-error/10 hover:text-error disabled:opacity-40 transition-colors whitespace-nowrap"
       >
