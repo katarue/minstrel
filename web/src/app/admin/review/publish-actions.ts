@@ -26,6 +26,11 @@ export async function publishEvent(id: string): Promise<{ ok: boolean; message?:
     return { ok: false, message: "都道府県が登録されていません" };
   if (!target.start_datetime)
     return { ok: false, message: "開催日時が登録されていません" };
+  {
+    const jst = new Date(new Date(target.start_datetime).getTime() + 9 * 60 * 60 * 1000);
+    if (jst.getUTCHours() === 0 && jst.getUTCMinutes() === 0)
+      return { ok: false, message: "開催時間が未確定です。フライヤーまたは公式サイトで確認してください" };
+  }
   if (!target.source_url)
     return { ok: false, message: "ソースURLが登録されていません" };
 

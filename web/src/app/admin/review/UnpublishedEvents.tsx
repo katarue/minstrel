@@ -17,19 +17,6 @@ type UnpublishedEvent = {
   event_game_titles: Array<{ game_titles: { title_name: string } | null }>;
 };
 
-// 必須8項目の充足チェック — 単一責任の判定関数
-function getMissingFields(ev: UnpublishedEvent): string[] {
-  const missing: string[] = [];
-  if (!ev.flyer_image_url && !ev.key_visual_url) missing.push("フライヤー/画像");
-  if (!ev.organizers?.name)                       missing.push("主催者");
-  if (!ev.event_game_titles.length)               missing.push("ゲームタイトル");
-  if (!ev.venue_name)                             missing.push("会場名");
-  if (!ev.prefecture)                             missing.push("都道府県");
-  if (!ev.start_datetime)                         missing.push("開催日時");
-  if (!ev.source_url)                             missing.push("ソースURL");
-  return missing;
-}
-
 function formatDate(dt: string | null): string {
   if (!dt) return "—";
   const d = new Date(dt);
@@ -38,9 +25,54 @@ function formatDate(dt: string | null): string {
   return `${jst.getUTCFullYear()}/${jst.getUTCMonth() + 1}/${jst.getUTCDate()}`;
 }
 
+function formatTime(dt: string | null): string | null {
+  if (!dt) return null;
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return null;
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const h = jst.getUTCHours();
+  const m = jst.getUTCMinutes();
+  if (h === 0 && m === 0) return null;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+// 必須項目の充足チェック — 単一責任の判定関数
+function getMissingFields(ev: UnpublishedEvent): string[] {
+  const missing: string[] = [];
+  if (!ev.flyer_image_url && !ev.key_visual_url) missing.push("フライヤー/画像");
+  if (!ev.organizers?.name)                       missing.push("主催者");
+  if (!ev.event_game_titles.length)               missing.push("ゲームタイトル");
+  if (!ev.venue_name)                             missing.push("会場名");
+  if (!ev.prefecture)                             missing.push("都道府県");
+  if (!ev.start_datetime)                         missing.push("開催日");
+  else if (!formatTime(ev.start_datetime))        missing.push("開催時間");
+  if (!ev.source_url)                             missing.push("ソースURL");
+  return missing;
+}
+
 function Cell({ value, label }: { value: string | null | undefined; label: string }) {
   if (value) return <span className="text-ink-body/80">{value}</span>;
   return <span className="text-error text-xs font-medium">✗ {label}なし</span>;
+}
+
+function ImageModal({ url, onClose }: { url: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      onClick={onClose}
+    >
+      <div className="relative" onClick={e => e.stopPropagation()}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" className="max-w-[90vw] max-h-[90vh] object-contain rounded-md" />
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white text-sm hover:bg-black/80 flex items-center justify-center"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ActionButtons({ ev }: { ev: UnpublishedEvent }) {
@@ -94,11 +126,13 @@ function ActionButtons({ ev }: { ev: UnpublishedEvent }) {
 }
 
 export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
+  const [modalImage, setModalImage] = useState<string | null>(null);
+
   if (events.length === 0) {
     return <p className="text-sm text-ink-body/40 py-4 text-center">未公開イベントはありません</p>;
   }
 
-  const readyCount  = events.filter(ev => getMissingFields(ev).length === 0).length;
+  const readyCount   = events.filter(ev => getMissingFields(ev).length === 0).length;
   const pendingCount = events.length - readyCount;
 
   return (
@@ -117,9 +151,9 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gold/30 text-xs text-ink-body/50 uppercase tracking-wider">
-              <th className="text-left py-2 pr-3 font-medium w-12">画像</th>
+              <th className="text-left py-2 pr-3 font-medium w-20">画像</th>
               <th className="text-left py-2 pr-3 font-medium">イベント名</th>
-              <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">開催日</th>
+              <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">開催日時</th>
               <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">会場 / 都道府県</th>
               <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">主催者</th>
               <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">ゲームタイトル</th>
@@ -128,11 +162,12 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
           </thead>
           <tbody>
             {events.map((ev) => {
-              const missing = getMissingFields(ev);
-              const imageUrl = ev.flyer_image_url ?? ev.key_visual_url;
+              const missing   = getMissingFields(ev);
+              const imageUrl  = ev.flyer_image_url ?? ev.key_visual_url;
               const gameTitles = ev.event_game_titles
                 .map(egt => egt.game_titles?.title_name)
                 .filter((t): t is string => !!t);
+              const time = formatTime(ev.start_datetime);
 
               return (
                 <tr
@@ -144,11 +179,14 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
                   {/* 画像 */}
                   <td className="py-2.5 pr-3">
                     {imageUrl ? (
-                      <div className="relative w-10 h-10 rounded overflow-hidden bg-parchment-dark shrink-0">
+                      <div
+                        className="relative w-20 h-20 rounded overflow-hidden bg-parchment-dark shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setModalImage(imageUrl)}
+                      >
                         <Image src={imageUrl} alt="" fill className="object-cover" />
                       </div>
                     ) : (
-                      <div className="w-10 h-10 rounded bg-error/10 flex items-center justify-center shrink-0">
+                      <div className="w-20 h-20 rounded bg-error/10 flex items-center justify-center shrink-0">
                         <span className="text-error text-xs">✗</span>
                       </div>
                     )}
@@ -171,9 +209,14 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
                     )}
                   </td>
 
-                  {/* 開催日 */}
+                  {/* 開催日時 */}
                   <td className="py-2.5 pr-3 whitespace-nowrap">
-                    <Cell value={formatDate(ev.start_datetime)} label="日時" />
+                    <Cell value={formatDate(ev.start_datetime)} label="開催日" />
+                    {ev.start_datetime && (
+                      time
+                        ? <span className="block text-ink-body/80 text-xs mt-0.5">{time}</span>
+                        : <span className="block text-error text-xs font-medium mt-0.5">✗ 時間なし</span>
+                    )}
                   </td>
 
                   {/* 会場 / 都道府県 */}
@@ -216,6 +259,8 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
           </tbody>
         </table>
       </div>
+
+      {modalImage && <ImageModal url={modalImage} onClose={() => setModalImage(null)} />}
     </div>
   );
 }
