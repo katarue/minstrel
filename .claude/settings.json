@@ -113,7 +113,10 @@
       "WebFetch(domain:lalaarenatokyo-bay.com)",
       "WebFetch(domain:www.songkick.com)",
       "Bash(Get-Content \"C:\\\\Users\\\\katar\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-katar-repos-active-minstrel\\\\f3e3eb63-3edd-41ee-bb32-f623e6e5af26\\\\tasks\\\\bz82hinzx.output\" -Wait)",
-      "Bash(Select-String -Pattern \".\")"
+      "Bash(Select-String -Pattern \".\")",
+      "WebFetch(domain:www.humanlayer.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:arxiv.org)"
     ],
     "additionalDirectories": [
       "c:\\Users\\katar\\repos\\active\\minstrel\\supabase",
