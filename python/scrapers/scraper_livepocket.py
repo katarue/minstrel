@@ -182,8 +182,10 @@ class ScraperLivepocket(BaseScraper):
         if candidate_urls:
             raw_text += "\n\n【外部リンク候補】\n" + "\n".join(candidate_urls)
 
-        og_image = soup.find("meta", property="og:image")
-        image_url = og_image["content"] if og_image and og_image.get("content") else None
+        og_image = soup.find("meta", attrs={"property": "og:image"})
+        image_url = og_image.get("content") if og_image else None
+        if image_url:
+            print(f"[livepocket] image found: {image_url[:80]}")
 
         result = {
             "source_url": url,

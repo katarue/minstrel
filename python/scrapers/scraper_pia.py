@@ -210,12 +210,18 @@ class ScraperPia(BaseScraper):
 
         pre_parsed = _parse_pia_structured(soup, url)
 
+        og_image = soup.find("meta", attrs={"property": "og:image"})
+        image_url = og_image.get("content") if og_image else None
+        if image_url:
+            print(f"[pia] image found: {image_url[:80]}")
+
         result = {
             "source_url": url,
             "source_name": self.source_name,
             "source_rank": self.source_rank,
             "raw_text": raw_text,
             "ticket_url": url,
+            "image_url": image_url,
         }
         if pre_parsed:
             result["_pre_parsed"] = pre_parsed
