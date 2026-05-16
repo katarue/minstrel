@@ -116,6 +116,27 @@ async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
 }
 
 
+// X /photo/N URL などの og:image を取得（ソーシャル共有用メタタグとして機能する）
+async function fetchOgImage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function extractFromPage(pageText: string): Promise<ResearchResult> {
   const prompt = `以下はイベントページまたはリプライのテキストです。以下のJSON形式で情報を抽出してください。
 
@@ -288,7 +309,11 @@ export async function reresearchEvent(
     if (isSocialUrl(event.reference_url)) {
       const refTweetId = getTweetId(event.reference_url);
       if (refTweetId) {
-        const refReplies = await fetchTweetReplies(refTweetId);
+        const [ogImage, refReplies] = await Promise.all([
+          fetchOgImage(event.reference_url),
+          fetchTweetReplies(refTweetId),
+        ]);
+        if (ogImage && !parsed.flyer_url) parsed.flyer_url = ogImage;
         if (refReplies.texts.length > 0) {
           const refText = refReplies.texts.join("\n").slice(0, 4000);
           const refResult = await extractFromPage(refText);
