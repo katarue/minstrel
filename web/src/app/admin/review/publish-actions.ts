@@ -135,6 +135,35 @@ export async function saveOfficialUrl(id: string, url: string): Promise<{ ok: bo
   return { ok: true };
 }
 
+export async function clearEventImage(id: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+
+  const { data: ev } = await supabase
+    .from("events")
+    .select("flyer_image_url, key_visual_url")
+    .eq("id", id)
+    .single();
+
+  const storagePrefix = "/storage/v1/object/public/event-images/";
+  for (const url of [ev?.flyer_image_url, ev?.key_visual_url]) {
+    if (!url) continue;
+    const idx = url.indexOf(storagePrefix);
+    if (idx !== -1) {
+      const path = decodeURIComponent(url.slice(idx + storagePrefix.length));
+      await supabase.storage.from("event-images").remove([path]);
+    }
+  }
+
+  const { error } = await supabase
+    .from("events")
+    .update({ flyer_image_url: null, key_visual_url: null })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  return { ok: true };
+}
+
 export async function saveReferenceUrl(id: string, url: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
   const { error } = await supabase

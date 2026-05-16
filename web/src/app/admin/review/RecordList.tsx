@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, saveOfficialUrl, saveReferenceUrl, updateGameTitles } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, updateGameTitles } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -55,6 +55,42 @@ function getMissingFields(ev: EventRecord): string[] {
 
 function Empty({ label }: { label: string }) {
   return <span className="text-error text-xs font-medium">✗ {label}</span>;
+}
+
+function ImageCell({ ev, onOpenModal }: { ev: EventRecord; onOpenModal: (url: string) => void }) {
+  const [cleared, setCleared] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const imageUrl = cleared ? null : (ev.flyer_image_url ?? ev.key_visual_url);
+
+  if (!imageUrl) {
+    return (
+      <div className="w-36 h-36 rounded bg-error/10 flex items-center justify-center">
+        <span className="text-error text-xs">✗</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-36 h-36 group">
+      <div
+        className="relative w-full h-full rounded overflow-hidden bg-parchment-dark cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => onOpenModal(imageUrl)}
+      >
+        <Image src={imageUrl} alt="" fill className="object-cover" />
+      </div>
+      <button
+        onClick={() => startTransition(async () => {
+          const res = await clearEventImage(ev.id);
+          if (res.ok) setCleared(true);
+        })}
+        disabled={isPending}
+        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-[10px] hover:bg-error/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-40"
+        title="画像を削除"
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
 function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTitles: string[] }) {
@@ -356,9 +392,8 @@ export function RecordList({ events }: { events: EventRecord[] }) {
               </tr>
             )}
             {filtered.map(ev => {
-              const missing    = getMissingFields(ev);
-              const imageUrl   = ev.flyer_image_url ?? ev.key_visual_url;
-              const date       = formatDate(ev.start_datetime);
+              const missing = getMissingFields(ev);
+              const date    = formatDate(ev.start_datetime);
               const time       = formatTime(ev.start_datetime);
               const gameTitles = ev.event_game_titles
                 .map(e => e.game_titles?.title_name)
@@ -378,18 +413,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                 >
                   {/* 画像 */}
                   <td className="py-2 pr-2">
-                    {imageUrl ? (
-                      <div
-                        className="relative w-36 h-36 rounded overflow-hidden bg-parchment-dark cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => setModalImage(imageUrl)}
-                      >
-                        <Image src={imageUrl} alt="" fill className="object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-36 h-36 rounded bg-error/10 flex items-center justify-center">
-                        <span className="text-error text-xs">✗</span>
-                      </div>
-                    )}
+                    <ImageCell ev={ev} onOpenModal={setModalImage} />
                   </td>
 
                   {/* イベント名 + URL */}
