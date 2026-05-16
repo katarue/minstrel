@@ -290,16 +290,13 @@ export async function reresearchEvent(
   let parsed: ResearchResult = {};
 
   // ── Step 1a: チケットサイト・公式ページを直接スクレイピング ───────────────
-  console.log("[DEBUG reresearch] START id=", id, "effectiveUrl=", effectiveUrl);
   let scrapedFromUrl = false;
   let mainStartTimes: string[] = [];
   let mainPageData: Awaited<ReturnType<typeof fetchPageData>> = null;
   if (effectiveUrl && !isSocialUrl(effectiveUrl)) {
     mainPageData = await fetchPageData(effectiveUrl);
-    console.log("[DEBUG reresearch] fetchPageData result:", mainPageData ? `text.length=${mainPageData.text.length}, prefix200=${mainPageData.text.slice(0,200)}` : "NULL");
     if (mainPageData) {
       parsed = await extractFromPage(mainPageData.text);
-      console.log("[DEBUG reresearch] extractFromPage result:", JSON.stringify(parsed));
       mainStartTimes = mainPageData.startTimes;
       scrapedFromUrl = true;
     }
@@ -308,12 +305,10 @@ export async function reresearchEvent(
   // 構造化プレフィックスから主催者を直接補完（Claudeが抽出できなかった場合）
   if (!parsed.organizer_name && mainPageData) {
     const orgLine = mainPageData.text.match(/^主催者[^:\n]*:\s*(.+)$/m);
-    console.log("[DEBUG reresearch] prefix orgLine:", orgLine?.[1] ?? "NO MATCH");
     if (orgLine?.[1]) parsed.organizer_name = orgLine[1].trim();
   }
   // Peatixアカウント名（英小文字・数字のみ）かどうかを記録しウェブ検索で正式名称を補完する
   const organizerIsUsername = parsed.organizer_name ? /^[a-z0-9][a-z0-9\-]+$/.test(parsed.organizer_name) : false;
-  console.log("[DEBUG reresearch] after Step1a: organizer_name=", parsed.organizer_name, "isUsername=", organizerIsUsername, "scrapedFromUrl=", scrapedFromUrl);
 
   // ── Step 1b: X ツイートの場合は複数の補助情報を並列取得 ─────────────────
   if (effectiveUrl && isSocialUrl(effectiveUrl)) {
@@ -399,7 +394,6 @@ export async function reresearchEvent(
   // ── Step 2: ウェブ検索（スクレイピングで取れなかった情報を補完）──────────
   // organizerIsUsernameの場合もウェブ検索で正式名称を取得する
   const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl || !parsed.organizer_name || organizerIsUsername;
-  console.log("[DEBUG reresearch] needsWebSearch=", needsWebSearch, "reasons: game_titles=", !parsed.game_titles?.length, "scrapedFromUrl=", !scrapedFromUrl, "no_organizer=", !parsed.organizer_name, "isUsername=", organizerIsUsername);
   if (needsWebSearch) {
     const orgHint = organizerIsUsername && parsed.organizer_name ? `（Peatixアカウント: ${parsed.organizer_name}）` : "";
     const webPrompt = `コンサート「${event.event_name}」${orgHint}（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
@@ -417,12 +411,9 @@ export async function reresearchEvent(
 
     try {
       const resultText = await callClaudeWithWebSearch(webPrompt);
-      console.log("[DEBUG reresearch] webSearch resultText (first 500):", resultText.slice(0, 500));
       const match = resultText.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-      console.log("[DEBUG reresearch] webSearch JSON match:", match ? match[0].slice(0, 300) : "NO MATCH");
       if (match) {
         const webResult = JSON.parse(match[0]) as ResearchResult;
-        console.log("[DEBUG reresearch] webResult:", JSON.stringify(webResult));
         if (!parsed.game_titles?.length && webResult.game_titles?.length) parsed.game_titles = webResult.game_titles;
         if (!parsed.start_time && webResult.start_time) parsed.start_time = webResult.start_time;
         if (!parsed.venue_name && webResult.venue_name) parsed.venue_name = webResult.venue_name;
@@ -433,14 +424,12 @@ export async function reresearchEvent(
         }
       }
     } catch (err) {
-      console.log("[DEBUG reresearch] webSearch ERROR:", err);
       if (!scrapedFromUrl && !parsed.game_titles?.length) {
         return { ok: false, message: `検索エラー: ${err instanceof Error ? err.message : String(err)}` };
       }
     }
   }
 
-  console.log("[DEBUG reresearch] before Step3: parsed.organizer_name=", parsed.organizer_name, "event.organizer_id=", event.organizer_id);
   // ── Step 3: 取得結果を DB に反映（欠損フィールドのみ更新）────────────────
   const updates: Record<string, unknown> = {};
   const updatedFields: string[] = [];
