@@ -26,6 +26,11 @@ function extractExternalUrls(text: string): string[] {
   return matches.filter((url) => !SOCIAL_DOMAINS.some((d) => url.includes(d)));
 }
 
+function getTweetId(url: string): string | null {
+  const m = url.match(/\/status\/(\d+)/);
+  return m ? m[1] : null;
+}
+
 async function fetchPageText(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
@@ -51,8 +56,56 @@ async function fetchPageText(url: string): Promise<string | null> {
   }
 }
 
+// ── twitterapi.io でリプライ・会話ツリーを取得 ─────────────────────────────
+type TweetReplyData = {
+  texts: string[];
+  imageUrls: string[];
+};
+
+async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
+  const apiKey = process.env.TWITTERAPI_IO_KEY;
+  if (!apiKey) return { texts: [], imageUrls: [] };
+
+  try {
+    const params = new URLSearchParams({
+      query: `conversation_id:${tweetId} -is:retweet`,
+      queryType: "Latest",
+    });
+    const res = await fetch(
+      `https://api.twitterapi.io/twitter/tweet/advanced_search?${params}`,
+      {
+        headers: { "X-API-Key": apiKey },
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+    if (!res.ok) return { texts: [], imageUrls: [] };
+
+    const data = await res.json() as { tweets?: Record<string, unknown>[] };
+    const texts: string[] = [];
+    const imageUrls: string[] = [];
+
+    for (const tweet of (data.tweets ?? [])) {
+      if (typeof tweet.text === "string") texts.push(tweet.text);
+
+      const media = (tweet.extendedEntities as Record<string, unknown>)?.media;
+      if (Array.isArray(media)) {
+        for (const m of media as Record<string, unknown>[]) {
+          if (m.type === "photo") {
+            const url = (m.media_url_https ?? m.media_url) as string | undefined;
+            if (url) imageUrls.push(url);
+          }
+        }
+      }
+    }
+
+    return { texts, imageUrls };
+  } catch {
+    return { texts: [], imageUrls: [] };
+  }
+}
+
 async function extractFromPage(pageText: string): Promise<ResearchResult> {
-  const prompt = `以下はイベントページのテキストです。以下のJSON形式で情報を抽出してください。
+  const prompt = `以下はイベントページまたはリプライのテキストです。以下のJSON形式で情報を抽出してください。
 
 ゲームタイトルは「最初にゲームとしてリリースされたタイトル」のみを含めてください（ビジュアルノベル含む。アニメ・漫画原作は除く）。シリーズ名で統一すること。
 
@@ -155,46 +208,72 @@ export async function reresearchEvent(
   if (!event) return { ok: false, message: "イベントが見つかりません" };
 
   const organizer = (event.organizers as unknown as { name: string } | null)?.name ?? "";
-
-  // ── Step 1: URL スクレイピング（公式・チケットサイトページを直接読む）────
   let parsed: ResearchResult = {};
+
+  // ── Step 1a: チケットサイト・公式ページを直接スクレイピング ───────────────
   let scrapedFromUrl = false;
-
-  // source_url がソーシャルでなければ直接スクレイピング
-  let urlToScrape: string | null = null;
   if (event.source_url && !isSocialUrl(event.source_url)) {
-    urlToScrape = event.source_url;
-  } else {
-    // X ツイートの場合: event_sources の raw_data._tweet_text から外部URLを抽出
-    const { data: sources } = await supabase
-      .from("event_sources")
-      .select("raw_data")
-      .eq("event_id", id)
-      .limit(5);
-
-    for (const src of (sources ?? [])) {
-      const rawData = src.raw_data as Record<string, unknown>;
-      const tweetText = typeof rawData._tweet_text === "string" ? rawData._tweet_text : null;
-      if (tweetText) {
-        const urls = extractExternalUrls(tweetText);
-        if (urls.length > 0) {
-          urlToScrape = urls[0];
-          break;
-        }
-      }
-    }
-  }
-
-  if (urlToScrape) {
-    const pageText = await fetchPageText(urlToScrape);
+    const pageText = await fetchPageText(event.source_url);
     if (pageText) {
       parsed = await extractFromPage(pageText);
       scrapedFromUrl = true;
     }
   }
 
+  // ── Step 1b: X ツイートの場合は複数の補助情報を並列取得 ─────────────────
+  if (event.source_url && isSocialUrl(event.source_url)) {
+    const tweetId = getTweetId(event.source_url);
+
+    // ツイート本文内の外部URL → 公式ページスクレイピング
+    let externalUrlText: string | null = null;
+    const { data: sources } = await supabase
+      .from("event_sources")
+      .select("raw_data")
+      .eq("event_id", id)
+      .limit(5);
+
+    const tweetUrls: string[] = [];
+    for (const src of (sources ?? [])) {
+      const rawData = src.raw_data as Record<string, unknown>;
+      const tweetText = typeof rawData._tweet_text === "string" ? rawData._tweet_text : null;
+      if (tweetText) {
+        tweetUrls.push(...extractExternalUrls(tweetText));
+      }
+    }
+
+    // リプライ取得 + 外部URLスクレイピングを並列実行
+    const [replyData, externalPage] = await Promise.all([
+      tweetId ? fetchTweetReplies(tweetId) : Promise.resolve({ texts: [], imageUrls: [] }),
+      tweetUrls[0] ? fetchPageText(tweetUrls[0]) : Promise.resolve(null),
+    ]);
+
+    externalUrlText = externalPage;
+
+    // 公式ページから抽出（外部URLがあれば最優先）
+    if (externalUrlText) {
+      parsed = await extractFromPage(externalUrlText);
+      scrapedFromUrl = true;
+    }
+
+    // リプライのテキストから補完（ゲームタイトル・会場が未取得の場合）
+    if (replyData.texts.length > 0 && (!parsed.game_titles?.length || !parsed.venue_name)) {
+      const replyText = replyData.texts.join("\n").slice(0, 4000);
+      const replyResult = await extractFromPage(replyText);
+      if (!parsed.game_titles?.length && replyResult.game_titles?.length) {
+        parsed.game_titles = replyResult.game_titles;
+      }
+      if (!parsed.venue_name && replyResult.venue_name) parsed.venue_name = replyResult.venue_name;
+      if (!parsed.prefecture && replyResult.prefecture) parsed.prefecture = replyResult.prefecture;
+      if (!parsed.start_time && replyResult.start_time) parsed.start_time = replyResult.start_time;
+    }
+
+    // リプライの画像をフライヤー候補として使用（画像がまだない場合）
+    if (replyData.imageUrls.length > 0 && !parsed.flyer_url) {
+      parsed.flyer_url = replyData.imageUrls[0];
+    }
+  }
+
   // ── Step 2: ウェブ検索（スクレイピングで取れなかった情報を補完）──────────
-  // ゲームタイトルが取れていない、またはスクレイピング自体できなかった場合
   const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl;
   if (needsWebSearch) {
     const webPrompt = `コンサート「${event.event_name}」（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
@@ -215,7 +294,6 @@ export async function reresearchEvent(
       const match = resultText.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
       if (match) {
         const webResult = JSON.parse(match[0]) as ResearchResult;
-        // スクレイピングで取れなかったフィールドをウェブ検索結果で補完
         if (!parsed.game_titles?.length && webResult.game_titles?.length) parsed.game_titles = webResult.game_titles;
         if (!parsed.start_time && webResult.start_time) parsed.start_time = webResult.start_time;
         if (!parsed.venue_name && webResult.venue_name) parsed.venue_name = webResult.venue_name;
@@ -223,7 +301,7 @@ export async function reresearchEvent(
         if (!parsed.flyer_url && webResult.flyer_url) parsed.flyer_url = webResult.flyer_url;
       }
     } catch (err) {
-      if (!scrapedFromUrl) {
+      if (!scrapedFromUrl && !parsed.game_titles?.length) {
         return { ok: false, message: `検索エラー: ${err instanceof Error ? err.message : String(err)}` };
       }
     }
