@@ -34,7 +34,7 @@ def enrich_event_fields(event_name: str, organizer: str = "") -> dict:
             tools=tools,
             messages=msgs,
         )
-        text_block = next((b for b in resp.content if b.type == "text"), None)
+        text_block = next((b for b in reversed(resp.content) if b.type == "text"), None)
         if text_block:
             result_text = text_block.text
         if resp.stop_reason == "end_turn":
