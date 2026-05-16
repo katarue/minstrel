@@ -274,10 +274,10 @@ export async function reresearchEvent(
   const { data: event } = await supabase
     .from("events")
     .select(`
-      event_name, source_url, start_datetime, end_datetime,
+      event_name, source_url, start_datetime,
       venue_name, prefecture, flyer_image_url, key_visual_url,
-      organizer_id, reference_url, description, ticket_url,
-      source_name, source_rank, is_cancelled, is_published,
+      organizer_id, reference_url, description,
+      source_rank, is_canceled, is_published,
       auto_publish_eligible, organizers(name)
     `)
     .eq("id", id)
@@ -518,7 +518,6 @@ export async function reresearchEvent(
       event_name: `${event.event_name} ${time2}`,
       source_url: (updates.source_url as string | undefined) ?? event.source_url,
       start_datetime: dateStr ? `${dateStr}T${time2}:00+09:00` : event.start_datetime,
-      end_datetime: null,
       venue_name: (updates.venue_name as string | undefined) ?? event.venue_name,
       prefecture: (updates.prefecture as string | undefined) ?? event.prefecture,
       flyer_image_url: (updates.flyer_image_url as string | undefined) ?? event.flyer_image_url,
@@ -526,10 +525,8 @@ export async function reresearchEvent(
       organizer_id: (updates.organizer_id as string | undefined) ?? event.organizer_id,
       reference_url: event.reference_url,
       description: event.description,
-      ticket_url: event.ticket_url,
-      source_name: event.source_name,
       source_rank: event.source_rank,
-      is_cancelled: false,
+      is_canceled: false,
       is_published: false,
       auto_publish_eligible: false,
     }).select("id").single();
