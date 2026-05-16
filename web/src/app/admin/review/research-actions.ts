@@ -59,6 +59,28 @@ async function fetchPageText(url: string): Promise<string | null> {
       html.match(/itemprop="organizer"[\s\S]{0,600}?<meta[^>]+content="([^"]+)"[^>]*itemprop="name"/i) ??
       html.match(/itemprop="organizer"[\s\S]{0,600}?itemprop="name"[^>]*content="([^"]+)"/i);
     if (organizerMatch?.[1]) structuredParts.push(`主催者: ${organizerMatch[1]}`);
+    // Peatix: Twitter シェア URL からオーガナイザーの Peatix アカウント名を抽出
+    if (!organizerMatch) {
+      const peatixOrgMatch = html.match(/https?%3A%2F%2F([a-zA-Z0-9][a-zA-Z0-9\-]+)\.peatix\.com/i);
+      if (peatixOrgMatch?.[1]) structuredParts.push(`主催者(Peatixアカウント): ${peatixOrgMatch[1]}`);
+    }
+    // Peatix: keywords メタタグからオーガナイザーアカウント名を抽出（イベント名の直後の項目）
+    if (structuredParts.every(p => !p.startsWith("主催者"))) {
+      const kwMatch = html.match(/<meta[^>]+name="keywords"[^>]+content="([^"]+)"/i)
+        ?? html.match(/<meta[^>]+content="([^"]+)"[^>]+name="keywords"/i);
+      if (kwMatch?.[1]) {
+        // Peatix keywords: [カテゴリ,...,イベント名,オーガナイザー名,チケットの販,...]
+        // "チケットの販" の直前の項目がオーガナイザーユーザー名
+        const kwList = kwMatch[1].split(",").map(s => s.trim());
+        const genericIdx = kwList.findIndex(k => k.startsWith("チケット") || k === "イベント管理");
+        if (genericIdx > 1) {
+          const candidate = kwList[genericIdx - 1];
+          if (candidate && candidate.length < 50) {
+            structuredParts.push(`主催者(Peatixアカウント): ${candidate}`);
+          }
+        }
+      }
+    }
 
     const text = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
