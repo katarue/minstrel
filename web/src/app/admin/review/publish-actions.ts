@@ -176,6 +176,29 @@ export async function saveReferenceUrl(id: string, url: string): Promise<{ ok: b
   return { ok: true };
 }
 
+export async function saveImageFromUrl(id: string, imageUrl: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  try {
+    const res = await fetch(imageUrl.trim(), { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return { ok: false, message: "画像のダウンロードに失敗しました" };
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") ?? "image/jpeg";
+    const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+    const path = `${id}/flyer_manual.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("event-images")
+      .upload(path, buffer, { contentType, upsert: true });
+    if (uploadError) return { ok: false, message: uploadError.message };
+    const publicUrl = supabase.storage.from("event-images").getPublicUrl(path).data.publicUrl;
+    const { error } = await supabase.from("events").update({ flyer_image_url: publicUrl }).eq("id", id);
+    if (error) return { ok: false, message: error.message };
+    revalidatePath("/admin/review");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "エラー" };
+  }
+}
+
 export async function updateGameTitles(id: string, titles: string[]): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, updateGameTitles } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, updateGameTitles, saveImageFromUrl } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -213,6 +213,47 @@ function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUr
           </button>
         )}
         {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
+      </div>
+    </div>
+  );
+}
+
+function ManualImageUrlField({ eventId }: { eventId: string }) {
+  const [value, setValue] = useState("");
+  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [errMsg, setErrMsg] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleSave = () =>
+    startTransition(async () => {
+      if (!value.trim()) return;
+      const res = await saveImageFromUrl(eventId, value.trim());
+      if (res.ok) { setStatus("ok"); setValue(""); }
+      else { setStatus("error"); setErrMsg(res.message ?? "エラー"); }
+    });
+
+  return (
+    <div className="mt-1.5">
+      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">画像URL</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="url"
+          value={value}
+          onChange={e => { setValue(e.target.value); setStatus("idle"); }}
+          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          placeholder="画像URLを貼り付け..."
+        />
+        {value.trim() && status === "idle" && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {status === "ok" && <span className="text-[10px] text-success shrink-0">✓ 保存済み</span>}
+        {status === "error" && <span className="text-[10px] text-error shrink-0" title={errMsg}>✗ {errMsg}</span>}
       </div>
     </div>
   );
@@ -461,6 +502,9 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                         </div>
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                         <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
+                        {!ev.flyer_image_url && !ev.key_visual_url && (
+                          <ManualImageUrlField eventId={ev.id} />
+                        )}
                       </>
                     ) : (
                       <>

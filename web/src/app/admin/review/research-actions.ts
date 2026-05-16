@@ -63,15 +63,10 @@ async function fetchPageText(url: string): Promise<string | null> {
   }
 }
 
-// ── twitterapi.io でリプライ・会話ツリーを取得 ─────────────────────────────
-type TweetReplyData = {
-  texts: string[];
-  imageUrls: string[];
-};
-
-async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
+// ── twitterapi.io でリプライ・会話ツリーのテキストを取得 ─────────────────────
+async function fetchTweetReplies(tweetId: string): Promise<string[]> {
   const apiKey = process.env.TWITTERAPI_IO_KEY;
-  if (!apiKey) return { texts: [], imageUrls: [] };
+  if (!apiKey) return [];
 
   try {
     const params = new URLSearchParams({
@@ -80,98 +75,49 @@ async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
     });
     const res = await fetch(
       `https://api.twitterapi.io/twitter/tweet/advanced_search?${params}`,
-      {
-        headers: { "X-API-Key": apiKey },
-        signal: AbortSignal.timeout(10000),
-      },
+      { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
     );
-    if (!res.ok) return { texts: [], imageUrls: [] };
+    if (!res.ok) return [];
 
     const data = await res.json() as { tweets?: Record<string, unknown>[] };
-    const texts: string[] = [];
-    const imageUrls: string[] = [];
-
-    for (const tweet of (data.tweets ?? [])) {
-      if (typeof tweet.text === "string") texts.push(tweet.text);
-
-      // twitterapi.io は snake_case で返すため extended_entities と entities の両方を確認
-      const mediaArr =
-        (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
-        (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
-        (tweet.entities as Record<string, unknown> | undefined)?.media;
-      if (Array.isArray(mediaArr)) {
-        for (const m of mediaArr as Record<string, unknown>[]) {
-          if (m.type === "photo") {
-            const url = (m.media_url_https ?? m.media_url) as string | undefined;
-            if (url) imageUrls.push(url);
-          }
-        }
-      }
-    }
-
-    return { texts, imageUrls };
+    return (data.tweets ?? [])
+      .filter((t) => typeof t.text === "string")
+      .map((t) => t.text as string);
   } catch {
-    return { texts: [], imageUrls: [] };
+    return [];
   }
 }
 
-
-// from:handle + 日付範囲でツイートを検索し、対象ツイートの最初の画像URLを返す
-// ツイートIDは JS の安全整数上限を超えるため id_str 優先、数値は許容誤差±1000 で照合
-async function fetchTweetImageByHandle(tweetId: string, tweetUrl: string): Promise<string | null> {
+// ── twitterapi.io でツイートIDから画像URLを直接取得 ──────────────────────────
+async function fetchTweetImage(tweetId: string): Promise<string | null> {
   const apiKey = process.env.TWITTERAPI_IO_KEY;
   if (!apiKey) return null;
 
-  const handleMatch = tweetUrl.match(/x\.com\/([^/]+)\/status/);
-  const handle = handleMatch?.[1];
-  if (!handle) return null;
-
   try {
-    const snowflake = BigInt(tweetId);
-    const timestampMs = Number(snowflake >> BigInt(22)) + 1288834974657;
-    const sinceTs = Math.floor((timestampMs - 3600000) / 1000);
-    const untilTs = Math.floor((timestampMs + 86400000) / 1000);
-
-    const params = new URLSearchParams({
-      query: `from:${handle} since_time:${sinceTs} until_time:${untilTs} -is:retweet`,
-      queryType: "Latest",
-    });
     const res = await fetch(
-      `https://api.twitterapi.io/twitter/tweet/advanced_search?${params}`,
+      `https://api.twitterapi.io/twitter/tweets?tweet_ids=${tweetId}`,
       { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
     );
     if (!res.ok) return null;
 
     const data = await res.json() as { tweets?: Record<string, unknown>[] };
-    const target = BigInt(tweetId);
+    const tweet = (data.tweets ?? [])[0];
+    if (!tweet) return null;
 
-    for (const tweet of (data.tweets ?? [])) {
-      // id_str（文字列）で完全一致、なければ数値を BigInt 変換して誤差±1000 で照合
-      const idStr = tweet.id_str as string | undefined;
-      const idNum = typeof tweet.id === "number" ? tweet.id : null;
-      const isMatch = idStr === tweetId
-        || (idNum !== null && (() => {
-          const actual = BigInt(Math.round(idNum));
-          const diff = actual > target ? actual - target : target - actual;
-          return diff < BigInt(1000);
-        })());
-      if (!isMatch) continue;
-
-      if (Array.isArray(tweet.photos)) {
-        const first = (tweet.photos as Record<string, unknown>[])[0];
-        const url = (first?.url ?? first?.media_url_https ?? first?.media_url) as string | undefined;
-        if (url) return url;
-      }
-      const mediaArr =
-        (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
-        (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
-        (tweet.entities as Record<string, unknown> | undefined)?.media;
-      if (Array.isArray(mediaArr)) {
-        for (const m of mediaArr as Record<string, unknown>[]) {
-          if (m.type === "photo") {
-            const url = (m.media_url_https ?? m.media_url) as string | undefined;
-            if (url) return url;
-          }
+    if (Array.isArray(tweet.photos)) {
+      const first = (tweet.photos as Record<string, unknown>[])[0];
+      const url = (first?.url ?? first?.media_url_https ?? first?.media_url) as string | undefined;
+      if (url) return url;
+    }
+    const mediaArr =
+      (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
+      (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
+      (tweet.entities as Record<string, unknown> | undefined)?.media;
+    if (Array.isArray(mediaArr)) {
+      for (const m of mediaArr as Record<string, unknown>[]) {
+        if (m.type === "photo") {
+          const url = (m.media_url_https ?? m.media_url) as string | undefined;
+          if (url) return url;
         }
       }
     }
@@ -322,8 +268,8 @@ export async function reresearchEvent(
     }
 
     // リプライ取得 + 外部URLスクレイピングを並列実行
-    const [replyData, externalPage] = await Promise.all([
-      tweetId ? fetchTweetReplies(tweetId) : Promise.resolve({ texts: [], imageUrls: [] }),
+    const [replyTexts, externalPage] = await Promise.all([
+      tweetId ? fetchTweetReplies(tweetId) : Promise.resolve([]),
       tweetUrls[0] ? fetchPageText(tweetUrls[0]) : Promise.resolve(null),
     ]);
 
@@ -336,8 +282,8 @@ export async function reresearchEvent(
     }
 
     // リプライのテキストから補完（ゲームタイトル・会場が未取得の場合）
-    if (replyData.texts.length > 0 && (!parsed.game_titles?.length || !parsed.venue_name)) {
-      const replyText = replyData.texts.join("\n").slice(0, 4000);
+    if (replyTexts.length > 0 && (!parsed.game_titles?.length || !parsed.venue_name)) {
+      const replyText = replyTexts.join("\n").slice(0, 4000);
       const replyResult = await extractFromPage(replyText);
       if (!parsed.game_titles?.length && replyResult.game_titles?.length) {
         parsed.game_titles = replyResult.game_titles;
@@ -353,13 +299,13 @@ export async function reresearchEvent(
     if (isSocialUrl(event.reference_url)) {
       const refTweetId = getTweetId(event.reference_url);
       if (refTweetId) {
-        const [tweetImage, refReplies] = await Promise.all([
-          fetchTweetImageByHandle(refTweetId, event.reference_url),
+        const [tweetImage, refTexts] = await Promise.all([
+          fetchTweetImage(refTweetId),
           fetchTweetReplies(refTweetId),
         ]);
         if (tweetImage && !parsed.flyer_url) parsed.flyer_url = tweetImage;
-        if (refReplies.texts.length > 0) {
-          const refText = refReplies.texts.join("\n").slice(0, 4000);
+        if (refTexts.length > 0) {
+          const refText = refTexts.join("\n").slice(0, 4000);
           const refResult = await extractFromPage(refText);
           if (!parsed.game_titles?.length && refResult.game_titles?.length) parsed.game_titles = refResult.game_titles;
           if (!parsed.venue_name && refResult.venue_name) parsed.venue_name = refResult.venue_name;
