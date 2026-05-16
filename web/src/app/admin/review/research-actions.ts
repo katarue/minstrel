@@ -14,6 +14,7 @@ type ResearchResult = {
   venue_name?: string | null;
   prefecture?: string | null;
   flyer_url?: string | null;
+  organizer_name?: string | null;
 };
 
 function isSocialUrl(url: string): boolean {
@@ -119,7 +120,8 @@ JSONのみ返してください：
   "start_time": "HH:MM または null",
   "venue_name": "会場名 または null",
   "prefecture": "都道府県名（例: 東京都）または null",
-  "flyer_url": "フライヤー画像の直リンクURL または null"
+  "flyer_url": "フライヤー画像の直リンクURL または null",
+  "organizer_name": "主催者・団体名 または null"
 }
 
 テキスト:
@@ -204,7 +206,7 @@ export async function reresearchEvent(
     .select(`
       event_name, source_url, start_datetime,
       venue_name, prefecture, flyer_image_url, key_visual_url,
-      organizers(name)
+      organizer_id, organizers(name)
     `)
     .eq("id", id)
     .single();
@@ -290,7 +292,8 @@ export async function reresearchEvent(
   "start_time": "HH:MM または null",
   "venue_name": "会場名 または null",
   "prefecture": "都道府県名（例: 東京都）または null",
-  "flyer_url": "フライヤー画像の直リンクURL または null"
+  "flyer_url": "フライヤー画像の直リンクURL または null",
+  "organizer_name": "主催者・団体名 または null"
 }`;
 
     try {
@@ -335,6 +338,20 @@ export async function reresearchEvent(
     if (storedUrl) {
       updates.flyer_image_url = storedUrl;
       updatedFields.push("フライヤー画像");
+    }
+  }
+  if (parsed.organizer_name && !event.organizer_id) {
+    const { data: existingOrg } = await supabase
+      .from("organizers")
+      .select("id")
+      .eq("name", parsed.organizer_name)
+      .single();
+    const orgId = existingOrg?.id ?? (
+      await supabase.from("organizers").insert({ name: parsed.organizer_name }).select("id").single()
+    ).data?.id;
+    if (orgId) {
+      updates.organizer_id = orgId;
+      updatedFields.push("主催者");
     }
   }
 
