@@ -34,15 +34,6 @@ export async function publishEvent(id: string): Promise<{ ok: boolean; message?:
   if (!target.source_url)
     return { ok: false, message: "ソースURLが登録されていません" };
 
-  const { count: gameTitleCount } = await supabase
-    .from("event_game_titles")
-    .select("id", { count: "exact", head: true })
-    .eq("event_id", id);
-
-  if (!gameTitleCount || gameTitleCount === 0) {
-    return { ok: false, message: "ゲームタイトルが登録されていません。掲載に値するか確認してください" };
-  }
-
   if (target?.start_datetime) {
     const dateStr = target.start_datetime.substring(0, 10);
 
