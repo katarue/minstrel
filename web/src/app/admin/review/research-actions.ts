@@ -115,184 +115,6 @@ async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
   }
 }
 
-// ツイートオブジェクトから画像URLを抽出する共通ヘルパー
-function extractImagesFromTweet(tweet: Record<string, unknown>): string[] {
-  const urls: string[] = [];
-
-  // パターン1: photos[] フィールド（twitterapi.io 独自）
-  if (Array.isArray(tweet.photos)) {
-    for (const photo of tweet.photos as Record<string, unknown>[]) {
-      const url = (photo.url ?? photo.media_url_https ?? photo.media_url) as string | undefined;
-      if (url) urls.push(url);
-    }
-  }
-
-  // パターン2: extended_entities / entities の media[]（標準 Twitter API 形式）
-  const mediaArr =
-    (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
-    (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
-    (tweet.entities as Record<string, unknown> | undefined)?.media;
-
-  if (Array.isArray(mediaArr)) {
-    for (const m of mediaArr as Record<string, unknown>[]) {
-      if (m.type === "photo") {
-        const url = (m.media_url_https ?? m.media_url) as string | undefined;
-        if (url && !urls.includes(url)) urls.push(url);
-      }
-    }
-  }
-
-  return urls;
-}
-
-async function fetchOriginalTweetImages(tweetId: string, tweetUrl?: string): Promise<string[]> {
-  const apiKey = process.env.TWITTERAPI_IO_KEY;
-  if (!apiKey) return [];
-
-  try {
-    // 方法1: 単一ツイート取得エンドポイント
-    const res = await fetch(
-      `https://api.twitterapi.io/twitter/tweet?tweet_id=${tweetId}`,
-      { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
-    );
-    if (res.ok) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = await res.json() as any;
-      const tweet = data.tweet ?? data.data ?? (
-        typeof data === "object" && !Array.isArray(data) && !data.tweets ? data : null
-      );
-      if (tweet) {
-        const images = extractImagesFromTweet(tweet as Record<string, unknown>);
-        if (images.length > 0) return images;
-      }
-    }
-
-    // 方法2: 会話検索で元ツイートを探す
-    const searchParams = new URLSearchParams({
-      query: `conversation_id:${tweetId} -is:retweet`,
-      queryType: "Latest",
-    });
-    const res2 = await fetch(
-      `https://api.twitterapi.io/twitter/tweet/advanced_search?${searchParams}`,
-      { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
-    );
-    if (res2.ok) {
-      const data2 = await res2.json() as { tweets?: Record<string, unknown>[] };
-      for (const tweet of (data2.tweets ?? [])) {
-        // id_str を優先（ツイートIDはJSの安全整数上限を超えるため数値は精度ロスする）
-        const id = (tweet.id_str ?? String(tweet.id)) as string | undefined;
-        if (id === tweetId) {
-          const images = extractImagesFromTweet(tweet);
-          if (images.length > 0) return images;
-        }
-      }
-    }
-
-    // 方法3: from:ハンドル + スノーフレークIDから逆算した日付範囲で検索
-    const handleMatch = tweetUrl?.match(/x\.com\/([^/]+)\/status/);
-    const handle = handleMatch?.[1];
-    if (handle) {
-      const snowflake = BigInt(tweetId);
-      const timestampMs = Number(snowflake >> BigInt(22)) + 1288834974657;
-      const sinceTs = Math.floor((timestampMs - 3600000) / 1000);
-      const untilTs = Math.floor((timestampMs + 86400000) / 1000);
-      const params3 = new URLSearchParams({
-        query: `from:${handle} since_time:${sinceTs} until_time:${untilTs} -is:retweet`,
-        queryType: "Latest",
-      });
-      const res3 = await fetch(
-        `https://api.twitterapi.io/twitter/tweet/advanced_search?${params3}`,
-        { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
-      );
-      if (res3.ok) {
-        const data3 = await res3.json() as { tweets?: Record<string, unknown>[] };
-        for (const tweet of (data3.tweets ?? [])) {
-          const id = (tweet.id_str ?? String(tweet.id)) as string | undefined;
-          if (id === tweetId) {
-            const images = extractImagesFromTweet(tweet);
-            if (images.length > 0) return images;
-          }
-        }
-      }
-    }
-
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-// og:image を HTML から直接抽出（twitterapi.io が失敗した場合のフォールバック）
-async function fetchOgImage(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    return match?.[1] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function analyzeImageWithVision(imageUrl: string): Promise<ResearchResult> {
-  try {
-    const res = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return {};
-    const buffer = Buffer.from(await res.arrayBuffer());
-    const contentType = res.headers.get("content-type") ?? "image/jpeg";
-    const base64 = buffer.toString("base64");
-
-    const mediaType = (
-      contentType.startsWith("image/png")  ? "image/png"  :
-      contentType.startsWith("image/gif")  ? "image/gif"  :
-      contentType.startsWith("image/webp") ? "image/webp" : "image/jpeg"
-    ) as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-
-    const resp = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          {
-            type: "text",
-            text: `このイベントフライヤー画像から、以下の情報をJSON形式で抽出してください。
-
-ゲームタイトルは「最初にゲームとしてリリースされたタイトル」のみ（ビジュアルノベル含む。アニメ・漫画原作は除く）。
-
-JSONのみ返してください：
-{
-  "game_titles": ["タイトル1", "タイトル2"],
-  "start_time": "HH:MM または null",
-  "venue_name": "会場名 または null",
-  "prefecture": "都道府県名（例: 東京都）または null",
-  "flyer_url": null,
-  "organizer_name": "主催者・団体名 または null"
-}`,
-          },
-        ],
-      }],
-    });
-
-    const block = resp.content[0];
-    if (block.type !== "text") return {};
-    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-    if (!match) return {};
-    return JSON.parse(match[0]) as ResearchResult;
-  } catch {
-    return {};
-  }
-}
 
 async function extractFromPage(pageText: string): Promise<ResearchResult> {
   const prompt = `以下はイベントページまたはリプライのテキストです。以下のJSON形式で情報を抽出してください。
@@ -402,7 +224,6 @@ export async function reresearchEvent(
   const organizer = (event.organizers as unknown as { name: string } | null)?.name ?? "";
   const effectiveUrl = overrideUrl?.trim() || event.source_url;
   let parsed: ResearchResult = {};
-  let allImageUrls: string[] = [];
 
   // ── Step 1a: チケットサイト・公式ページを直接スクレイピング ───────────────
   let scrapedFromUrl = false;
@@ -435,19 +256,12 @@ export async function reresearchEvent(
       }
     }
 
-    // リプライ取得 + 元ツイート画像取得 + 外部URLスクレイピングを並列実行
-    const [replyData, originalImages, externalPage] = await Promise.all([
+    // リプライ取得 + 外部URLスクレイピングを並列実行
+    const [replyData, externalPage] = await Promise.all([
       tweetId ? fetchTweetReplies(tweetId) : Promise.resolve({ texts: [], imageUrls: [] }),
-      tweetId ? fetchOriginalTweetImages(tweetId, effectiveUrl) : Promise.resolve([]),
       tweetUrls[0] ? fetchPageText(tweetUrls[0]) : Promise.resolve(null),
     ]);
 
-    allImageUrls = [...originalImages];
-    // API で画像取得できない場合は og:image をフォールバック
-    if (originalImages.length === 0 && tweetId) {
-      const ogImg = await fetchOgImage(effectiveUrl);
-      if (ogImg) allImageUrls.push(ogImg);
-    }
     externalUrlText = externalPage;
 
     // 公式ページから抽出（外部URLがあれば最優先）
@@ -474,16 +288,7 @@ export async function reresearchEvent(
     if (isSocialUrl(event.reference_url)) {
       const refTweetId = getTweetId(event.reference_url);
       if (refTweetId) {
-        const [refImages, refReplies] = await Promise.all([
-          fetchOriginalTweetImages(refTweetId, event.reference_url),
-          fetchTweetReplies(refTweetId),
-        ]);
-        allImageUrls.push(...refImages);
-        // API で画像取得できない場合は og:image をフォールバック
-        if (refImages.length === 0) {
-          const ogImg = await fetchOgImage(event.reference_url);
-          if (ogImg) allImageUrls.push(ogImg);
-        }
+        const refReplies = await fetchTweetReplies(refTweetId);
         if (refReplies.texts.length > 0) {
           const refText = refReplies.texts.join("\n").slice(0, 4000);
           const refResult = await extractFromPage(refText);
@@ -520,7 +325,6 @@ export async function reresearchEvent(
   "start_time": "HH:MM または null",
   "venue_name": "会場名 または null",
   "prefecture": "都道府県名（例: 東京都）または null",
-  "flyer_url": "フライヤー画像の直リンクURL または null",
   "organizer_name": "主催者・団体名 または null"
 }`;
 
@@ -533,29 +337,12 @@ export async function reresearchEvent(
         if (!parsed.start_time && webResult.start_time) parsed.start_time = webResult.start_time;
         if (!parsed.venue_name && webResult.venue_name) parsed.venue_name = webResult.venue_name;
         if (!parsed.prefecture && webResult.prefecture) parsed.prefecture = webResult.prefecture;
-        if (!parsed.flyer_url && webResult.flyer_url) parsed.flyer_url = webResult.flyer_url;
       }
     } catch (err) {
       if (!scrapedFromUrl && !parsed.game_titles?.length) {
         return { ok: false, message: `検索エラー: ${err instanceof Error ? err.message : String(err)}` };
       }
     }
-  }
-
-  // ── Step 2.5: Vision OCR（X フライヤー画像から不足フィールドを補完）────────
-  if (allImageUrls.length > 0 && (!parsed.venue_name || !parsed.prefecture || !parsed.organizer_name)) {
-    for (const imgUrl of allImageUrls.slice(0, 3)) {
-      const visionResult = await analyzeImageWithVision(imgUrl);
-      if (!parsed.game_titles?.length && visionResult.game_titles?.length) parsed.game_titles = visionResult.game_titles;
-      if (!parsed.start_time && visionResult.start_time) parsed.start_time = visionResult.start_time;
-      if (!parsed.venue_name && visionResult.venue_name) parsed.venue_name = visionResult.venue_name;
-      if (!parsed.prefecture && visionResult.prefecture) parsed.prefecture = visionResult.prefecture;
-      if (!parsed.organizer_name && visionResult.organizer_name) parsed.organizer_name = visionResult.organizer_name;
-      if (parsed.venue_name && parsed.prefecture && parsed.organizer_name) break;
-    }
-  }
-  if (allImageUrls.length > 0 && !parsed.flyer_url) {
-    parsed.flyer_url = allImageUrls[0];
   }
 
   // ── Step 3: 取得結果を DB に反映（欠損フィールドのみ更新）────────────────
