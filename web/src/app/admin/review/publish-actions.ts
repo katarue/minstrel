@@ -164,6 +164,18 @@ export async function clearEventImage(id: string): Promise<{ ok: boolean; messag
   return { ok: true };
 }
 
+export async function saveTicketUrl(id: string, url: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ ticket_urls: url.trim() ? { primary: url.trim() } : null })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  return { ok: true };
+}
+
 export async function saveReferenceUrl(id: string, url: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
   const { error } = await supabase
