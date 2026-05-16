@@ -40,12 +40,30 @@ false にする条件（明確にゲームと無関係な場合）:
 - 関連なし例: 「アニメ『○○』原作のイベント。ゲーム起源なし」「一般バンドのライブ。ゲーム音楽との関連なし」
 """
 
-EXTRACTION_SYSTEM = """
-あなたはゲーム音楽コンサートの情報を構造化するアシスタントです。
-与えられたHTMLまたはテキストから、以下のJSONスキーマに従って情報を抽出してください。
-抽出できない項目はnullにしてください。日時はISO 8601形式（JST）で返してください。
-""" + _GAME_TITLES_CRITERIA + _GAME_MUSIC_CLASSIFICATION + """
+_GAME_MUSIC_CLASSIFICATION_STRICT = """
+【is_game_music_event の判定基準（厳格モード）】
+true にする条件（いずれか1つ以上が明確に確認できる場合のみ）:
+- ゲームタイトルの楽曲が演奏されることが明記されている
+- 演奏者・作曲者がゲーム音楽で著名であることが明記されている
+- ゲーム会社が主催または共催していることが明記されている
+- イベント名・プログラムにゲーム音楽関連のキーワードが含まれている
 
+false にする条件:
+- 上記のいずれも確認できない
+- アニメ・漫画・映画原作IPのみ（ゲーム起源なし）
+- 一般バンド・アーティストのライブ
+- クラシックコンサート・オーケストラ（ゲーム曲の記載なし）
+- 情報が不十分で判断できない
+
+判断に迷う場合は false にしてください。情報が不十分な場合も false にしてください。
+
+【game_music_reason の書き方】
+1〜2行で具体的に記述してください:
+- 関連あり例: 「ゲームタイトル『○○』の楽曲を演奏」「作曲家○○（FF・DQ等で著名）のコンサート」
+- 関連なし例: 「アニメ『○○』原作のイベント。ゲーム起源なし」「一般バンドのライブ。ゲーム音楽との関連なし」
+"""
+
+_ORGANIZER_URL_CRITERIA = """
 【organizer_official_url の判定基準】
 テキスト末尾に「【外部リンク候補】」として URL リストが提示される場合があります。
 その中から主催者・演奏団体自身が運営する公式ウェブサイトの URL を1つだけ選んでください。
@@ -56,6 +74,18 @@ EXTRACTION_SYSTEM = """
 - 除外: 地図・ユーティリティサービス
 候補に公式サイトらしき URL がなければ null を返してください。
 """
+
+EXTRACTION_SYSTEM = """
+あなたはゲーム音楽コンサートの情報を構造化するアシスタントです。
+与えられたHTMLまたはテキストから、以下のJSONスキーマに従って情報を抽出してください。
+抽出できない項目はnullにしてください。日時はISO 8601形式（JST）で返してください。
+""" + _GAME_TITLES_CRITERIA + _GAME_MUSIC_CLASSIFICATION + _ORGANIZER_URL_CRITERIA
+
+EXTRACTION_SYSTEM_STRICT = """
+あなたはゲーム音楽コンサートの情報を構造化するアシスタントです。
+与えられた内容から、以下のJSONスキーマに従って情報を抽出してください。
+抽出できない項目はnullにしてください。日時はISO 8601形式（JST）で返してください。
+""" + _GAME_TITLES_CRITERIA + _GAME_MUSIC_CLASSIFICATION_STRICT + _ORGANIZER_URL_CRITERIA
 
 EXTRACTION_SCHEMA = {
     "title": "string",
@@ -193,7 +223,23 @@ JSONのみ返してください。"""
         return {"game_titles": [], "is_game_music_event": True, "game_music_reason": ""}
 
 
-def extract_event(raw_text: str, source_url: str) -> dict | None:
+def _parse_json_response(text: str) -> dict | None:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        parsed = json.loads(text.strip())
+        if isinstance(parsed, list):
+            return parsed[0] if parsed else None
+        return parsed
+    except (json.JSONDecodeError, IndexError):
+        return None
+
+
+def extract_event(raw_text: str, source_url: str, strict: bool = False) -> dict | None:
+    system = EXTRACTION_SYSTEM_STRICT if strict else EXTRACTION_SYSTEM
     prompt = f"""以下のテキストからコンサート情報を抽出してください。
 
 出典URL: {source_url}
@@ -210,19 +256,39 @@ JSONのみ返してください。他のテキストは不要です。"""
         model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
-        system=EXTRACTION_SYSTEM,
+        system=system,
     )
+    return _parse_json_response(resp.content[0].text)
+
+
+def extract_event_from_image(image_url: str, tweet_text: str, source_url: str) -> dict | None:
+    """フライヤー画像をVisionで読み取りイベント情報を抽出する（厳格フィルター適用）。"""
+    prompt = f"""このコンサートのフライヤー画像から情報を抽出してください。
+
+ツイートテキスト（補足）:
+{tweet_text[:300]}
+
+出典URL: {source_url}
+
+以下のJSONスキーマで返してください:
+{json.dumps(EXTRACTION_SCHEMA, ensure_ascii=False, indent=2)}
+
+JSONのみ返してください。"""
 
     try:
-        text = resp.content[0].text.strip()
-        if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-        parsed = json.loads(text.strip())
-        # Claudeがリストを返した場合は先頭要素を使用
-        if isinstance(parsed, list):
-            return parsed[0] if parsed else None
-        return parsed
-    except (json.JSONDecodeError, IndexError):
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "url", "url": image_url}},
+                    {"type": "text", "text": prompt},
+                ],
+            }],
+            system=EXTRACTION_SYSTEM_STRICT,
+        )
+        return _parse_json_response(resp.content[0].text)
+    except Exception as e:
+        print(f"[vision] extraction failed for {image_url[:60]}: {e}")
         return None

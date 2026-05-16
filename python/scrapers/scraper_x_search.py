@@ -1,11 +1,12 @@
 import json
 import os
+import re
 import time
 from datetime import datetime, timezone, timedelta
 
 import requests
 
-from utils.config import TWITTERAPI_IO_KEY
+from utils.config import TWITTERAPI_IO_KEY, USER_AGENT
 
 _FOLLOWING_CACHE_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -26,6 +27,14 @@ SEARCH_QUERIES = [
 # 1リクエストあたりの最大ページ数（コスト制御）
 MAX_PAGES_PER_QUERY = 3
 
+# URL フェッチをスキップするドメイン（SNS・動画サイト等）
+_SKIP_URL_DOMAINS = {
+    "twitter.com", "x.com", "t.co",
+    "instagram.com", "facebook.com",
+    "youtube.com", "youtu.be",
+    "tiktok.com",
+}
+
 
 def _tweet_url(tweet: dict) -> str:
     user = tweet.get("author", {}).get("userName", "unknown")
@@ -44,9 +53,86 @@ def _build_raw_text(tweet: dict) -> str:
     return "\n".join(lines)
 
 
+def _extract_tweet_urls(tweet: dict) -> list[str]:
+    """entities.urls から外部URL（SNS・動画サイト除く）を返す。"""
+    urls = []
+    for u in (tweet.get("entities") or {}).get("urls", []):
+        expanded = u.get("expanded_url", "")
+        if expanded and not any(d in expanded for d in _SKIP_URL_DOMAINS):
+            urls.append(expanded)
+    return urls
+
+
+def _extract_tweet_photos(tweet: dict) -> list[str]:
+    """extendedEntities.media から写真URL（フライヤー候補）を返す。"""
+    return [
+        m["media_url_https"]
+        for m in (tweet.get("extendedEntities") or {}).get("media", [])
+        if m.get("type") == "photo" and m.get("media_url_https")
+    ]
+
+
+def _fetch_page_text(url: str) -> str | None:
+    """URLのページ内容をプレーンテキストとして返す。失敗時はNone。"""
+    try:
+        resp = requests.get(
+            url, timeout=12,
+            headers={"User-Agent": USER_AGENT, "Accept-Language": "ja,en;q=0.5"},
+        )
+        if not resp.ok:
+            return None
+        html = resp.text
+        html = re.sub(r'<script[\s\S]*?</script>', ' ', html, flags=re.IGNORECASE)
+        html = re.sub(r'<style[\s\S]*?</style>', ' ', html, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', ' ', html)
+        text = re.sub(r'&[a-z]+;', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text[:3000] if text else None
+    except Exception:
+        return None
+
+
+def _enrich_tweet(tweet: dict) -> dict | None:
+    """
+    ツイートを以下の優先度で強化して返す。
+    Pattern 1: 外部URLあり → ページ内容を raw_text に使用
+    Pattern 2: URLなし・写真あり → raw_text=ツイートテキスト + _flyer_image_url を設定
+    Pattern 3: URLも写真もなし → None（スキップ）
+    """
+    tweet_text = _build_raw_text(tweet)
+    external_urls = _extract_tweet_urls(tweet)
+    photo_urls = _extract_tweet_photos(tweet)
+
+    # Pattern 1: 外部URLをフェッチしてページ内容を取得
+    for url in external_urls:
+        page_text = _fetch_page_text(url)
+        if page_text:
+            print(f"[x_search] Pattern1: fetched {url[:60]}")
+            return {
+                "raw_text": page_text,
+                "ticket_url": url,
+                "_tweet_text": tweet_text,
+                "_flyer_image_url": photo_urls[0] if photo_urls else None,
+                "_has_page_content": True,
+            }
+
+    # Pattern 2: フライヤー画像のみ
+    if photo_urls:
+        print(f"[x_search] Pattern2: flyer image found")
+        return {
+            "raw_text": tweet_text,
+            "_tweet_text": tweet_text,
+            "_flyer_image_url": photo_urls[0],
+            "_has_page_content": False,
+        }
+
+    # Pattern 3: URLも画像もなし → スキップ
+    return None
+
+
 def search_tweets(query: str, since_days: int = 3) -> list[dict]:
     """
-    twitterapi.io でツイートを検索し、生データのリストを返す。
+    twitterapi.io でツイートを検索し、URL/画像で強化した結果リストを返す。
     since_days: 何日前から検索するか（デフォルト3日）
     """
     if not TWITTERAPI_IO_KEY:
@@ -61,6 +147,7 @@ def search_tweets(query: str, since_days: int = 3) -> list[dict]:
     headers = {"X-API-Key": TWITTERAPI_IO_KEY}
     results = []
     cursor = None
+    skipped_p3 = 0
 
     for page in range(MAX_PAGES_PER_QUERY):
         params: dict = {"query": full_query, "queryType": "Latest"}
@@ -80,15 +167,21 @@ def search_tweets(query: str, since_days: int = 3) -> list[dict]:
 
         tweets = data.get("tweets") or []
         for tweet in tweets:
-            results.append({
+            enriched = _enrich_tweet(tweet)
+            if enriched is None:
+                skipped_p3 += 1
+                continue
+
+            result = {
                 "source_url": _tweet_url(tweet),
                 "source_name": "x_search",
                 "source_rank": "B",
-                "raw_text": _build_raw_text(tweet),
                 "tweet_id": tweet.get("id"),
                 "created_at": tweet.get("createdAt"),
                 "_author_handle": tweet.get("author", {}).get("userName", "").lower(),
-            })
+            }
+            result.update(enriched)
+            results.append(result)
 
         if not data.get("has_next_page"):
             break
@@ -97,9 +190,10 @@ def search_tweets(query: str, since_days: int = 3) -> list[dict]:
         if not cursor:
             break
 
-        # ページ間: 2 秒待機
         time.sleep(2)
 
+    if skipped_p3:
+        print(f"[x_search] skipped {skipped_p3} tweets (no URL, no image)")
     return results
 
 
@@ -127,12 +221,10 @@ def _load_monitored_handles() -> list[str]:
 def _build_from_query(handles: list[str], since_days: int) -> str | None:
     """
     from: 指定の複合クエリを構築する。
-    twitterapi.io は OR 演算子が使えるので bundle する。
     最大 20 アカウントを 1 クエリにまとめる。
     """
     if not handles:
         return None
-    # (from:A OR from:B OR ...) -is:retweet
     from_parts = " OR ".join(f"from:{h}" for h in handles[:20])
     return f"({from_parts}) -is:retweet"
 
@@ -140,7 +232,6 @@ def _build_from_query(handles: list[str], since_days: int) -> str | None:
 def _load_following_handles() -> list[str]:
     """
     data/x_following_handles.json から @minstrel_live のフォローリストを読み込む。
-    ファイルが存在しない場合は空リストを返す（sync_x_following.py を先に実行すること）。
     """
     try:
         if not os.path.exists(_FOLLOWING_CACHE_PATH):
@@ -159,9 +250,8 @@ def _load_following_handles() -> list[str]:
 def scrape_x_search(since_days: int = 3) -> list[dict]:
     """
     複数クエリでゲーム音楽コンサート関連ツイートを収集。
-    1. キーワード検索（ハッシュタグ含む）
-    2. 監視アカウント（from: 指定）
-    重複ツイート（同じ tweet_id）を除去して返す。
+    各ツイートは URL フェッチ（Pattern 1）または画像（Pattern 2）で強化済み。
+    URL も画像もないツイートはスキップ（Pattern 3）。
     """
     seen_ids: set[str] = set()
     all_results: list[dict] = []
@@ -192,7 +282,6 @@ def scrape_x_search(since_days: int = 3) -> list[dict]:
                     tid = tweet.get("tweet_id", tweet["source_url"])
                     if tid not in seen_ids:
                         seen_ids.add(tid)
-                        # 監視アカウントの公式ツイートは source_name を区別
                         tweet["source_name"] = "x_monitored"
                         all_results.append(tweet)
                         new_count += 1

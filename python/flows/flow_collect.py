@@ -7,7 +7,7 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
-from processor.claude_extractor import extract_event, extract_game_titles, score_announcement
+from processor.claude_extractor import extract_event, extract_event_from_image, extract_game_titles
 from processor.web_enricher import enrich_event_fields
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
@@ -59,13 +59,9 @@ def scrape_livepocket() -> list[dict]:
 
 
 
-ANNOUNCEMENT_SCORE_THRESHOLD = 70  # X ツイートの告知確度足切り閾値
-
-
 @task
 def extract_events(raw_events: list[dict]) -> list[dict]:
     results = []
-    skipped_low_score = 0
     skipped_not_game = 0
     pre_parsed_count = 0
 
@@ -121,37 +117,44 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
         if not content:
             continue
 
-        # X ツイートは告知確度スコアで足切り（API コスト削減）
-        if raw.get("source_name") == "x_search":
-            score = score_announcement(content)
-            if score < ANNOUNCEMENT_SCORE_THRESHOLD:
-                skipped_low_score += 1
-                continue
+        source_name = raw.get("source_name", "")
+        is_x_source = source_name in ("x_search", "x_monitored", "x_followed")
 
-        extracted = extract_event(content, raw.get("source_url", ""))
+        # X ソース: Pattern 1（URLページ）/ Pattern 2（フライヤーVision）で抽出
+        if is_x_source:
+            flyer_image_url = raw.get("_flyer_image_url")
+            tweet_text = raw.get("_tweet_text", content)
+            has_page_content = raw.get("_has_page_content", False)
+
+            if has_page_content:
+                # Pattern 1: ページ内容から厳格フィルターで抽出
+                extracted = extract_event(content, raw.get("source_url", ""), strict=True)
+            elif flyer_image_url:
+                # Pattern 2: フライヤー画像をVisionで読み取り
+                extracted = extract_event_from_image(flyer_image_url, tweet_text, raw.get("source_url", ""))
+            else:
+                continue  # スクレイパーで弾かれるはずだが念のため
+        else:
+            extracted = extract_event(content, raw.get("source_url", ""))
+
         if extracted:
             if not extracted.get("is_game_music_event", True):
                 skipped_not_game += 1
                 continue
             extracted["source_rank"] = raw.get("source_rank", "C")
-            extracted["_image_url"] = raw.get("image_url")
-            extracted["_source_name"] = raw.get("source_name", "unknown")
+            extracted["_image_url"] = raw.get("image_url") or raw.get("_flyer_image_url")
+            extracted["_source_name"] = source_name
             extracted["_raw_source_url"] = raw.get("source_url", "")
-            # ticket_url がスクレイパーから直接提供されている場合は優先使用
             if raw.get("ticket_url") and not extracted.get("ticket_url"):
                 extracted["ticket_url"] = raw["ticket_url"]
-            # スクレイパーが抽出した X アカウント URL
             if raw.get("_organizer_x_url"):
                 extracted["_organizer_x_url"] = raw["_organizer_x_url"]
             if raw.get("_author_handle"):
                 extracted["_author_handle"] = raw["_author_handle"]
-            # X ソースはツイート原文を保持（採用時のURL抽出・補完に使用）
-            if raw.get("source_name") in ("x_search", "x_monitored", "x_followed"):
-                extracted["_tweet_text"] = raw.get("raw_text", "")
+            if is_x_source:
+                extracted["_tweet_text"] = raw.get("_tweet_text", "")
             results.append(extracted)
 
-    if skipped_low_score:
-        print(f"[extract] skipped {skipped_low_score} low-score X tweets")
     if skipped_not_game:
         print(f"[extract] skipped {skipped_not_game} non-game-music events")
     if pre_parsed_count:
