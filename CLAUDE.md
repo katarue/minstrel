@@ -268,8 +268,9 @@ AI による「ファクトチェック」ではなく、ルールベースの�
 
 | ドキュメント | 内容 | 更新頻度 |
 |---|---|---|
+| `docs/operations.md` | **現行の運用状況**（スクレイパー構成・パイプライン）← 最新 | 変更時 |
 | `docs/project_plan.md` | 戦略・哲学 | 低 |
-| `docs/implementation_schedule.md` | フェーズ別タスク | 適宜 |
+| `docs/implementation_schedule.md` | 初期計画書（現状と乖離あり、参照不要） | 更新停止 |
 | `docs/design_system.md` | デザイン規約 | 低 |
 | `docs/archive/memory_bank/` | 旧決定ログ D-001〜D-027（読み取り専用） | 更新停止 |
 
