@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveTicketUrl, updateGameTitles } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, updateGameTitles } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -14,7 +14,6 @@ export type EventRecord = {
   source_url: string | null;
   official_url: string | null;
   reference_url: string | null;
-  ticket_urls: { primary?: string } | null;
   flyer_image_url: string | null;
   key_visual_url: string | null;
   is_published: boolean;
@@ -197,50 +196,6 @@ function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUr
           onChange={e => { setValue(e.target.value); setSaved(false); }}
           className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="その他参考URL（X投稿など）..."
-        />
-        {value && (
-          <a href={value} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
-            ↗
-          </a>
-        )}
-        {dirty && !saved && (
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
-          >
-            {isPending ? "…" : "保存"}
-          </button>
-        )}
-        {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
-      </div>
-    </div>
-  );
-}
-
-function TicketUrlField({ eventId, initialUrl }: { eventId: string; initialUrl: string | null }) {
-  const [value, setValue] = useState(initialUrl ?? "");
-  const [saved, setSaved] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const dirty = value !== (initialUrl ?? "");
-
-  const handleSave = () =>
-    startTransition(async () => {
-      const res = await saveTicketUrl(eventId, value);
-      if (res.ok) setSaved(true);
-    });
-
-  return (
-    <div className="mt-1.5">
-      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">購入URL</span>
-      <div className="flex items-center gap-1">
-        <input
-          type="url"
-          value={value}
-          onChange={e => { setValue(e.target.value); setSaved(false); }}
-          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
-          placeholder="チケット購入URL..."
         />
         {value && (
           <a href={value} target="_blank" rel="noopener noreferrer"
@@ -506,7 +461,6 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                         </div>
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                         <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
-                        <TicketUrlField eventId={ev.id} initialUrl={ev.ticket_urls?.primary ?? null} />
                       </>
                     ) : (
                       <>
@@ -524,7 +478,6 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                         )}
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                         <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
-                        <TicketUrlField eventId={ev.id} initialUrl={ev.ticket_urls?.primary ?? null} />
                       </>
                     )}
                   </td>
