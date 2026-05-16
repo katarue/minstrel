@@ -552,3 +552,159 @@ export async function reresearchEvent(
     ? { ok: true, message: `更新: ${updatedFields.join("、")}`, updatedFields }
     : { ok: true, message: "新しい情報は見つかりませんでした" };
 }
+
+type IngestExtraction = {
+  event_name?: string;
+  start_datetime?: string | null;
+  venue_name?: string | null;
+  prefecture?: string | null;
+  organizer_name?: string | null;
+  organizer_official_url?: string | null;
+  ticket_url?: string | null;
+  description?: string | null;
+  game_titles?: string[];
+  is_game_music_event?: boolean;
+};
+
+async function extractFullEvent(pageText: string, sourceUrl: string): Promise<IngestExtraction> {
+  const prompt = `以下はコンサートページのテキストです。JSONのみ返してください。
+
+抽出ルール:
+- game_titles: ゲームが最初の発表媒体のタイトルのみ（アニメ・漫画・映画原作は除く）。シリーズ名で統一。
+- start_datetime: ISO8601形式（JST）。不明な場合はnull。
+- prefecture: 都道府県名（例: 東京都）。会場住所から推定。不明はnull。
+- organizer_official_url: 主催者・演奏団体の公式サイトURL（チケットサイト・SNSは除く）。
+
+出典URL: ${sourceUrl}
+
+{
+  "event_name": "string",
+  "start_datetime": "ISO8601 or null",
+  "venue_name": "string or null",
+  "prefecture": "string or null",
+  "organizer_name": "string or null",
+  "organizer_official_url": "string or null",
+  "ticket_url": "string or null",
+  "description": "100〜200字の日本語要約 or null",
+  "game_titles": ["タイトル1"],
+  "is_game_music_event": true
+}
+
+テキスト:
+${pageText}`;
+
+  try {
+    const resp = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = resp.content[0];
+    if (block.type !== "text") return {};
+    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    return JSON.parse(match[0]) as IngestExtraction;
+  } catch {
+    return {};
+  }
+}
+
+export async function ingestFromUrl(
+  url: string,
+): Promise<{ ok: boolean; message: string; eventId?: string }> {
+  const supabase = createAdminClient();
+  const trimmedUrl = url.trim();
+
+  if (!trimmedUrl) {
+    return { ok: false, message: "URLを入力してください" };
+  }
+
+  // 重複チェック
+  const { data: existing } = await supabase
+    .from("event_sources")
+    .select("event_id")
+    .eq("source_url", trimmedUrl)
+    .limit(1);
+
+  if (existing?.length) {
+    return { ok: false, message: "このURLは既に登録済みです" };
+  }
+
+  // ページ取得
+  const pageData = await fetchPageData(trimmedUrl);
+  if (!pageData) {
+    return { ok: false, message: "ページの取得に失敗しました（URLを確認してください）" };
+  }
+
+  // Claude で全フィールド抽出
+  const extracted = await extractFullEvent(pageData.text, trimmedUrl);
+
+  if (!extracted.event_name) {
+    return { ok: false, message: "イベント名を抽出できませんでした" };
+  }
+
+  // 主催者の upsert
+  let organizerId: string | null = null;
+  if (extracted.organizer_name) {
+    const { data: existingOrg } = await supabase
+      .from("organizers")
+      .select("id")
+      .eq("name", extracted.organizer_name)
+      .single();
+    organizerId = existingOrg?.id ?? (
+      await supabase.from("organizers").insert({
+        name: extracted.organizer_name,
+        official_url: extracted.organizer_official_url ?? null,
+      }).select("id").single()
+    ).data?.id ?? null;
+  }
+
+  // イベント挿入
+  const { data: newEvent, error: insertError } = await supabase
+    .from("events")
+    .insert({
+      event_name: extracted.event_name,
+      start_datetime: extracted.start_datetime ?? null,
+      venue_name: extracted.venue_name ?? null,
+      prefecture: extracted.prefecture ?? null,
+      organizer_id: organizerId,
+      official_url: extracted.organizer_official_url ?? null,
+      ticket_url: extracted.ticket_url ?? null,
+      source_url: trimmedUrl,
+      description: extracted.description ?? null,
+      source_rank: "A",
+      is_published: false,
+      auto_publish_eligible: false,
+      is_canceled: false,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !newEvent) {
+    return { ok: false, message: `登録エラー: ${insertError?.message ?? "不明なエラー"}` };
+  }
+
+  // event_sources 挿入
+  await supabase.from("event_sources").insert({
+    event_id: newEvent.id,
+    source_url: trimmedUrl,
+    source_name: "manual_ingest",
+    match_status: "new",
+  });
+
+  // ゲームタイトル挿入
+  for (const title of (extracted.game_titles ?? [])) {
+    if (!title?.trim()) continue;
+    const { data: gt } = await supabase
+      .from("game_titles").select("id").eq("title_name", title).single();
+    const gtId = gt?.id ?? (
+      await supabase.from("game_titles").insert({ title_name: title }).select("id").single()
+    ).data?.id;
+    if (gtId) {
+      await supabase.from("event_game_titles").insert({ event_id: newEvent.id, game_title_id: gtId });
+    }
+  }
+
+  revalidatePath("/admin/review");
+  return { ok: true, message: `「${extracted.event_name}」を登録しました`, eventId: newEvent.id };
+}

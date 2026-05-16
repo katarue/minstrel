@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { RecordList, type EventRecord } from "./RecordList";
+import { UrlIngestForm } from "./UrlIngestForm";
 
 export const revalidate = 0;
 export const maxDuration = 60;
@@ -52,6 +53,8 @@ export default async function ReviewPage() {
           全 {events.length} 件（未公開 {unpublishedCount} 件）
         </span>
       </div>
+
+      <UrlIngestForm />
 
       <div className="bg-parchment rounded-md border border-gold/30 px-5 py-3">
         <RecordList events={events} />
