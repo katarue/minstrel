@@ -116,22 +116,66 @@ async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
 }
 
 
-// X /photo/N URL などの og:image を取得（ソーシャル共有用メタタグとして機能する）
-async function fetchOgImage(url: string): Promise<string | null> {
+// from:handle + 日付範囲でツイートを検索し、対象ツイートの最初の画像URLを返す
+// ツイートIDは JS の安全整数上限を超えるため id_str 優先、数値は許容誤差±1000 で照合
+async function fetchTweetImageByHandle(tweetId: string, tweetUrl: string): Promise<string | null> {
+  const apiKey = process.env.TWITTERAPI_IO_KEY;
+  if (!apiKey) return null;
+
+  const handleMatch = tweetUrl.match(/x\.com\/([^/]+)\/status/);
+  const handle = handleMatch?.[1];
+  if (!handle) return null;
+
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
-      },
-      signal: AbortSignal.timeout(8000),
+    const snowflake = BigInt(tweetId);
+    const timestampMs = Number(snowflake >> BigInt(22)) + 1288834974657;
+    const sinceTs = Math.floor((timestampMs - 3600000) / 1000);
+    const untilTs = Math.floor((timestampMs + 86400000) / 1000);
+
+    const params = new URLSearchParams({
+      query: `from:${handle} since_time:${sinceTs} until_time:${untilTs} -is:retweet`,
+      queryType: "Latest",
     });
+    const res = await fetch(
+      `https://api.twitterapi.io/twitter/tweet/advanced_search?${params}`,
+      { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
+    );
     if (!res.ok) return null;
-    const html = await res.text();
-    const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    return match?.[1] ?? null;
+
+    const data = await res.json() as { tweets?: Record<string, unknown>[] };
+    const target = BigInt(tweetId);
+
+    for (const tweet of (data.tweets ?? [])) {
+      // id_str（文字列）で完全一致、なければ数値を BigInt 変換して誤差±1000 で照合
+      const idStr = tweet.id_str as string | undefined;
+      const idNum = typeof tweet.id === "number" ? tweet.id : null;
+      const isMatch = idStr === tweetId
+        || (idNum !== null && (() => {
+          const actual = BigInt(Math.round(idNum));
+          const diff = actual > target ? actual - target : target - actual;
+          return diff < BigInt(1000);
+        })());
+      if (!isMatch) continue;
+
+      if (Array.isArray(tweet.photos)) {
+        const first = (tweet.photos as Record<string, unknown>[])[0];
+        const url = (first?.url ?? first?.media_url_https ?? first?.media_url) as string | undefined;
+        if (url) return url;
+      }
+      const mediaArr =
+        (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
+        (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
+        (tweet.entities as Record<string, unknown> | undefined)?.media;
+      if (Array.isArray(mediaArr)) {
+        for (const m of mediaArr as Record<string, unknown>[]) {
+          if (m.type === "photo") {
+            const url = (m.media_url_https ?? m.media_url) as string | undefined;
+            if (url) return url;
+          }
+        }
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -309,11 +353,11 @@ export async function reresearchEvent(
     if (isSocialUrl(event.reference_url)) {
       const refTweetId = getTweetId(event.reference_url);
       if (refTweetId) {
-        const [ogImage, refReplies] = await Promise.all([
-          fetchOgImage(event.reference_url),
+        const [tweetImage, refReplies] = await Promise.all([
+          fetchTweetImageByHandle(refTweetId, event.reference_url),
           fetchTweetReplies(refTweetId),
         ]);
-        if (ogImage && !parsed.flyer_url) parsed.flyer_url = ogImage;
+        if (tweetImage && !parsed.flyer_url) parsed.flyer_url = tweetImage;
         if (refReplies.texts.length > 0) {
           const refText = refReplies.texts.join("\n").slice(0, 4000);
           const refResult = await extractFromPage(refText);
