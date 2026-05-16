@@ -22,7 +22,7 @@ export type EventRecord = {
   event_sources: Array<{ source_name: string; raw_data: { game_music_reason?: string; [key: string]: unknown } }> | null;
 };
 
-type Filter = "unpublished" | "published" | "archive";
+type Filter = "unpublished" | "published" | "upcoming" | "archive";
 
 function formatDate(dt: string | null): string {
   if (!dt) return "";
@@ -345,11 +345,13 @@ export function RecordList({ events }: { events: EventRecord[] }) {
 
   const upcomingUnpublished = events.filter(e => isFuture(e) && !e.is_published).length;
   const upcomingPublished   = events.filter(e => isFuture(e) && e.is_published).length;
+  const upcomingAll         = events.filter(e => isFuture(e)).length;
   const archiveCount        = events.filter(e => !isFuture(e)).length;
 
   const filtered = events.filter(ev => {
     if (filter === "unpublished") return isFuture(ev) && !ev.is_published;
     if (filter === "published")   return isFuture(ev) && ev.is_published;
+    if (filter === "upcoming")    return isFuture(ev);
     if (filter === "archive")     return !isFuture(ev);
     return true;
   });
@@ -357,6 +359,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
   const filters: { key: Filter; label: string; count: number }[] = [
     { key: "unpublished", label: "未公開",     count: upcomingUnpublished },
     { key: "published",   label: "公開済み",   count: upcomingPublished },
+    { key: "upcoming",    label: "全件",       count: upcomingAll },
     { key: "archive",     label: "アーカイブ", count: archiveCount },
   ];
 
