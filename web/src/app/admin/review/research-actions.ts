@@ -247,7 +247,8 @@ async function callClaudeWithWebSearch(prompt: string): Promise<string> {
       messages: msgs,
     });
 
-    const textBlock = resp.content.find((b): b is Anthropic.TextBlock => b.type === "text");
+    // 複数テキストブロックがある場合（前置き + JSON）、最後のブロックが JSON
+    const textBlock = [...resp.content].reverse().find((b): b is Anthropic.TextBlock => b.type === "text");
     if (textBlock) resultText = textBlock.text;
     if (resp.stop_reason === "end_turn") break;
 
@@ -291,14 +292,23 @@ export async function reresearchEvent(
   // ── Step 1a: チケットサイト・公式ページを直接スクレイピング ───────────────
   let scrapedFromUrl = false;
   let mainStartTimes: string[] = [];
+  let mainPageData: Awaited<ReturnType<typeof fetchPageData>> = null;
   if (effectiveUrl && !isSocialUrl(effectiveUrl)) {
-    const pageData = await fetchPageData(effectiveUrl);
-    if (pageData) {
-      parsed = await extractFromPage(pageData.text);
-      mainStartTimes = pageData.startTimes;
+    mainPageData = await fetchPageData(effectiveUrl);
+    if (mainPageData) {
+      parsed = await extractFromPage(mainPageData.text);
+      mainStartTimes = mainPageData.startTimes;
       scrapedFromUrl = true;
     }
   }
+
+  // 構造化プレフィックスから主催者を直接補完（Claudeが抽出できなかった場合）
+  if (!parsed.organizer_name && mainPageData) {
+    const orgLine = mainPageData.text.match(/^主催者[^:\n]*:\s*(.+)$/m);
+    if (orgLine?.[1]) parsed.organizer_name = orgLine[1].trim();
+  }
+  // Peatixアカウント名（英小文字・数字のみ）かどうかを記録しウェブ検索で正式名称を補完する
+  const organizerIsUsername = parsed.organizer_name ? /^[a-z0-9][a-z0-9\-]+$/.test(parsed.organizer_name) : false;
 
   // ── Step 1b: X ツイートの場合は複数の補助情報を並列取得 ─────────────────
   if (effectiveUrl && isSocialUrl(effectiveUrl)) {
@@ -382,9 +392,11 @@ export async function reresearchEvent(
   }
 
   // ── Step 2: ウェブ検索（スクレイピングで取れなかった情報を補完）──────────
-  const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl || !parsed.organizer_name;
+  // organizerIsUsernameの場合もウェブ検索で正式名称を取得する
+  const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl || !parsed.organizer_name || organizerIsUsername;
   if (needsWebSearch) {
-    const webPrompt = `コンサート「${event.event_name}」（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
+    const orgHint = organizerIsUsername && parsed.organizer_name ? `（Peatixアカウント: ${parsed.organizer_name}）` : "";
+    const webPrompt = `コンサート「${event.event_name}」${orgHint}（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
 
 ゲームタイトルは「最初にゲームとしてリリースされたタイトルのみ」（ビジュアルノベル含む。アニメ・漫画原作は除く）。
 
@@ -406,7 +418,10 @@ export async function reresearchEvent(
         if (!parsed.start_time && webResult.start_time) parsed.start_time = webResult.start_time;
         if (!parsed.venue_name && webResult.venue_name) parsed.venue_name = webResult.venue_name;
         if (!parsed.prefecture && webResult.prefecture) parsed.prefecture = webResult.prefecture;
-        if (!parsed.organizer_name && webResult.organizer_name) parsed.organizer_name = webResult.organizer_name;
+        // ユーザー名スタイル（hibiyamusicfes等）よりウェブ検索の正式名称を優先
+        if (webResult.organizer_name && (!parsed.organizer_name || organizerIsUsername)) {
+          parsed.organizer_name = webResult.organizer_name;
+        }
       }
     } catch (err) {
       if (!scrapedFromUrl && !parsed.game_titles?.length) {

@@ -387,13 +387,22 @@ function RowActions({
   return (
     <div className="flex flex-col gap-1.5 items-end min-w-[80px]">
       {ev.is_published ? (
-        <button
-          disabled={isPending}
-          onClick={handleUnpublish}
-          className="text-xs px-2.5 py-1 border border-warning/40 text-warning rounded hover:bg-warning/10 disabled:opacity-40 whitespace-nowrap"
-        >
-          非公開に
-        </button>
+        <>
+          <button
+            disabled={isPending}
+            onClick={handleUnpublish}
+            className="text-xs px-2.5 py-1 border border-warning/40 text-warning rounded hover:bg-warning/10 disabled:opacity-40 whitespace-nowrap"
+          >
+            非公開に
+          </button>
+          <button
+            disabled={isPending || isResearching}
+            onClick={handleResearch}
+            className="text-xs px-2.5 py-1 border border-gold/40 text-ink-body/60 rounded hover:bg-gold/10 disabled:opacity-40 whitespace-nowrap"
+          >
+            {isResearching ? "検索中..." : "再リサーチ"}
+          </button>
+        </>
       ) : (
         <>
           <button
