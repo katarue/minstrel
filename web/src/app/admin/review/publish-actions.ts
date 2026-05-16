@@ -134,3 +134,33 @@ export async function saveOfficialUrl(id: string, url: string): Promise<{ ok: bo
   revalidatePath("/admin/review");
   return { ok: true };
 }
+
+export async function updateGameTitles(id: string, titles: string[]): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+
+  const { error: delError } = await supabase
+    .from("event_game_titles")
+    .delete()
+    .eq("event_id", id);
+
+  if (delError) return { ok: false, message: delError.message };
+
+  for (const titleName of titles) {
+    const trimmed = titleName.trim();
+    if (!trimmed) continue;
+
+    const { data: existing } = await supabase
+      .from("game_titles").select("id").eq("title_name", trimmed).single();
+
+    const gtId = existing?.id ?? (
+      await supabase.from("game_titles").insert({ title_name: trimmed }).select("id").single()
+    ).data?.id;
+
+    if (gtId) {
+      await supabase.from("event_game_titles").insert({ event_id: id, game_title_id: gtId });
+    }
+  }
+
+  revalidatePath("/admin/review");
+  return { ok: true };
+}

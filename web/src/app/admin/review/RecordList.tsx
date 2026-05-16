@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, saveOfficialUrl } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, saveOfficialUrl, updateGameTitles } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -54,6 +54,42 @@ function getMissingFields(ev: EventRecord): string[] {
 
 function Empty({ label }: { label: string }) {
   return <span className="text-error text-xs font-medium">✗ {label}</span>;
+}
+
+function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTitles: string[] }) {
+  const [value, setValue] = useState(initialTitles.join("、"));
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== initialTitles.join("、");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const titles = value.split(/[,、，]/).map(t => t.trim()).filter(Boolean);
+      const res = await updateGameTitles(eventId, titles);
+      if (res.ok) setSaved(true);
+    });
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        type="text"
+        value={value}
+        onChange={e => { setValue(e.target.value); setSaved(false); }}
+        className="flex-1 min-w-0 text-xs bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body/80"
+        placeholder="タイトルなし（カンマ区切り）"
+      />
+      {dirty && !saved && (
+        <button
+          onClick={handleSave}
+          disabled={isPending}
+          className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+        >
+          {isPending ? "…" : "保存"}
+        </button>
+      )}
+      {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
+    </div>
+  );
 }
 
 function OfficialUrlField({ eventId, initialUrl }: { eventId: string; initialUrl: string | null }) {
@@ -403,16 +439,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
 
                   {/* ゲームタイトル */}
                   <td className="py-2.5 pr-2">
-                    {gameTitles.length > 0 ? (
-                      <span className="text-ink-body/80 text-xs">
-                        {gameTitles[0]}
-                        {gameTitles.length > 1 && (
-                          <span className="text-ink-body/40 ml-1">+{gameTitles.length - 1}</span>
-                        )}
-                      </span>
-                    ) : (
-                      <Empty label="タイトルなし" />
-                    )}
+                    <GameTitleField eventId={ev.id} initialTitles={gameTitles} />
                   </td>
 
                   {/* 状態 */}
