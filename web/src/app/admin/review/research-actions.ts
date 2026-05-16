@@ -353,7 +353,7 @@ export async function reresearchEvent(
       tweetUrls[0] ? fetchPageText(tweetUrls[0]) : Promise.resolve(null),
     ]);
 
-    allImageUrls = [...originalImages, ...replyData.imageUrls];
+    allImageUrls = [...originalImages];
     externalUrlText = externalPage;
 
     // 公式ページから抽出（外部URLがあれば最優先）
@@ -384,7 +384,7 @@ export async function reresearchEvent(
           fetchOriginalTweetImages(refTweetId),
           fetchTweetReplies(refTweetId),
         ]);
-        allImageUrls.push(...refImages, ...refReplies.imageUrls);
+        allImageUrls.push(...refImages);
         if (refReplies.texts.length > 0) {
           const refText = refReplies.texts.join("\n").slice(0, 4000);
           const refResult = await extractFromPage(refText);
