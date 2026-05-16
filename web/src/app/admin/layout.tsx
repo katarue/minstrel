@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <span className="text-gold/60 text-sm">|</span>
           <span className="text-sm text-ink-body/60">管理ダッシュボード</span>
         </header>
-        <main className="max-w-5xl mx-auto px-4 md:px-8 py-8">{children}</main>
+        <main className="w-[90vw] max-w-[1600px] mx-auto px-4 md:px-6 py-8">{children}</main>
       </body>
     </html>
   );
