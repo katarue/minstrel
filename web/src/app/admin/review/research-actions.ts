@@ -44,7 +44,12 @@ async function fetchPageText(url: string): Promise<string | null> {
     });
     if (!res.ok) return null;
     const html = await res.text();
-    return html
+    // タグ削除前に og:image URL を抽出して保持する
+    const ogImageMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    const ogImage = ogImageMatch?.[1] ?? null;
+
+    const text = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<[^>]+>/g, " ")
@@ -52,6 +57,7 @@ async function fetchPageText(url: string): Promise<string | null> {
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 6000);
+    return ogImage ? `${text}\n\nog:image: ${ogImage}` : text;
   } catch {
     return null;
   }

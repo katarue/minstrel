@@ -291,7 +291,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                             ↗ 開く
                           </a>
                         )}
-                      />
+                      </>
                     ) : ev.source_url ? (
                       <a
                         href={ev.source_url}
