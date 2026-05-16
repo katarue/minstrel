@@ -49,6 +49,17 @@ async function fetchPageText(url: string): Promise<string | null> {
       ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
     const ogImage = ogImageMatch?.[1] ?? null;
 
+    // itemprop 構造化データをタグ削除前に抽出（Peatix 等の meta タグ形式に対応）
+    const structuredParts: string[] = [];
+    const venueMatch =
+      html.match(/itemprop="location"[\s\S]{0,600}?<meta[^>]+content="([^"]+)"[^>]*itemprop="name"/i) ??
+      html.match(/itemprop="location"[\s\S]{0,600}?itemprop="name"[^>]*content="([^"]+)"/i);
+    if (venueMatch?.[1]) structuredParts.push(`会場: ${venueMatch[1]}`);
+    const organizerMatch =
+      html.match(/itemprop="organizer"[\s\S]{0,600}?<meta[^>]+content="([^"]+)"[^>]*itemprop="name"/i) ??
+      html.match(/itemprop="organizer"[\s\S]{0,600}?itemprop="name"[^>]*content="([^"]+)"/i);
+    if (organizerMatch?.[1]) structuredParts.push(`主催者: ${organizerMatch[1]}`);
+
     const text = html
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -57,7 +68,8 @@ async function fetchPageText(url: string): Promise<string | null> {
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 6000);
-    return ogImage ? `${text}\n\nog:image: ${ogImage}` : text;
+    const prefix = structuredParts.length ? structuredParts.join("\n") + "\n\n" : "";
+    return ogImage ? `${prefix}${text}\n\nog:image: ${ogImage}` : `${prefix}${text}`;
   } catch {
     return null;
   }
@@ -414,7 +426,7 @@ export async function reresearchEvent(
 
   if (parsed.game_titles?.length) {
     const { data: existing } = await supabase
-      .from("event_game_titles").select("id").eq("event_id", id).limit(1);
+      .from("event_game_titles").select("event_id").eq("event_id", id).limit(1);
     if (!existing?.length) {
       for (const title of parsed.game_titles) {
         if (!title?.trim()) continue;
