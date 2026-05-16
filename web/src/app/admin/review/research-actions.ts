@@ -145,7 +145,7 @@ function extractImagesFromTweet(tweet: Record<string, unknown>): string[] {
   return urls;
 }
 
-async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
+async function fetchOriginalTweetImages(tweetId: string, tweetUrl?: string): Promise<string[]> {
   const apiKey = process.env.TWITTERAPI_IO_KEY;
   if (!apiKey) return [];
 
@@ -167,7 +167,7 @@ async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
       }
     }
 
-    // 方法2: 会話検索で元ツイートを探す（/advanced_search は動作実績あり）
+    // 方法2: 会話検索で元ツイートを探す
     const searchParams = new URLSearchParams({
       query: `conversation_id:${tweetId} -is:retweet`,
       queryType: "Latest",
@@ -179,11 +179,39 @@ async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
     if (res2.ok) {
       const data2 = await res2.json() as { tweets?: Record<string, unknown>[] };
       for (const tweet of (data2.tweets ?? [])) {
-        // 元ツイート（ID一致）の画像のみ取得
-        const id = (tweet.id ?? tweet.id_str) as string | undefined;
+        // id_str を優先（ツイートIDはJSの安全整数上限を超えるため数値は精度ロスする）
+        const id = (tweet.id_str ?? String(tweet.id)) as string | undefined;
         if (id === tweetId) {
           const images = extractImagesFromTweet(tweet);
           if (images.length > 0) return images;
+        }
+      }
+    }
+
+    // 方法3: from:ハンドル + スノーフレークIDから逆算した日付範囲で検索
+    const handleMatch = tweetUrl?.match(/x\.com\/([^/]+)\/status/);
+    const handle = handleMatch?.[1];
+    if (handle) {
+      const snowflake = BigInt(tweetId);
+      const timestampMs = Number(snowflake >> BigInt(22)) + 1288834974657;
+      const sinceTs = Math.floor((timestampMs - 3600000) / 1000);
+      const untilTs = Math.floor((timestampMs + 86400000) / 1000);
+      const params3 = new URLSearchParams({
+        query: `from:${handle} since_time:${sinceTs} until_time:${untilTs} -is:retweet`,
+        queryType: "Latest",
+      });
+      const res3 = await fetch(
+        `https://api.twitterapi.io/twitter/tweet/advanced_search?${params3}`,
+        { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
+      );
+      if (res3.ok) {
+        const data3 = await res3.json() as { tweets?: Record<string, unknown>[] };
+        for (const tweet of (data3.tweets ?? [])) {
+          const id = (tweet.id_str ?? String(tweet.id)) as string | undefined;
+          if (id === tweetId) {
+            const images = extractImagesFromTweet(tweet);
+            if (images.length > 0) return images;
+          }
         }
       }
     }
@@ -410,7 +438,7 @@ export async function reresearchEvent(
     // リプライ取得 + 元ツイート画像取得 + 外部URLスクレイピングを並列実行
     const [replyData, originalImages, externalPage] = await Promise.all([
       tweetId ? fetchTweetReplies(tweetId) : Promise.resolve({ texts: [], imageUrls: [] }),
-      tweetId ? fetchOriginalTweetImages(tweetId) : Promise.resolve([]),
+      tweetId ? fetchOriginalTweetImages(tweetId, effectiveUrl) : Promise.resolve([]),
       tweetUrls[0] ? fetchPageText(tweetUrls[0]) : Promise.resolve(null),
     ]);
 
@@ -447,7 +475,7 @@ export async function reresearchEvent(
       const refTweetId = getTweetId(event.reference_url);
       if (refTweetId) {
         const [refImages, refReplies] = await Promise.all([
-          fetchOriginalTweetImages(refTweetId),
+          fetchOriginalTweetImages(refTweetId, event.reference_url),
           fetchTweetReplies(refTweetId),
         ]);
         allImageUrls.push(...refImages);
