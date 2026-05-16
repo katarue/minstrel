@@ -22,7 +22,7 @@ export type EventRecord = {
   event_sources: Array<{ source_name: string; raw_data: { game_music_reason?: string; [key: string]: unknown } }> | null;
 };
 
-type Filter = "all" | "unpublished" | "published";
+type Filter = "unpublished" | "published" | "archive";
 
 function formatDate(dt: string | null): string {
   if (!dt) return "";
@@ -333,19 +333,31 @@ export function RecordList({ events }: { events: EventRecord[] }) {
   const [researchMsgs, setResearchMsgs] = useState<Record<string, string>>({});
   const [urlOverrides, setUrlOverrides] = useState<Record<string, string>>({});
 
-  const publishedCount   = events.filter(e => e.is_published).length;
-  const unpublishedCount = events.filter(e => !e.is_published).length;
+  // JST での「今日の開始」を算出（本日 00:00 JST）
+  const todayJSTStart = (() => {
+    const nowJST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const ymd = nowJST.toISOString().slice(0, 10);
+    return new Date(`${ymd}T00:00:00+09:00`);
+  })();
+
+  const isFuture = (ev: EventRecord) =>
+    !ev.start_datetime || new Date(ev.start_datetime) >= todayJSTStart;
+
+  const upcomingUnpublished = events.filter(e => isFuture(e) && !e.is_published).length;
+  const upcomingPublished   = events.filter(e => isFuture(e) && e.is_published).length;
+  const archiveCount        = events.filter(e => !isFuture(e)).length;
 
   const filtered = events.filter(ev => {
-    if (filter === "published")   return ev.is_published;
-    if (filter === "unpublished") return !ev.is_published;
+    if (filter === "unpublished") return isFuture(ev) && !ev.is_published;
+    if (filter === "published")   return isFuture(ev) && ev.is_published;
+    if (filter === "archive")     return !isFuture(ev);
     return true;
   });
 
   const filters: { key: Filter; label: string; count: number }[] = [
-    { key: "unpublished", label: "未公開",   count: unpublishedCount },
-    { key: "published",   label: "公開済み", count: publishedCount },
-    { key: "all",         label: "全件",     count: events.length },
+    { key: "unpublished", label: "未公開",     count: upcomingUnpublished },
+    { key: "published",   label: "公開済み",   count: upcomingPublished },
+    { key: "archive",     label: "アーカイブ", count: archiveCount },
   ];
 
   return (

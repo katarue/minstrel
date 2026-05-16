@@ -7,9 +7,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <html lang="ja">
       <body className="bg-parchment-dark min-h-screen font-body text-ink-body">
         <header className="bg-parchment border-b border-gold/30 px-6 py-3 flex items-center gap-4">
-          <span className="font-heading text-bordeaux text-lg font-bold tracking-widest">
+          <a
+            href="/"
+            className="font-heading text-bordeaux text-lg font-bold tracking-widest hover:opacity-70 transition-opacity"
+          >
             Minstrel
-          </span>
+          </a>
           <span className="text-gold/60 text-sm">|</span>
           <span className="text-sm text-ink-body/60">管理ダッシュボード</span>
         </header>
