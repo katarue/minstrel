@@ -115,53 +115,80 @@ async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
   }
 }
 
+// ツイートオブジェクトから画像URLを抽出する共通ヘルパー
+function extractImagesFromTweet(tweet: Record<string, unknown>): string[] {
+  const urls: string[] = [];
+
+  // パターン1: photos[] フィールド（twitterapi.io 独自）
+  if (Array.isArray(tweet.photos)) {
+    for (const photo of tweet.photos as Record<string, unknown>[]) {
+      const url = (photo.url ?? photo.media_url_https ?? photo.media_url) as string | undefined;
+      if (url) urls.push(url);
+    }
+  }
+
+  // パターン2: extended_entities / entities の media[]（標準 Twitter API 形式）
+  const mediaArr =
+    (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
+    (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
+    (tweet.entities as Record<string, unknown> | undefined)?.media;
+
+  if (Array.isArray(mediaArr)) {
+    for (const m of mediaArr as Record<string, unknown>[]) {
+      if (m.type === "photo") {
+        const url = (m.media_url_https ?? m.media_url) as string | undefined;
+        if (url && !urls.includes(url)) urls.push(url);
+      }
+    }
+  }
+
+  return urls;
+}
+
 async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
   const apiKey = process.env.TWITTERAPI_IO_KEY;
   if (!apiKey) return [];
 
   try {
+    // 方法1: 単一ツイート取得エンドポイント
     const res = await fetch(
       `https://api.twitterapi.io/twitter/tweet?tweet_id=${tweetId}`,
-      {
-        headers: { "X-API-Key": apiKey },
-        signal: AbortSignal.timeout(10000),
-      },
+      { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
     );
-    if (!res.ok) return [];
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await res.json() as any;
-
-    // twitterapi.io はレスポンス構造が複数パターンある
-    const tweet = data.tweet ?? data.data ?? (typeof data === "object" && !Array.isArray(data) ? data : null);
-    if (!tweet) return [];
-
-    const imageUrls: string[] = [];
-
-    // パターン1: photos[] フィールド（twitterapi.io 独自）
-    if (Array.isArray(tweet.photos)) {
-      for (const photo of tweet.photos as Record<string, unknown>[]) {
-        const url = (photo.url ?? photo.media_url_https ?? photo.media_url) as string | undefined;
-        if (url) imageUrls.push(url);
+    if (res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await res.json() as any;
+      const tweet = data.tweet ?? data.data ?? (
+        typeof data === "object" && !Array.isArray(data) && !data.tweets ? data : null
+      );
+      if (tweet) {
+        const images = extractImagesFromTweet(tweet as Record<string, unknown>);
+        if (images.length > 0) return images;
       }
     }
 
-    // パターン2: extended_entities / entities の media[]（標準 Twitter API 形式）
-    const mediaArr =
-      (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
-      (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
-      (tweet.entities as Record<string, unknown> | undefined)?.media;
-
-    if (Array.isArray(mediaArr)) {
-      for (const m of mediaArr as Record<string, unknown>[]) {
-        if (m.type === "photo") {
-          const url = (m.media_url_https ?? m.media_url) as string | undefined;
-          if (url && !imageUrls.includes(url)) imageUrls.push(url);
+    // 方法2: 会話検索で元ツイートを探す（/advanced_search は動作実績あり）
+    const searchParams = new URLSearchParams({
+      query: `conversation_id:${tweetId} -is:retweet`,
+      queryType: "Latest",
+    });
+    const res2 = await fetch(
+      `https://api.twitterapi.io/twitter/tweet/advanced_search?${searchParams}`,
+      { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(10000) },
+    );
+    if (res2.ok) {
+      const data2 = await res2.json() as { tweets?: Record<string, unknown>[] };
+      for (const tweet of (data2.tweets ?? [])) {
+        // 元ツイート（ID一致）の画像のみ取得
+        const id = (tweet.id ?? tweet.id_str) as string | undefined;
+        if (id === tweetId) {
+          const images = extractImagesFromTweet(tweet);
+          if (images.length > 0) return images;
         }
       }
     }
 
-    return imageUrls;
+    return [];
   } catch {
     return [];
   }
