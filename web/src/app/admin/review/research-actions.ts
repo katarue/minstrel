@@ -340,7 +340,7 @@ export async function reresearchEvent(
   }
 
   // ── Step 2: ウェブ検索（スクレイピングで取れなかった情報を補完）──────────
-  const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl;
+  const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl || !parsed.organizer_name;
   if (needsWebSearch) {
     const webPrompt = `コンサート「${event.event_name}」（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
 
@@ -364,6 +364,7 @@ export async function reresearchEvent(
         if (!parsed.start_time && webResult.start_time) parsed.start_time = webResult.start_time;
         if (!parsed.venue_name && webResult.venue_name) parsed.venue_name = webResult.venue_name;
         if (!parsed.prefecture && webResult.prefecture) parsed.prefecture = webResult.prefecture;
+        if (!parsed.organizer_name && webResult.organizer_name) parsed.organizer_name = webResult.organizer_name;
       }
     } catch (err) {
       if (!scrapedFromUrl && !parsed.game_titles?.length) {
