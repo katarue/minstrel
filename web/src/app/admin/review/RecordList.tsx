@@ -43,7 +43,6 @@ function formatTime(dt: string | null): string {
 function getMissingFields(ev: EventRecord): string[] {
   const missing: string[] = [];
   if (!ev.flyer_image_url && !ev.key_visual_url) missing.push("画像");
-  if (!ev.organizers?.name)                       missing.push("主催者");
   if (!ev.venue_name)                             missing.push("会場");
   if (!ev.prefecture)                             missing.push("都道府県");
   if (!ev.start_datetime)                         missing.push("日付");

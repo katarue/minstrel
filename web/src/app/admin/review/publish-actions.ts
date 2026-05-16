@@ -18,8 +18,6 @@ export async function publishEvent(id: string): Promise<{ ok: boolean; message?:
   // ── 品質ゲート（8必須フィールド） ─────────────────────────────────────
   if (!target.flyer_image_url && !target.key_visual_url)
     return { ok: false, message: "フライヤー/キービジュアルが登録されていません" };
-  if (!target.organizer_id)
-    return { ok: false, message: "主催者が登録されていません" };
   if (!target.venue_name)
     return { ok: false, message: "会場名が登録されていません" };
   if (!target.prefecture)
