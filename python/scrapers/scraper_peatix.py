@@ -94,7 +94,7 @@ def _parse_peatix_structured(soup: BeautifulSoup, url: str) -> dict | None:
     # 都道府県
     prefecture = extract_prefecture(venue or soup.get_text()[:2000])
 
-    # 主催者: itemprop="organizer" → /group/ リンク
+    # 主催者: itemprop="organizer" → /group/ → /user/ → テキストパターン
     organizer_name = None
     org_el = soup.find(attrs={"itemprop": "organizer"})
     if org_el:
@@ -106,6 +106,24 @@ def _parse_peatix_structured(soup: BeautifulSoup, url: str) -> dict | None:
             if text:
                 organizer_name = text
                 break
+    if not organizer_name:
+        for a in soup.find_all("a", href=re.compile(r'/user/')):
+            text = a.get_text(strip=True)
+            if text and len(text) < 80:
+                organizer_name = text
+                break
+    if not organizer_name:
+        full_text = soup.get_text(separator="\n")
+        # 「オーガナイザー」セクションの直後の行
+        m = re.search(r'オーガナイザー\n+([^\n]{2,80})', full_text)
+        if m:
+            organizer_name = m.group(1).strip()
+    if not organizer_name:
+        full_text = soup.get_text(separator="\n")
+        # "By username" パターン（Peatix 標準フォーマット）
+        m = re.search(r'[\n|]\s*By\s+([^\n|]{2,80})', full_text)
+        if m:
+            organizer_name = m.group(1).strip() or None
 
     description = None
     if venue and date_str:
