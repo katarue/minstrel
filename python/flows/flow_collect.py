@@ -65,6 +65,7 @@ ANNOUNCEMENT_SCORE_THRESHOLD = 70  # X ツイートの告知確度足切り閾�
 def extract_events(raw_events: list[dict]) -> list[dict]:
     results = []
     skipped_low_score = 0
+    skipped_not_game = 0
     pre_parsed_count = 0
 
     for raw in raw_events:
@@ -72,7 +73,10 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
         pre_list = raw.get("_pre_parsed_list")
         if pre_list:
             content = raw.get("raw_html") or raw.get("raw_text") or ""
-            game_titles = extract_game_titles(content, raw.get("source_url", ""))
+            gt_result = extract_game_titles(content, raw.get("source_url", ""))
+            if not gt_result.get("is_game_music_event", True):
+                skipped_not_game += 1
+                continue
             for pre in pre_list:
                 if not (pre.get("title") and pre.get("start_datetime")):
                     continue
@@ -83,7 +87,8 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
                 pre["_raw_source_url"] = pre.get("source_url", raw.get("source_url", ""))
                 if raw.get("_organizer_x_url"):
                     pre["_organizer_x_url"] = raw["_organizer_x_url"]
-                pre["game_titles"] = game_titles
+                pre["game_titles"] = gt_result["game_titles"]
+                pre["game_music_reason"] = gt_result.get("game_music_reason", "")
                 results.append(pre)
                 pre_parsed_count += 1
             continue
@@ -101,7 +106,12 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
                 pre["_organizer_x_url"] = raw["_organizer_x_url"]
             # ゲームタイトルは常に Claude で抽出（キーワードマッチを使わない）
             content = raw.get("raw_html") or raw.get("raw_text") or ""
-            pre["game_titles"] = extract_game_titles(content, raw.get("source_url", ""))
+            gt_result = extract_game_titles(content, raw.get("source_url", ""))
+            if not gt_result.get("is_game_music_event", True):
+                skipped_not_game += 1
+                continue
+            pre["game_titles"] = gt_result["game_titles"]
+            pre["game_music_reason"] = gt_result.get("game_music_reason", "")
             results.append(pre)
             pre_parsed_count += 1
             continue
@@ -119,6 +129,9 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
 
         extracted = extract_event(content, raw.get("source_url", ""))
         if extracted:
+            if not extracted.get("is_game_music_event", True):
+                skipped_not_game += 1
+                continue
             extracted["source_rank"] = raw.get("source_rank", "C")
             extracted["_image_url"] = raw.get("image_url")
             extracted["_source_name"] = raw.get("source_name", "unknown")
@@ -138,6 +151,8 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
 
     if skipped_low_score:
         print(f"[extract] skipped {skipped_low_score} low-score X tweets")
+    if skipped_not_game:
+        print(f"[extract] skipped {skipped_not_game} non-game-music events")
     if pre_parsed_count:
         print(f"[extract] pre-parsed (Claude skipped): {pre_parsed_count} items")
     return results

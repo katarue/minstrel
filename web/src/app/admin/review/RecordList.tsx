@@ -19,6 +19,7 @@ export type EventRecord = {
   is_published: boolean;
   organizers: { name: string } | null;
   event_game_titles: Array<{ game_titles: { title_name: string } | null }>;
+  event_sources: Array<{ source_name: string; raw_data: { game_music_reason?: string; [key: string]: unknown } }> | null;
 };
 
 type Filter = "all" | "unpublished" | "published";
@@ -509,6 +510,14 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   {/* ゲームタイトル */}
                   <td className="py-2.5 pr-2">
                     <GameTitleField eventId={ev.id} initialTitles={gameTitles} />
+                    {gameTitles.length === 0 && (() => {
+                      const reason = ev.event_sources?.[0]?.raw_data?.game_music_reason;
+                      return reason ? (
+                        <p className="text-[10px] text-ink-body/35 mt-1 leading-snug max-w-[160px]" title={reason}>
+                          理由: {reason}
+                        </p>
+                      ) : null;
+                    })()}
                   </td>
 
                   {/* 状態 */}

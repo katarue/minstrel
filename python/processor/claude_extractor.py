@@ -18,11 +18,33 @@ game_titles には「ビデオゲーム・コンピューターゲームが最�
   例:「ファイナルファンタジーXIV」→「ファイナルファンタジー」、「ゼルダの伝説 ブレス オブ ザ ワイルド」→「ゼルダの伝説」。
 """
 
+_GAME_MUSIC_CLASSIFICATION = """
+【is_game_music_event の判定基準】
+true にする条件（いずれか1つ以上）:
+- ゲームタイトルの楽曲が演奏される・演奏される可能性がある
+- 演奏者・作曲者がゲーム音楽で著名（例: 植松伸夫、光田康典、崎元仁、古代祐三、下村陽子など）
+- ゲーム会社（任天堂、スクウェア・エニックス、コナミ、セガ等）が主催または共催するコンサート
+- イベント名・説明にゲーム音楽関連のキーワードが含まれる（「ゲーム音楽」「Game Music」等）
+
+false にする条件（明確にゲームと無関係な場合）:
+- アニメ・漫画・映画原作IPのみ（ゲーム起源なし）
+- 一般バンド・アーティストのライブ（ゲーム音楽との接点が皆無）
+- クラシックコンサート・オーケストラ（ゲーム曲を一切演奏しない）
+- 格闘技・スポーツ等の非音楽イベント
+
+判断に迷う場合は true にしてください（人間が最終確認します）。
+
+【game_music_reason の書き方】
+1〜2行で具体的に記述してください:
+- 関連あり例: 「ゲームタイトル『○○』の楽曲を演奏」「作曲家○○（FF・DQ等で著名）のコンサート」
+- 関連なし例: 「アニメ『○○』原作のイベント。ゲーム起源なし」「一般バンドのライブ。ゲーム音楽との関連なし」
+"""
+
 EXTRACTION_SYSTEM = """
 あなたはゲーム音楽コンサートの情報を構造化するアシスタントです。
 与えられたHTMLまたはテキストから、以下のJSONスキーマに従って情報を抽出してください。
 抽出できない項目はnullにしてください。日時はISO 8601形式（JST）で返してください。
-""" + _GAME_TITLES_CRITERIA + """
+""" + _GAME_TITLES_CRITERIA + _GAME_MUSIC_CLASSIFICATION + """
 
 【organizer_official_url の判定基準】
 テキスト末尾に「【外部リンク候補】」として URL リストが提示される場合があります。
@@ -48,6 +70,8 @@ EXTRACTION_SCHEMA = {
     "game_titles": ["ゲームが原作（発祥）のタイトル名のみ。アニメ・漫画・映画原作は除く。"],
     "is_cancelled": "boolean",
     "source_url": "string",
+    "is_game_music_event": "boolean: このイベントがゲーム音楽イベントであるか（迷う場合はtrue）",
+    "game_music_reason": "string: 1〜2行の判定理由（例: ゲームタイトル○○の楽曲を演奏 / 作曲家○○はFF・DQで著名 / 一般バンドのライブ）",
 }
 
 
@@ -119,15 +143,23 @@ JSONのみ返してください。"""
 
 
 GAME_TITLES_SYSTEM = """
-あなたはゲーム音楽コンサートのテキストから演奏対象ゲームタイトルを抽出するアシスタントです。
-""" + _GAME_TITLES_CRITERIA
+あなたはゲーム音楽コンサートの情報を判定するアシスタントです。
+""" + _GAME_TITLES_CRITERIA + _GAME_MUSIC_CLASSIFICATION
+
+GAME_TITLES_SCHEMA = {
+    "game_titles": ["ゲームタイトル名..."],
+    "is_game_music_event": "boolean: ゲーム音楽イベントであるか（迷う場合はtrue）",
+    "game_music_reason": "string: 1〜2行の判定理由",
+}
 
 
-def extract_game_titles(raw_text: str, source_url: str = "") -> list[str]:
-    """テキストからゲームタイトルのみを抽出する。pre_parsed イベント専用。"""
+def extract_game_titles(raw_text: str, source_url: str = "") -> dict:
+    """テキストからゲームタイトルとゲーム音楽関連性を抽出する。pre_parsed イベント専用。
+    戻り値: {"game_titles": list[str], "is_game_music_event": bool, "game_music_reason": str}
+    """
     if not raw_text:
-        return []
-    prompt = f"""以下のテキストから演奏されるゲームタイトルを抽出してください。
+        return {"game_titles": [], "is_game_music_event": True, "game_music_reason": ""}
+    prompt = f"""以下のテキストから演奏されるゲームタイトルと、ゲーム音楽イベントとしての関連性を判定してください。
 
 出典URL: {source_url}
 
@@ -135,14 +167,14 @@ def extract_game_titles(raw_text: str, source_url: str = "") -> list[str]:
 {raw_text[:3000]}
 
 以下のJSON形式で返してください:
-{{"game_titles": ["タイトル名1", "タイトル名2"]}}
+{json.dumps(GAME_TITLES_SCHEMA, ensure_ascii=False)}
 
 JSONのみ返してください。"""
 
     try:
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=256,
+            max_tokens=512,
             messages=[{"role": "user", "content": prompt}],
             system=GAME_TITLES_SYSTEM,
         )
@@ -152,9 +184,13 @@ JSONのみ返してください。"""
             if text.startswith("json"):
                 text = text[4:]
         parsed = json.loads(text.strip())
-        return parsed.get("game_titles", [])
+        return {
+            "game_titles": parsed.get("game_titles", []),
+            "is_game_music_event": parsed.get("is_game_music_event", True),
+            "game_music_reason": parsed.get("game_music_reason", ""),
+        }
     except Exception:
-        return []
+        return {"game_titles": [], "is_game_music_event": True, "game_music_reason": ""}
 
 
 def extract_event(raw_text: str, source_url: str) -> dict | None:
