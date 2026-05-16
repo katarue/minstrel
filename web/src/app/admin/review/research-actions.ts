@@ -129,11 +129,24 @@ async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
     );
     if (!res.ok) return [];
 
-    const data = await res.json() as { tweet?: Record<string, unknown> };
-    const tweet = data.tweet;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await res.json() as any;
+
+    // twitterapi.io はレスポンス構造が複数パターンある
+    const tweet = data.tweet ?? data.data ?? (typeof data === "object" && !Array.isArray(data) ? data : null);
     if (!tweet) return [];
 
     const imageUrls: string[] = [];
+
+    // パターン1: photos[] フィールド（twitterapi.io 独自）
+    if (Array.isArray(tweet.photos)) {
+      for (const photo of tweet.photos as Record<string, unknown>[]) {
+        const url = (photo.url ?? photo.media_url_https ?? photo.media_url) as string | undefined;
+        if (url) imageUrls.push(url);
+      }
+    }
+
+    // パターン2: extended_entities / entities の media[]（標準 Twitter API 形式）
     const mediaArr =
       (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
       (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
@@ -143,7 +156,7 @@ async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
       for (const m of mediaArr as Record<string, unknown>[]) {
         if (m.type === "photo") {
           const url = (m.media_url_https ?? m.media_url) as string | undefined;
-          if (url) imageUrls.push(url);
+          if (url && !imageUrls.includes(url)) imageUrls.push(url);
         }
       }
     }
@@ -151,6 +164,27 @@ async function fetchOriginalTweetImages(tweetId: string): Promise<string[]> {
     return imageUrls;
   } catch {
     return [];
+  }
+}
+
+// og:image を HTML から直接抽出（twitterapi.io が失敗した場合のフォールバック）
+async function fetchOgImage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -354,6 +388,11 @@ export async function reresearchEvent(
     ]);
 
     allImageUrls = [...originalImages];
+    // API で画像取得できない場合は og:image をフォールバック
+    if (originalImages.length === 0 && tweetId) {
+      const ogImg = await fetchOgImage(effectiveUrl);
+      if (ogImg) allImageUrls.push(ogImg);
+    }
     externalUrlText = externalPage;
 
     // 公式ページから抽出（外部URLがあれば最優先）
@@ -385,6 +424,11 @@ export async function reresearchEvent(
           fetchTweetReplies(refTweetId),
         ]);
         allImageUrls.push(...refImages);
+        // API で画像取得できない場合は og:image をフォールバック
+        if (refImages.length === 0) {
+          const ogImg = await fetchOgImage(event.reference_url);
+          if (ogImg) allImageUrls.push(ogImg);
+        }
         if (refReplies.texts.length > 0) {
           const refText = refReplies.texts.join("\n").slice(0, 4000);
           const refResult = await extractFromPage(refText);
