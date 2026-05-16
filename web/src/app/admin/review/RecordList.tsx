@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, saveOfficialUrl, updateGameTitles } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, saveOfficialUrl, saveReferenceUrl, updateGameTitles } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -13,6 +13,7 @@ export type EventRecord = {
   prefecture: string | null;
   source_url: string | null;
   official_url: string | null;
+  reference_url: string | null;
   flyer_image_url: string | null;
   key_visual_url: string | null;
   is_published: boolean;
@@ -112,30 +113,70 @@ function OfficialUrlField({ eventId, initialUrl }: { eventId: string; initialUrl
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false); }}
-          className="flex-1 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="公式サイトURL..."
         />
+        {value && (
+          <a href={value} target="_blank" rel="noopener noreferrer"
+            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
+            ↗
+          </a>
+        )}
         {dirty && !saved && (
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap"
+            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
           >
             {isPending ? "…" : "保存"}
           </button>
         )}
-        {saved && <span className="text-[10px] text-success">✓</span>}
+        {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
       </div>
-      {value && (
-        <a
-          href={value}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-0.5 text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors"
-        >
-          ↗ 開く
-        </a>
-      )}
+    </div>
+  );
+}
+
+function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUrl: string | null }) {
+  const [value, setValue] = useState(initialUrl ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== (initialUrl ?? "");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveReferenceUrl(eventId, value);
+      if (res.ok) setSaved(true);
+    });
+
+  return (
+    <div className="mt-1.5">
+      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">参考</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="url"
+          value={value}
+          onChange={e => { setValue(e.target.value); setSaved(false); }}
+          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          placeholder="その他参考URL（X投稿など）..."
+        />
+        {value && (
+          <a href={value} target="_blank" rel="noopener noreferrer"
+            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
+            ↗
+          </a>
+        )}
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
+      </div>
     </div>
   );
 }
@@ -359,24 +400,27 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     {!ev.is_published ? (
                       <>
                         <span className="text-[9px] text-ink-body/30 uppercase tracking-wide mt-1 block">チケット</span>
-                        <input
-                          type="url"
-                          value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
-                          onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
-                          className="w-full text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
-                          placeholder="URLを入力..."
-                        />
-                        {(urlOverrides[ev.id] ?? ev.source_url) && (
-                          <a
-                            href={urlOverrides[ev.id] ?? ev.source_url ?? ""}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block mt-0.5 text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors"
-                          >
-                            ↗ 開く
-                          </a>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="url"
+                            value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
+                            onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
+                            className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+                            placeholder="URLを入力..."
+                          />
+                          {(urlOverrides[ev.id] ?? ev.source_url) && (
+                            <a
+                              href={urlOverrides[ev.id] ?? ev.source_url ?? ""}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0"
+                            >
+                              ↗
+                            </a>
+                          )}
+                        </div>
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
+                        <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
                       </>
                     ) : (
                       <>
@@ -393,6 +437,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                           <Empty label="URLなし" />
                         )}
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
+                        <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
                       </>
                     )}
                   </td>

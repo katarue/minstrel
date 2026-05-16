@@ -303,7 +303,7 @@ export async function reresearchEvent(
     .select(`
       event_name, source_url, start_datetime,
       venue_name, prefecture, flyer_image_url, key_visual_url,
-      organizer_id, organizers(name)
+      organizer_id, reference_url, organizers(name)
     `)
     .eq("id", id)
     .single();
@@ -372,6 +372,39 @@ export async function reresearchEvent(
       if (!parsed.venue_name && replyResult.venue_name) parsed.venue_name = replyResult.venue_name;
       if (!parsed.prefecture && replyResult.prefecture) parsed.prefecture = replyResult.prefecture;
       if (!parsed.start_time && replyResult.start_time) parsed.start_time = replyResult.start_time;
+    }
+  }
+
+  // ── Step 1c: reference_url からも画像・情報を補完 ─────────────────────────
+  if (event.reference_url) {
+    if (isSocialUrl(event.reference_url)) {
+      const refTweetId = getTweetId(event.reference_url);
+      if (refTweetId) {
+        const [refImages, refReplies] = await Promise.all([
+          fetchOriginalTweetImages(refTweetId),
+          fetchTweetReplies(refTweetId),
+        ]);
+        allImageUrls.push(...refImages, ...refReplies.imageUrls);
+        if (refReplies.texts.length > 0) {
+          const refText = refReplies.texts.join("\n").slice(0, 4000);
+          const refResult = await extractFromPage(refText);
+          if (!parsed.game_titles?.length && refResult.game_titles?.length) parsed.game_titles = refResult.game_titles;
+          if (!parsed.venue_name && refResult.venue_name) parsed.venue_name = refResult.venue_name;
+          if (!parsed.prefecture && refResult.prefecture) parsed.prefecture = refResult.prefecture;
+          if (!parsed.organizer_name && refResult.organizer_name) parsed.organizer_name = refResult.organizer_name;
+          if (!parsed.start_time && refResult.start_time) parsed.start_time = refResult.start_time;
+        }
+      }
+    } else {
+      const refText = await fetchPageText(event.reference_url);
+      if (refText) {
+        const refResult = await extractFromPage(refText);
+        if (!parsed.game_titles?.length && refResult.game_titles?.length) parsed.game_titles = refResult.game_titles;
+        if (!parsed.venue_name && refResult.venue_name) parsed.venue_name = refResult.venue_name;
+        if (!parsed.prefecture && refResult.prefecture) parsed.prefecture = refResult.prefecture;
+        if (!parsed.organizer_name && refResult.organizer_name) parsed.organizer_name = refResult.organizer_name;
+        if (!parsed.flyer_url && refResult.flyer_url) parsed.flyer_url = refResult.flyer_url;
+      }
     }
   }
 

@@ -46,7 +46,7 @@ async function getEventRecords(): Promise<EventRecord[]> {
     .from("events")
     .select(`
       id, event_name, start_datetime, venue_name, prefecture,
-      source_url, official_url, flyer_image_url, key_visual_url, is_published,
+      source_url, official_url, reference_url, flyer_image_url, key_visual_url, is_published,
       organizers(name),
       event_game_titles(game_titles(title_name))
     `)
