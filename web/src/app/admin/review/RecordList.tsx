@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, updateGameTitles, saveImageFromUrl } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -196,6 +196,62 @@ function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUr
           onChange={e => { setValue(e.target.value); setSaved(false); }}
           className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="その他参考URL（X投稿など）..."
+        />
+        {value && (
+          <a href={value} target="_blank" rel="noopener noreferrer"
+            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
+            ↗
+          </a>
+        )}
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
+      </div>
+    </div>
+  );
+}
+
+function SourceUrlField({
+  eventId,
+  initialUrl,
+  onValueChange,
+}: {
+  eventId: string;
+  initialUrl: string | null;
+  onValueChange?: (url: string) => void;
+}) {
+  const [value, setValue] = useState(initialUrl ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== (initialUrl ?? "");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveSourceUrl(eventId, value);
+      if (res.ok) setSaved(true);
+    });
+
+  return (
+    <div className="mt-1">
+      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">チケット</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="url"
+          value={value}
+          onChange={e => {
+            setValue(e.target.value);
+            setSaved(false);
+            onValueChange?.(e.target.value);
+          }}
+          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          placeholder="チケットページURL..."
         />
         {value && (
           <a href={value} target="_blank" rel="noopener noreferrer"
@@ -480,26 +536,11 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     </p>
                     {!ev.is_published ? (
                       <>
-                        <span className="text-[9px] text-ink-body/30 uppercase tracking-wide mt-1 block">チケット</span>
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="url"
-                            value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
-                            onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
-                            className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
-                            placeholder="URLを入力..."
-                          />
-                          {(urlOverrides[ev.id] ?? ev.source_url) && (
-                            <a
-                              href={urlOverrides[ev.id] ?? ev.source_url ?? ""}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0"
-                            >
-                              ↗
-                            </a>
-                          )}
-                        </div>
+                        <SourceUrlField
+                          eventId={ev.id}
+                          initialUrl={ev.source_url}
+                          onValueChange={url => setUrlOverrides(prev => ({ ...prev, [ev.id]: url }))}
+                        />
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                         <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
                         {!ev.flyer_image_url && !ev.key_visual_url && (
@@ -508,18 +549,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       </>
                     ) : (
                       <>
-                        {ev.source_url ? (
-                          <a
-                            href={ev.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-bordeaux/60 hover:underline truncate block max-w-[160px] mt-0.5"
-                          >
-                            {ev.source_url}
-                          </a>
-                        ) : (
-                          <Empty label="URLなし" />
-                        )}
+                        <SourceUrlField eventId={ev.id} initialUrl={ev.source_url} />
                         <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                         <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
                       </>
