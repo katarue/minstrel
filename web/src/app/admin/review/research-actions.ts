@@ -21,6 +21,10 @@ function isSocialUrl(url: string): boolean {
   return SOCIAL_DOMAINS.some((d) => url.includes(d));
 }
 
+function isDirectImageUrl(url: string): boolean {
+  return /\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(url);
+}
+
 function extractExternalUrls(text: string): string[] {
   const urlRegex = /https?:\/\/[^\s　-〿＀-￯、。！？「」【】（）[\]]+/g;
   const matches = text.match(urlRegex) ?? [];
@@ -359,6 +363,7 @@ export async function reresearchEvent(
   }
 
   // ── Step 1c: reference_url からも画像・情報を補完 ─────────────────────────
+  let refIsDirectImage = false;
   if (event.reference_url) {
     if (isSocialUrl(event.reference_url)) {
       const refTweetId = getTweetId(event.reference_url);
@@ -378,6 +383,10 @@ export async function reresearchEvent(
           if (!parsed.start_time && refResult.start_time) parsed.start_time = refResult.start_time;
         }
       }
+    } else if (isDirectImageUrl(event.reference_url)) {
+      // 直リンク画像URL → そのままフライヤーとして使用（HTMLスクレイピングをスキップ）
+      parsed.flyer_url = event.reference_url;
+      refIsDirectImage = true;
     } else {
       const refText = await fetchPageText(event.reference_url);
       if (refText) {
@@ -455,7 +464,8 @@ export async function reresearchEvent(
       updatedFields.push("開催時間");
     }
   }
-  if (parsed.flyer_url && !event.flyer_image_url && !event.key_visual_url) {
+  // reference_url に直リンク画像が指定された場合は既存画像を上書き
+  if (parsed.flyer_url && (refIsDirectImage || (!event.flyer_image_url && !event.key_visual_url))) {
     const storedUrl = await uploadFlyer(supabase, parsed.flyer_url, id);
     if (storedUrl) {
       updates.flyer_image_url = storedUrl;
