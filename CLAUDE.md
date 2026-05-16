@@ -183,13 +183,8 @@ X 連携（フェーズ3）:
 ## 🌿 Branch Rules
 
 ```
-作業ブランチ: feature/*  または  chore/*
-本番ブランチ: main（直接コミット禁止）
-命名例:
-  feature/setup-supabase-schema
-  feature/scraper-2083web
-  chore/update-readme
-  fix/padding-issue
+ソロ開発のため main への直接コミットを許可する（グローバルルール準拠）。
+コミット後は即 push してデプロイを確実に反映させること。
 ```
 
 ---
