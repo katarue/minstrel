@@ -79,9 +79,11 @@ function ImageModal({ url, onClose }: { url: string; onClose: () => void }) {
 function RowActions({
   ev,
   onResearchMsg,
+  urlOverride,
 }: {
   ev: EventRecord;
   onResearchMsg: (msg: string) => void;
+  urlOverride: string;
 }) {
   const [done, setDone] = useState<"published" | "unpublished" | "deleted" | null>(null);
   const [error, setError] = useState("");
@@ -114,7 +116,7 @@ function RowActions({
 
   const handleResearch = () =>
     startResearch(async () => {
-      const res = await reresearchEvent(ev.id);
+      const res = await reresearchEvent(ev.id, urlOverride || undefined);
       onResearchMsg(res.message ?? (res.ok ? "完了" : "エラー"));
     });
 
@@ -167,6 +169,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
   const [filter, setFilter] = useState<Filter>("unpublished");
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [researchMsgs, setResearchMsgs] = useState<Record<string, string>>({});
+  const [urlOverrides, setUrlOverrides] = useState<Record<string, string>>({});
 
   const publishedCount   = events.filter(e => e.is_published).length;
   const unpublishedCount = events.filter(e => !e.is_published).length;
@@ -269,7 +272,15 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     <p className="font-medium text-ink-heading leading-snug line-clamp-2 text-xs">
                       {ev.event_name}
                     </p>
-                    {ev.source_url ? (
+                    {!ev.is_published ? (
+                      <input
+                        type="url"
+                        value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
+                        onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
+                        className="mt-1 w-full text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+                        placeholder="URLを入力..."
+                      />
+                    ) : ev.source_url ? (
                       <a
                         href={ev.source_url}
                         target="_blank"
@@ -362,6 +373,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       onResearchMsg={msg =>
                         setResearchMsgs(prev => ({ ...prev, [ev.id]: msg }))
                       }
+                      urlOverride={urlOverrides[ev.id] ?? ev.source_url ?? ""}
                     />
                   </td>
                 </tr>

@@ -198,6 +198,7 @@ async function callClaudeWithWebSearch(prompt: string): Promise<string> {
 
 export async function reresearchEvent(
   id: string,
+  overrideUrl?: string,
 ): Promise<{ ok: boolean; message: string; updatedFields?: string[] }> {
   const supabase = createAdminClient();
 
@@ -214,12 +215,13 @@ export async function reresearchEvent(
   if (!event) return { ok: false, message: "イベントが見つかりません" };
 
   const organizer = (event.organizers as unknown as { name: string } | null)?.name ?? "";
+  const effectiveUrl = overrideUrl?.trim() || event.source_url;
   let parsed: ResearchResult = {};
 
   // ── Step 1a: チケットサイト・公式ページを直接スクレイピング ───────────────
   let scrapedFromUrl = false;
-  if (event.source_url && !isSocialUrl(event.source_url)) {
-    const pageText = await fetchPageText(event.source_url);
+  if (effectiveUrl && !isSocialUrl(effectiveUrl)) {
+    const pageText = await fetchPageText(effectiveUrl);
     if (pageText) {
       parsed = await extractFromPage(pageText);
       scrapedFromUrl = true;
@@ -227,8 +229,8 @@ export async function reresearchEvent(
   }
 
   // ── Step 1b: X ツイートの場合は複数の補助情報を並列取得 ─────────────────
-  if (event.source_url && isSocialUrl(event.source_url)) {
-    const tweetId = getTweetId(event.source_url);
+  if (effectiveUrl && isSocialUrl(effectiveUrl)) {
+    const tweetId = getTweetId(effectiveUrl);
 
     // ツイート本文内の外部URL → 公式ページスクレイピング
     let externalUrlText: string | null = null;
@@ -317,6 +319,12 @@ export async function reresearchEvent(
   // ── Step 3: 取得結果を DB に反映（欠損フィールドのみ更新）────────────────
   const updates: Record<string, unknown> = {};
   const updatedFields: string[] = [];
+
+  // URLが上書き指定された場合は source_url を更新
+  if (overrideUrl?.trim() && overrideUrl.trim() !== event.source_url) {
+    updates.source_url = overrideUrl.trim();
+    updatedFields.push("ソースURL");
+  }
 
   if (parsed.venue_name && !event.venue_name) {
     updates.venue_name = parsed.venue_name;
