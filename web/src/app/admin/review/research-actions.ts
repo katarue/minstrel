@@ -32,7 +32,17 @@ function getTweetId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-async function fetchPageText(url: string): Promise<string | null> {
+function detectStartTimes(html: string): string[] {
+  const times: string[] = [];
+  const regex = /(\d{2}:\d{2})\s*開演/g;
+  let m;
+  while ((m = regex.exec(html)) !== null) {
+    if (!times.includes(m[1])) times.push(m[1]);
+  }
+  return times.sort();
+}
+
+async function fetchPageData(url: string): Promise<{ text: string; startTimes: string[] } | null> {
   try {
     const res = await fetch(url, {
       headers: {
@@ -90,11 +100,17 @@ async function fetchPageText(url: string): Promise<string | null> {
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 6000);
+    const startTimes = detectStartTimes(html);
     const prefix = structuredParts.length ? structuredParts.join("\n") + "\n\n" : "";
-    return ogImage ? `${prefix}${text}\n\nog:image: ${ogImage}` : `${prefix}${text}`;
+    const fullText = ogImage ? `${prefix}${text}\n\nog:image: ${ogImage}` : `${prefix}${text}`;
+    return { text: fullText, startTimes };
   } catch {
     return null;
   }
+}
+
+async function fetchPageText(url: string): Promise<string | null> {
+  return (await fetchPageData(url))?.text ?? null;
 }
 
 // ── twitterapi.io でリプライ・会話ツリーのテキストを取得 ─────────────────────
@@ -257,9 +273,11 @@ export async function reresearchEvent(
   const { data: event } = await supabase
     .from("events")
     .select(`
-      event_name, source_url, start_datetime,
+      event_name, source_url, start_datetime, end_datetime,
       venue_name, prefecture, flyer_image_url, key_visual_url,
-      organizer_id, reference_url, organizers(name)
+      organizer_id, reference_url, description, ticket_url,
+      source_name, source_rank, is_cancelled, is_published,
+      auto_publish_eligible, organizers(name)
     `)
     .eq("id", id)
     .single();
@@ -272,10 +290,12 @@ export async function reresearchEvent(
 
   // ── Step 1a: チケットサイト・公式ページを直接スクレイピング ───────────────
   let scrapedFromUrl = false;
+  let mainStartTimes: string[] = [];
   if (effectiveUrl && !isSocialUrl(effectiveUrl)) {
-    const pageText = await fetchPageText(effectiveUrl);
-    if (pageText) {
-      parsed = await extractFromPage(pageText);
+    const pageData = await fetchPageData(effectiveUrl);
+    if (pageData) {
+      parsed = await extractFromPage(pageData.text);
+      mainStartTimes = pageData.startTimes;
       scrapedFromUrl = true;
     }
   }
@@ -464,6 +484,55 @@ export async function reresearchEvent(
       }
       updatedFields.push("ゲームタイトル");
     }
+  }
+
+  // ── Step 4: 複数公演を検出した場合、レコードを分割 ─────────────────────────
+  // 既にイベント名末尾に時刻が付いている場合はスキップ（二重分割防止）
+  if (mainStartTimes.length >= 2 && !/\s\d{2}:\d{2}$/.test(event.event_name)) {
+    const [time1, time2] = mainStartTimes;
+    const dateStr = event.start_datetime?.substring(0, 10); // "2026-05-17"
+
+    // 元レコードを1公演目で更新
+    await supabase.from("events").update({
+      event_name: `${event.event_name} ${time1}`,
+      start_datetime: dateStr ? `${dateStr}T${time1}:00+09:00` : event.start_datetime,
+    }).eq("id", id);
+
+    // 2公演目を新規レコードとして挿入（更新済み値を優先してコピー）
+    const { data: newEvent } = await supabase.from("events").insert({
+      event_name: `${event.event_name} ${time2}`,
+      source_url: (updates.source_url as string | undefined) ?? event.source_url,
+      start_datetime: dateStr ? `${dateStr}T${time2}:00+09:00` : event.start_datetime,
+      end_datetime: null,
+      venue_name: (updates.venue_name as string | undefined) ?? event.venue_name,
+      prefecture: (updates.prefecture as string | undefined) ?? event.prefecture,
+      flyer_image_url: (updates.flyer_image_url as string | undefined) ?? event.flyer_image_url,
+      key_visual_url: event.key_visual_url,
+      organizer_id: (updates.organizer_id as string | undefined) ?? event.organizer_id,
+      reference_url: event.reference_url,
+      description: event.description,
+      ticket_url: event.ticket_url,
+      source_name: event.source_name,
+      source_rank: event.source_rank,
+      is_cancelled: false,
+      is_published: false,
+      auto_publish_eligible: false,
+    }).select("id").single();
+
+    // ゲームタイトルを新レコードにコピー
+    if (newEvent?.id) {
+      const { data: existingGts } = await supabase
+        .from("event_game_titles").select("game_title_id").eq("event_id", id);
+      for (const gt of (existingGts ?? [])) {
+        await supabase.from("event_game_titles").upsert({
+          event_id: newEvent.id,
+          game_title_id: gt.game_title_id,
+        });
+      }
+    }
+
+    revalidatePath("/admin/review");
+    return { ok: true, message: `2公演に分割しました（${time1} / ${time2}）` };
   }
 
   revalidatePath("/admin/review");
