@@ -22,8 +22,9 @@ BASE_URL = "https://eplus.jp"
 LIST_URL = f"{BASE_URL}/sf/live/game-music"
 
 
-def _parse_eplus_structured(soup: BeautifulSoup, url: str) -> dict | None:
+def _parse_eplus_structured(soup: BeautifulSoup, url: str) -> list[dict] | None:
     """e+ 詳細ページのHTMLから構造化データを抽出する。
+    複数公演がある場合は list[dict]（公演数分）を返す。
     title と start_datetime が取得できない場合は None を返す（Claude フォールバック）。
     """
     # ── タイトル ─────────────────────────────────────────────────────
@@ -37,44 +38,41 @@ def _parse_eplus_structured(soup: BeautifulSoup, url: str) -> dict | None:
             raw_title = og_title.get("content", "")
             title = re.sub(r'のチケット情報.*$', '', raw_title).strip()
 
-    # ── 日付・時刻 ────────────────────────────────────────────────────
-    date_str = None
-    date_el = soup.find("span", class_="block-ticket-article__date")
-    if date_el:
-        date_raw = date_el.get_text(strip=True)
-        date_clean = re.sub(r'\([^)]+\)', '', date_raw).strip()  # "2026/5/16(土)" → "2026/5/16"
-        try:
-            d = datetime.strptime(date_clean, "%Y/%m/%d")
-            date_str = d.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    time_str = None
-    time_el = soup.find("span", class_="block-ticket-article__time")
-    if time_el:
-        time_raw = time_el.get_text(strip=True)
-        m = re.search(r'開演[：:]\s*(\d{1,2}:\d{2})', time_raw)
-        if m:
-            time_str = m.group(1)
-
-    start_dt = build_iso8601(date_str or "", time_str or "")
-
-    if not title or not start_dt:
+    if not title:
         return None
 
-    # ── 会場・都道府県 ─────────────────────────────────────────────────
-    venue = None
-    venue_el = soup.find("span", class_="block-ticket-article__venue")
-    if venue_el:
-        venue = venue_el.get_text(strip=True) or None
+    # ── 日付・時刻（全公演分）────────────────────────────────────────
+    date_els  = soup.find_all("span", class_="block-ticket-article__date")
+    time_els  = soup.find_all("span", class_="block-ticket-article__time")
+    venue_els = soup.find_all("span", class_="block-ticket-article__venue")
+    pref_els  = soup.find_all("small", class_="block-ticket-article__region")
 
-    prefecture = None
-    pref_el = soup.find("small", class_="block-ticket-article__region")
-    if pref_el:
-        pref_clean = re.sub(r'[（）()]', '', pref_el.get_text(strip=True)).strip()
-        prefecture = pref_clean or None
+    dates: list[str | None] = []
+    for el in date_els:
+        date_raw   = el.get_text(strip=True)
+        date_clean = re.sub(r'\([^)]+\)', '', date_raw).strip()
+        try:
+            d = datetime.strptime(date_clean, "%Y/%m/%d")
+            dates.append(d.strftime("%Y-%m-%d"))
+        except ValueError:
+            dates.append(None)
 
-    # ── 主催者（dl > dt "主催" の隣の dd）────────────────────────────
+    if not dates:
+        return None
+
+    times: list[str | None] = []
+    for el in time_els:
+        m = re.search(r'開演[：:]\s*(\d{1,2}:\d{2})', el.get_text(strip=True))
+        times.append(m.group(1) if m else None)
+    while len(times) < len(dates):
+        times.append(None)
+
+    # 会場・都道府県は公演数より少ない場合は最初の値を共用
+    def _get_text(els, i: int) -> str | None:
+        el = els[i] if i < len(els) else (els[0] if els else None)
+        return el.get_text(strip=True) or None if el else None
+
+    # ── 主催者（ページ共通）──────────────────────────────────────────
     organizer_name = None
     for dt in soup.find_all("dt"):
         if "主催" in dt.get_text():
@@ -83,29 +81,43 @@ def _parse_eplus_structured(soup: BeautifulSoup, url: str) -> dict | None:
                 organizer_name = dd.get_text(strip=True) or None
                 break
 
-    # ── ゲームタイトル ────────────────────────────────────────────────
     titles = game_titles_from_text(title)
+    multi  = len(dates) > 1
 
-    # ── description: テンプレート生成 ────────────────────────────────
-    description = None
-    if venue and date_str:
-        pref_str = f"（{prefecture}）" if prefecture else ""
-        description = f"{date_str.replace('-', '/')} {venue}{pref_str}で開催のゲーム音楽コンサート。"
+    results: list[dict] = []
+    for i, (date_str, time_str) in enumerate(zip(dates, times)):
+        start_dt = build_iso8601(date_str or "", time_str or "")
+        if not start_dt:
+            continue
 
-    return {
-        "title": title,
-        "start_datetime": start_dt,
-        "end_datetime": None,
-        "venue": venue,
-        "prefecture": prefecture,
-        "organizer_name": organizer_name,
-        "organizer_official_url": None,
-        "ticket_url": url,
-        "description": description,
-        "game_titles": titles,
-        "is_cancelled": False,
-        "source_url": url,
-    }
+        venue  = _get_text(venue_els, i)
+        pref_raw = _get_text(pref_els, i)
+        prefecture = re.sub(r'[（）()]', '', pref_raw).strip() if pref_raw else None
+
+        # 複数公演の場合は source_url にフラグメントを付与して一意性を保証
+        perf_url = f"{url}#perf_{i + 1}" if multi else url
+
+        description = None
+        if venue and date_str:
+            pref_str = f"（{prefecture}）" if prefecture else ""
+            description = f"{date_str.replace('-', '/')} {venue}{pref_str}で開催のゲーム音楽コンサート。"
+
+        results.append({
+            "title": title,
+            "start_datetime": start_dt,
+            "end_datetime": None,
+            "venue": venue,
+            "prefecture": prefecture,
+            "organizer_name": organizer_name,
+            "organizer_official_url": None,
+            "ticket_url": url,       # 常に元URL（表示・リンク用）
+            "description": description,
+            "game_titles": titles,
+            "is_cancelled": False,
+            "source_url": perf_url,  # 複数公演時はフラグメント付きで重複を防ぐ
+        })
+
+    return results if results else None
 
 
 class ScraperEplus(BaseScraper):
@@ -176,7 +188,7 @@ class ScraperEplus(BaseScraper):
         og_image = soup.find("meta", property="og:image")
         image_url = og_image["content"] if og_image and og_image.get("content") else None
 
-        pre_parsed = _parse_eplus_structured(soup, url)
+        pre_parsed_list = _parse_eplus_structured(soup, url)
 
         result = {
             "source_url": url,
@@ -187,6 +199,9 @@ class ScraperEplus(BaseScraper):
             "image_url": image_url,
             "_organizer_x_url": x_url,
         }
-        if pre_parsed:
-            result["_pre_parsed"] = pre_parsed
+        if pre_parsed_list:
+            if len(pre_parsed_list) == 1:
+                result["_pre_parsed"] = pre_parsed_list[0]
+            else:
+                result["_pre_parsed_list"] = pre_parsed_list
         return result

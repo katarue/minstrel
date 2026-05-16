@@ -68,6 +68,26 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
     pre_parsed_count = 0
 
     for raw in raw_events:
+        # ── 複数公演（_pre_parsed_list）の展開 ───────────────────────────
+        pre_list = raw.get("_pre_parsed_list")
+        if pre_list:
+            content = raw.get("raw_html") or raw.get("raw_text") or ""
+            game_titles = extract_game_titles(content, raw.get("source_url", ""))
+            for pre in pre_list:
+                if not (pre.get("title") and pre.get("start_datetime")):
+                    continue
+                pre["source_rank"]    = raw.get("source_rank", "A")
+                pre["_image_url"]     = raw.get("image_url")
+                pre["_source_name"]   = raw.get("source_name", "unknown")
+                # 各公演の source_url（フラグメント付き）を _raw_source_url に設定
+                pre["_raw_source_url"] = pre.get("source_url", raw.get("source_url", ""))
+                if raw.get("_organizer_x_url"):
+                    pre["_organizer_x_url"] = raw["_organizer_x_url"]
+                pre["game_titles"] = game_titles
+                results.append(pre)
+                pre_parsed_count += 1
+            continue
+
         # ── 構造化済みデータがある場合は Claude をスキップ ──────────────
         pre = raw.get("_pre_parsed")
         if pre and pre.get("title") and pre.get("start_datetime"):
