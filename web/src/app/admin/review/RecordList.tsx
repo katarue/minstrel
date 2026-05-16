@@ -273,12 +273,24 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       {ev.event_name}
                     </p>
                     {!ev.is_published ? (
-                      <input
-                        type="url"
-                        value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
-                        onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
-                        className="mt-1 w-full text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
-                        placeholder="URLを入力..."
+                      <>
+                        <input
+                          type="url"
+                          value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
+                          onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
+                          className="mt-1 w-full text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+                          placeholder="URLを入力..."
+                        />
+                        {(urlOverrides[ev.id] ?? ev.source_url) && (
+                          <a
+                            href={urlOverrides[ev.id] ?? ev.source_url ?? ""}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block mt-0.5 text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors"
+                          >
+                            ↗ 開く
+                          </a>
+                        )}
                       />
                     ) : ev.source_url ? (
                       <a
