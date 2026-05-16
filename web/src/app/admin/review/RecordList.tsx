@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, saveOfficialUrl } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -12,6 +12,7 @@ export type EventRecord = {
   venue_name: string | null;
   prefecture: string | null;
   source_url: string | null;
+  official_url: string | null;
   flyer_image_url: string | null;
   key_visual_url: string | null;
   is_published: boolean;
@@ -53,6 +54,54 @@ function getMissingFields(ev: EventRecord): string[] {
 
 function Empty({ label }: { label: string }) {
   return <span className="text-error text-xs font-medium">✗ {label}</span>;
+}
+
+function OfficialUrlField({ eventId, initialUrl }: { eventId: string; initialUrl: string | null }) {
+  const [value, setValue] = useState(initialUrl ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== (initialUrl ?? "");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveOfficialUrl(eventId, value);
+      if (res.ok) setSaved(true);
+    });
+
+  return (
+    <div className="mt-1.5">
+      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">公式</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="url"
+          value={value}
+          onChange={e => { setValue(e.target.value); setSaved(false); }}
+          className="flex-1 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          placeholder="公式サイトURL..."
+        />
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-[10px] text-success">✓</span>}
+      </div>
+      {value && (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-0.5 text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors"
+        >
+          ↗ 開く
+        </a>
+      )}
+    </div>
+  );
 }
 
 function ImageModal({ url, onClose }: { url: string; onClose: () => void }) {
@@ -273,11 +322,12 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     </p>
                     {!ev.is_published ? (
                       <>
+                        <span className="text-[9px] text-ink-body/30 uppercase tracking-wide mt-1 block">チケット</span>
                         <input
                           type="url"
                           value={urlOverrides[ev.id] ?? ev.source_url ?? ""}
                           onChange={e => setUrlOverrides(prev => ({ ...prev, [ev.id]: e.target.value }))}
-                          className="mt-1 w-full text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+                          className="w-full text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
                           placeholder="URLを入力..."
                         />
                         {(urlOverrides[ev.id] ?? ev.source_url) && (
@@ -290,18 +340,24 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                             ↗ 開く
                           </a>
                         )}
+                        <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                       </>
-                    ) : ev.source_url ? (
-                      <a
-                        href={ev.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-bordeaux/60 hover:underline truncate block max-w-[160px]"
-                      >
-                        {ev.source_url}
-                      </a>
                     ) : (
-                      <Empty label="URLなし" />
+                      <>
+                        {ev.source_url ? (
+                          <a
+                            href={ev.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-bordeaux/60 hover:underline truncate block max-w-[160px] mt-0.5"
+                          >
+                            {ev.source_url}
+                          </a>
+                        ) : (
+                          <Empty label="URLなし" />
+                        )}
+                        <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
+                      </>
                     )}
                   </td>
 
