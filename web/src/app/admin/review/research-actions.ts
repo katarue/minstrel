@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const SOCIAL_DOMAINS = ["x.com", "twitter.com", "t.co", "instagram.com", "facebook.com", "youtube.com", "youtu.be"];
+
 type ResearchResult = {
   game_titles?: string[];
   start_time?: string | null;
@@ -13,6 +15,74 @@ type ResearchResult = {
   prefecture?: string | null;
   flyer_url?: string | null;
 };
+
+function isSocialUrl(url: string): boolean {
+  return SOCIAL_DOMAINS.some((d) => url.includes(d));
+}
+
+function extractExternalUrls(text: string): string[] {
+  const urlRegex = /https?:\/\/[^\s　-〿＀-￯、。！？「」【】（）[\]]+/g;
+  const matches = text.match(urlRegex) ?? [];
+  return matches.filter((url) => !SOCIAL_DOMAINS.some((d) => url.includes(d)));
+}
+
+async function fetchPageText(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 6000);
+  } catch {
+    return null;
+  }
+}
+
+async function extractFromPage(pageText: string): Promise<ResearchResult> {
+  const prompt = `以下はイベントページのテキストです。以下のJSON形式で情報を抽出してください。
+
+ゲームタイトルは「最初にゲームとしてリリースされたタイトル」のみを含めてください（ビジュアルノベル含む。アニメ・漫画原作は除く）。シリーズ名で統一すること。
+
+JSONのみ返してください：
+{
+  "game_titles": ["タイトル1", "タイトル2"],
+  "start_time": "HH:MM または null",
+  "venue_name": "会場名 または null",
+  "prefecture": "都道府県名（例: 東京都）または null",
+  "flyer_url": "フライヤー画像の直リンクURL または null"
+}
+
+テキスト:
+${pageText}`;
+
+  try {
+    const resp = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = resp.content[0];
+    if (block.type !== "text") return {};
+    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    return JSON.parse(match[0]) as ResearchResult;
+  } catch {
+    return {};
+  }
+}
 
 async function uploadFlyer(
   supabase: ReturnType<typeof createAdminClient>,
@@ -86,7 +156,48 @@ export async function reresearchEvent(
 
   const organizer = (event.organizers as unknown as { name: string } | null)?.name ?? "";
 
-  const prompt = `コンサート「${event.event_name}」（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
+  // ── Step 1: URL スクレイピング（公式・チケットサイトページを直接読む）────
+  let parsed: ResearchResult = {};
+  let scrapedFromUrl = false;
+
+  // source_url がソーシャルでなければ直接スクレイピング
+  let urlToScrape: string | null = null;
+  if (event.source_url && !isSocialUrl(event.source_url)) {
+    urlToScrape = event.source_url;
+  } else {
+    // X ツイートの場合: event_sources の raw_data._tweet_text から外部URLを抽出
+    const { data: sources } = await supabase
+      .from("event_sources")
+      .select("raw_data")
+      .eq("event_id", id)
+      .limit(5);
+
+    for (const src of (sources ?? [])) {
+      const rawData = src.raw_data as Record<string, unknown>;
+      const tweetText = typeof rawData._tweet_text === "string" ? rawData._tweet_text : null;
+      if (tweetText) {
+        const urls = extractExternalUrls(tweetText);
+        if (urls.length > 0) {
+          urlToScrape = urls[0];
+          break;
+        }
+      }
+    }
+  }
+
+  if (urlToScrape) {
+    const pageText = await fetchPageText(urlToScrape);
+    if (pageText) {
+      parsed = await extractFromPage(pageText);
+      scrapedFromUrl = true;
+    }
+  }
+
+  // ── Step 2: ウェブ検索（スクレイピングで取れなかった情報を補完）──────────
+  // ゲームタイトルが取れていない、またはスクレイピング自体できなかった場合
+  const needsWebSearch = !parsed.game_titles?.length || !scrapedFromUrl;
+  if (needsWebSearch) {
+    const webPrompt = `コンサート「${event.event_name}」（主催: ${organizer}）について、X（Twitter）・公式サイト・プレスリリース等をウェブ検索し、以下の情報を収集してください。
 
 ゲームタイトルは「最初にゲームとしてリリースされたタイトルのみ」（ビジュアルノベル含む。アニメ・漫画原作は除く）。
 
@@ -99,21 +210,26 @@ export async function reresearchEvent(
   "flyer_url": "フライヤー画像の直リンクURL または null"
 }`;
 
-  let resultText: string;
-  try {
-    resultText = await callClaudeWithWebSearch(prompt);
-  } catch (err) {
-    return { ok: false, message: `検索エラー: ${err instanceof Error ? err.message : String(err)}` };
+    try {
+      const resultText = await callClaudeWithWebSearch(webPrompt);
+      const match = resultText.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+      if (match) {
+        const webResult = JSON.parse(match[0]) as ResearchResult;
+        // スクレイピングで取れなかったフィールドをウェブ検索結果で補完
+        if (!parsed.game_titles?.length && webResult.game_titles?.length) parsed.game_titles = webResult.game_titles;
+        if (!parsed.start_time && webResult.start_time) parsed.start_time = webResult.start_time;
+        if (!parsed.venue_name && webResult.venue_name) parsed.venue_name = webResult.venue_name;
+        if (!parsed.prefecture && webResult.prefecture) parsed.prefecture = webResult.prefecture;
+        if (!parsed.flyer_url && webResult.flyer_url) parsed.flyer_url = webResult.flyer_url;
+      }
+    } catch (err) {
+      if (!scrapedFromUrl) {
+        return { ok: false, message: `検索エラー: ${err instanceof Error ? err.message : String(err)}` };
+      }
+    }
   }
 
-  let parsed: ResearchResult = {};
-  try {
-    const match = resultText.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-    if (match) parsed = JSON.parse(match[0]);
-  } catch {
-    return { ok: false, message: "検索結果を解析できませんでした" };
-  }
-
+  // ── Step 3: 取得結果を DB に反映（欠損フィールドのみ更新）────────────────
   const updates: Record<string, unknown> = {};
   const updatedFields: string[] = [];
 
