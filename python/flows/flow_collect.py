@@ -344,7 +344,7 @@ def auto_enrich() -> int:
         needs_venue  = not event.get("venue_name")
         needs_pref   = not event.get("prefecture")
         has_titles   = bool(
-            db.table("event_game_titles").select("id").eq("event_id", event["id"]).limit(1).execute().data
+            db.table("event_game_titles").select("event_id").eq("event_id", event["id"]).limit(1).execute().data
         )
         needs_titles = not has_titles
 
