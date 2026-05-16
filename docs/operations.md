@@ -33,17 +33,24 @@
 - チケット不要の無料公演
 - 自前のチケットシステムを持つ大企業主催の公演
 
+スクレイパー: `scraper_x_search.py`
+
+内部で以下の **3層** を順番に実行し、重複を除去してまとめて返す：
+
+| 層 | 内容 |
+|---|---|
+| ① キーワード検索 | `#ゲーム音楽コンサート` 等のハッシュタグ・クエリ（5種） |
+| ② 監視アカウント | DBの `organizers.x_monitoring=true` のアカウントの投稿 |
+| ③ フォローリスト | `@minstrel_live` のフォローリストに含まれるアカウントの投稿 |
+
+フォローリストのキャッシュ: `python/data/x_following_handles.json`
+（更新方法: `python scripts/sync_x_following.py` を実行）
+
+### その他スクレイパー（コンサート情報収集とは別）
+
 | スクレイパー | 内容 |
 |---|---|
-| `scraper_x_search.py` | キーワード検索（「ゲーム音楽 コンサート」等） |
-| `scraper_organizer_x.py` | 主要演奏団体の公式Xアカウントを個別追跡 |
-
-追跡アカウントリスト: `python/data/x_following_handles.json`
-
-### その他スクレイパー（別カテゴリ）
-
-| スクレイパー | 内容 |
-|---|---|
+| `scraper_organizer_x.py` | 演奏団体のXプロフィール画像を更新する（情報収集ではない） |
 | `scraper_bangumi.py` | 番組表.Gガイド（TV・ラジオ放送情報） |
 | `scraper_broadcasts.py` | 放送局公式XアカウントからTV放送情報を収集 |
 
