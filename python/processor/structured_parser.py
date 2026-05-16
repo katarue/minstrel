@@ -4,6 +4,7 @@ scraper_teket.py 等から使用する。Claude extraction の代替として構
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone, timedelta
 
 JST = timezone(timedelta(hours=9))
@@ -121,6 +122,34 @@ _GAME_PATTERNS: list[tuple[str, list[str]]] = [
     ("スターオーシャン", ["スターオーシャン", "Star Ocean"]),
     ("ウマ娘 プリティーダービー", ["ウマ娘"]),
 ]
+
+
+def extract_prefecture(text: str) -> str | None:
+    """テキストから都道府県名を抽出する（公開ラッパー）。"""
+    return _pref_from_text(text)
+
+
+def extract_date_time(text: str) -> tuple[str | None, str | None]:
+    """日本語テキストから日付・開演時刻を抽出する。
+    Returns: (YYYY-MM-DD or None, HH:MM or None)
+    """
+    date_str = None
+    time_str = None
+
+    m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', text)
+    if m:
+        date_str = f"{m.group(1)}-{m.group(2).zfill(2)}-{m.group(3).zfill(2)}"
+
+    # 「開演」を優先、なければ「開場」
+    m = re.search(r'開演[：:\s]*(\d{1,2}):(\d{2})', text)
+    if not m:
+        m = re.search(r'(?:START|スタート)[：:\s]*(\d{1,2}):(\d{2})', text, re.I)
+    if not m:
+        m = re.search(r'開場[：:\s]*(\d{1,2}):(\d{2})', text)
+    if m:
+        time_str = f"{m.group(1).zfill(2)}:{m.group(2)}"
+
+    return date_str, time_str
 
 
 def game_titles_from_text(text: str) -> list[str]:
