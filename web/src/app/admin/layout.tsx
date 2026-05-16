@@ -8,7 +8,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <body className="bg-parchment-dark min-h-screen font-body text-ink-body">
         <header className="bg-parchment border-b border-gold/30 px-6 py-3 flex items-center gap-4">
           <a
-            href="/"
+            href="https://minstrel.live"
             className="font-heading text-bordeaux text-lg font-bold tracking-widest hover:opacity-70 transition-opacity"
           >
             Minstrel
