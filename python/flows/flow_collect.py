@@ -182,15 +182,6 @@ def upsert_to_db(events: list[dict]) -> int:
     db = get_client()
     inserted = 0
     merged = 0
-    review_queued = 0
-
-    # trust_tier=exclusive のハンドルを一括取得（ループ内で DB を叩かないため）
-    exclusive_result = db.table("organizers").select("x_handle").eq("trust_tier", "exclusive").execute()
-    exclusive_handles: set[str] = {
-        r["x_handle"].lstrip("@").lower()
-        for r in (exclusive_result.data or [])
-        if r.get("x_handle")
-    }
 
     for event in events:
         source_url = event.get("_raw_source_url") or event.get("source_url") or ""
@@ -261,18 +252,8 @@ def upsert_to_db(events: list[dict]) -> int:
             event_name = event.get("title") or ""
             start_dt = event.get("start_datetime") or None
             if not event_name or not start_dt:
-                # 必須項目が欠けている場合は source のみ保存して review へ
-                save_event_source(db, source_url, source_name, event, None, "review_needed")
-                review_queued += 1
+                print(f"[db] skip: 必須項目不足 title={bool(event_name)} date={bool(start_dt)} url={source_url[:60]}")
                 continue
-
-            # X ソースかつハードキーなし → exclusive 以外はレビューへ
-            if source_name == "x_search" and not hard_keys:
-                is_exclusive = bool(author_handle and author_handle in exclusive_handles)
-                if not is_exclusive or not event.get("auto_publish_eligible"):
-                    save_event_source(db, source_url, source_name, event, None, "review_needed")
-                    review_queued += 1
-                    continue
 
             ticket_url = event.get("ticket_url")
             confidence = event.get("confidence_score")
@@ -321,7 +302,7 @@ def upsert_to_db(events: list[dict]) -> int:
             save_game_titles(db, new_event_id, event.get("game_titles") or [])
             inserted += 1
 
-    print(f"[db] inserted={inserted}, merged={merged}, review_queued={review_queued}")
+    print(f"[db] inserted={inserted}, merged={merged}")
     return inserted
 
 
