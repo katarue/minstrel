@@ -87,9 +87,13 @@ async function fetchTweetReplies(tweetId: string): Promise<TweetReplyData> {
     for (const tweet of (data.tweets ?? [])) {
       if (typeof tweet.text === "string") texts.push(tweet.text);
 
-      const media = (tweet.extendedEntities as Record<string, unknown>)?.media;
-      if (Array.isArray(media)) {
-        for (const m of media as Record<string, unknown>[]) {
+      // twitterapi.io は snake_case で返すため extended_entities と entities の両方を確認
+      const mediaArr =
+        (tweet.extended_entities as Record<string, unknown> | undefined)?.media ??
+        (tweet.extendedEntities as Record<string, unknown> | undefined)?.media ??
+        (tweet.entities as Record<string, unknown> | undefined)?.media;
+      if (Array.isArray(mediaArr)) {
+        for (const m of mediaArr as Record<string, unknown>[]) {
           if (m.type === "photo") {
             const url = (m.media_url_https ?? m.media_url) as string | undefined;
             if (url) imageUrls.push(url);

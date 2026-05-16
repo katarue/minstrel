@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { ReviewQueue } from "./ReviewQueue";
-import { UnpublishedEvents } from "./UnpublishedEvents";
+import { RecordList, type EventRecord } from "./RecordList";
 
 export const revalidate = 0;
 export const maxDuration = 60;
@@ -40,44 +40,32 @@ async function getReviewItems(): Promise<ReviewSource[]> {
   return (data ?? []) as ReviewSource[];
 }
 
-type UnpublishedEvent = {
-  id: string;
-  event_name: string;
-  start_datetime: string | null;
-  venue_name: string | null;
-  prefecture: string | null;
-  source_url: string | null;
-  flyer_image_url: string | null;
-  key_visual_url: string | null;
-  organizers: { name: string } | null;
-  event_game_titles: Array<{ game_titles: { title_name: string } | null }>;
-};
-
-async function getUnpublishedEvents(): Promise<UnpublishedEvent[]> {
+async function getEventRecords(): Promise<EventRecord[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("events")
     .select(`
       id, event_name, start_datetime, venue_name, prefecture,
-      source_url, flyer_image_url, key_visual_url,
+      source_url, flyer_image_url, key_visual_url, is_published,
       organizers(name),
       event_game_titles(game_titles(title_name))
     `)
-    .eq("is_published", false)
     .order("start_datetime", { ascending: true });
 
   if (error) {
-    console.error("[admin/unpublished]", error);
+    console.error("[admin/records]", error);
     return [];
   }
-  return (data ?? []) as unknown as UnpublishedEvent[];
+  return (data ?? []) as unknown as EventRecord[];
 }
 
 export default async function ReviewPage() {
-  const [items, unpublished] = await Promise.all([
+  const [items, events] = await Promise.all([
     getReviewItems(),
-    getUnpublishedEvents(),
+    getEventRecords(),
   ]);
+
+  const unpublishedCount = events.filter(e => !e.is_published).length;
 
   return (
     <div className="space-y-4">
@@ -131,16 +119,21 @@ export default async function ReviewPage() {
         <ReviewQueue items={items} />
       )}
 
-      {/* 未公開イベント一覧 */}
+      {/* レコード一覧 */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-heading text-ink-heading text-base font-semibold">
-            未公開イベント
-          </h2>
-          <span className="text-xs text-ink-body/40">{unpublished.length} 件 — 「公開する」で公式サイトに掲載</span>
+          <div>
+            <h2 className="font-heading text-ink-heading text-base font-semibold">
+              レコード一覧
+            </h2>
+            <p className="text-xs text-ink-body/50 mt-0.5">全イベントの管理・公開制御</p>
+          </div>
+          <span className="text-xs text-ink-body/40">
+            全 {events.length} 件（未公開 {unpublishedCount} 件）
+          </span>
         </div>
         <div className="bg-parchment rounded-md border border-gold/30 px-5 py-3">
-          <UnpublishedEvents events={unpublished} />
+          <RecordList events={events} />
         </div>
       </div>
     </div>
