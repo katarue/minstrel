@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from prefect import flow, task
 from scrapers.scraper_teket import ScraperTeket
 from scrapers.scraper_eplus import ScraperEplus
@@ -8,6 +8,7 @@ from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
 from processor.claude_extractor import extract_event, extract_game_titles, score_announcement
+from processor.web_enricher import enrich_event_fields
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
 from utils.db import get_client
@@ -325,6 +326,60 @@ def upsert_to_db(events: list[dict]) -> int:
 
 
 @task
+def auto_enrich() -> int:
+    """直近のスクレイピングで作成された未公開イベントの不足フィールドをウェブ検索で補完する。"""
+    db = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    result = db.table("events").select(
+        "id, event_name, venue_name, prefecture, organizers(name)"
+    ).eq("is_published", False).gte("created_at", cutoff).execute()
+
+    events = result.data or []
+    if not events:
+        print("[enrich] No recently created unpublished events to enrich")
+        return 0
+
+    enriched = 0
+    for event in events:
+        needs_venue  = not event.get("venue_name")
+        needs_pref   = not event.get("prefecture")
+        has_titles   = bool(
+            db.table("event_game_titles").select("id").eq("event_id", event["id"]).limit(1).execute().data
+        )
+        needs_titles = not has_titles
+
+        if not needs_venue and not needs_pref and not needs_titles:
+            continue
+
+        organizer = ""
+        if isinstance(event.get("organizers"), dict):
+            organizer = event["organizers"].get("name", "")
+
+        print(f"[enrich] enriching: {event['event_name'][:50]}")
+        enriched_data = enrich_event_fields(event["event_name"], organizer)
+        if not enriched_data:
+            continue
+
+        updates = {}
+        if needs_venue and enriched_data.get("venue_name"):
+            updates["venue_name"] = enriched_data["venue_name"]
+        if needs_pref and enriched_data.get("prefecture"):
+            updates["prefecture"] = enriched_data["prefecture"]
+        if updates:
+            db.table("events").update(updates).eq("id", event["id"]).execute()
+
+        if needs_titles and enriched_data.get("game_titles"):
+            save_game_titles(db, event["id"], enriched_data["game_titles"])
+
+        if updates or (needs_titles and enriched_data.get("game_titles")):
+            enriched += 1
+            print(f"[enrich] done: {event['event_name'][:40]} fields={list(updates.keys())}")
+
+    print(f"[enrich] enriched {enriched} / {len(events)} events")
+    return enriched
+
+
+@task
 def fetch_missing_igdb_covers() -> int:
     """igdb_cover_url が未設定のゲームタイトルにカバー画像を付与する。"""
     if not IGDB_CLIENT_ID or not IGDB_CLIENT_SECRET:
@@ -420,6 +475,9 @@ def collect_flow():
 
         inserted_count = upsert_to_db(with_images)
         print(f"inserted: {inserted_count} new events")
+
+        enrich_count = auto_enrich()
+        print(f"auto-enriched: {enrich_count} events")
 
         igdb_count = fetch_missing_igdb_covers()
         print(f"igdb covers fetched: {igdb_count}")
