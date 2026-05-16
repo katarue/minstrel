@@ -78,11 +78,15 @@ def _parse_peatix_structured(soup: BeautifulSoup, url: str) -> dict | None:
         return None
 
     # 会場: itemprop="location" → class 名マッチ
+    # Peatix は <meta content="会場名" itemprop="name"> 形式を使うため get("content") で取得
     venue = None
     loc_el = soup.find(attrs={"itemprop": "location"})
     if loc_el:
         name_el = loc_el.find(attrs={"itemprop": "name"}) or loc_el
-        venue = name_el.get_text(strip=True) or None
+        if name_el.name == "meta":
+            venue = name_el.get("content", "").strip() or None
+        else:
+            venue = name_el.get_text(strip=True) or None
     if not venue:
         for cls_kw in ["venue", "location", "place"]:
             el = soup.find(class_=re.compile(cls_kw, re.I))
@@ -99,7 +103,10 @@ def _parse_peatix_structured(soup: BeautifulSoup, url: str) -> dict | None:
     org_el = soup.find(attrs={"itemprop": "organizer"})
     if org_el:
         name_el = org_el.find(attrs={"itemprop": "name"}) or org_el
-        organizer_name = name_el.get_text(strip=True) or None
+        if name_el.name == "meta":
+            organizer_name = name_el.get("content", "").strip() or None
+        else:
+            organizer_name = name_el.get_text(strip=True) or None
     if not organizer_name:
         for a in soup.find_all("a", href=re.compile(r'/group/')):
             text = a.get_text(strip=True)
