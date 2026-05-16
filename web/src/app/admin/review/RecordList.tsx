@@ -208,13 +208,13 @@ export function RecordList({ events }: { events: EventRecord[] }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gold/30 text-xs text-ink-body/50 uppercase tracking-wider">
-              <th className="text-left py-2 pr-2 font-medium w-14">画像</th>
+              <th className="text-left py-2 pr-2 font-medium w-28">画像</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[150px]">イベント名</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">日付</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">時間</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[110px]">会場</th>
-              <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">都道府県</th>
-              <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">主催者</th>
+              <th className="text-left py-2 pr-2 font-medium w-20">都道府県</th>
+              <th className="text-left py-2 pr-2 font-medium min-w-[80px]">主催者</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[100px]">ゲームタイトル</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">状態</th>
               <th className="text-right py-2 font-medium">操作</th>
@@ -250,16 +250,16 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   }`}
                 >
                   {/* 画像 */}
-                  <td className="py-2.5 pr-2">
+                  <td className="py-2 pr-2">
                     {imageUrl ? (
                       <div
-                        className="relative w-12 h-12 rounded overflow-hidden bg-parchment-dark cursor-pointer hover:opacity-80 transition-opacity"
+                        className="relative w-24 h-24 rounded overflow-hidden bg-parchment-dark cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => setModalImage(imageUrl)}
                       >
                         <Image src={imageUrl} alt="" fill className="object-cover" />
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded bg-error/10 flex items-center justify-center">
+                      <div className="w-24 h-24 rounded bg-error/10 flex items-center justify-center">
                         <span className="text-error text-xs">✗</span>
                       </div>
                     )}
@@ -309,7 +309,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   </td>
 
                   {/* 都道府県 */}
-                  <td className="py-2.5 pr-2 whitespace-nowrap">
+                  <td className="py-2.5 pr-2">
                     {ev.prefecture
                       ? <span className="text-ink-body/80 text-xs">{ev.prefecture}</span>
                       : <Empty label="都道府県なし" />
@@ -317,9 +317,9 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   </td>
 
                   {/* 主催者 */}
-                  <td className="py-2.5 pr-2 whitespace-nowrap">
+                  <td className="py-2.5 pr-2">
                     {ev.organizers?.name
-                      ? <span className="text-ink-body/80 text-xs">{ev.organizers.name}</span>
+                      ? <span className="text-ink-body/80 text-xs leading-snug">{ev.organizers.name}</span>
                       : <Empty label="主催者なし" />
                     }
                   </td>
