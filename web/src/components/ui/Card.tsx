@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MapPin } from "lucide-react";
 import Badge from "./Badge";
 import { prefectureToRegion, REGION_COLORS } from "@/utils/regions";
@@ -36,9 +37,16 @@ const genreLabels: Record<Genre, string> = {
 export default function Card({ imageUrl, title, titleEn, date, prefecture, venue, organizer, genre, href, gameTitles, tourCount, tourId, isPast }: CardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + (prefecture ? ` ${prefecture}` : ""))}`;
   const region = prefectureToRegion(prefecture);
+  const router = useRouter();
 
   return (
-    <Link href={href} className="block group relative">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(href)}
+      onKeyDown={(e) => e.key === "Enter" && router.push(href)}
+      className="block group relative cursor-pointer"
+    >
       <article
         className="bg-parchment rounded-md overflow-hidden transition-all duration-200 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
@@ -141,6 +149,6 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
           </span>
         </div>
       )}
-    </Link>
+    </div>
   );
 }
