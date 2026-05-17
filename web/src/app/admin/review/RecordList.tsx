@@ -113,6 +113,7 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
         type="text"
         value={value}
         onChange={e => { setValue(e.target.value); setSaved(false); }}
+        onKeyDown={e => e.key === "Enter" && handleSave()}
         className="flex-1 min-w-0 text-xs bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body/80"
         placeholder="タイトルなし（カンマ区切り）"
       />
@@ -150,6 +151,7 @@ function OfficialUrlField({ eventId, initialUrl }: { eventId: string; initialUrl
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false); }}
+          onKeyDown={e => e.key === "Enter" && handleSave()}
           className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="公式サイトURL..."
         />
@@ -194,6 +196,7 @@ function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUr
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false); }}
+          onKeyDown={e => e.key === "Enter" && handleSave()}
           className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="その他参考URL（X投稿など）..."
         />
@@ -250,6 +253,7 @@ function SourceUrlField({
             setSaved(false);
             onValueChange?.(e.target.value);
           }}
+          onKeyDown={e => e.key === "Enter" && handleSave()}
           className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="チケットページURL..."
         />
@@ -296,6 +300,7 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setStatus("idle"); }}
+          onKeyDown={e => e.key === "Enter" && handleSave()}
           className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="画像URLを貼り付け..."
         />
