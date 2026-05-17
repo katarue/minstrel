@@ -108,26 +108,37 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
       if (res.ok) setSaved(true);
     });
 
+  const currentTitles = value.split(/[,、，]/).map(t => t.trim()).filter(Boolean);
+
   return (
-    <div className="flex items-center gap-1">
-      <input
-        type="text"
-        value={value}
-        onChange={e => { setValue(e.target.value); setSaved(false); }}
-        onKeyDown={e => e.key === "Enter" && handleSave()}
-        className="flex-1 min-w-0 text-sm bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body"
-        placeholder="タイトルなし（カンマ区切り）"
-      />
-      {dirty && !saved && (
-        <button
-          onClick={handleSave}
-          disabled={isPending}
-          className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
-        >
-          {isPending ? "…" : "保存"}
-        </button>
+    <div>
+      {currentTitles.length > 0 && (
+        <ul className="mb-1.5 space-y-0.5">
+          {currentTitles.map((t, i) => (
+            <li key={i} className="text-sm text-ink-body leading-snug">・{t}</li>
+          ))}
+        </ul>
       )}
-      {saved && <span className="text-[10px] text-success shrink-0">✓</span>}
+      <div className="flex items-center gap-1">
+        <input
+          type="text"
+          value={value}
+          onChange={e => { setValue(e.target.value); setSaved(false); }}
+          onKeyDown={e => e.key === "Enter" && handleSave()}
+          className="flex-1 min-w-0 text-xs bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body/70"
+          placeholder="カンマ区切りで入力"
+        />
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-xs text-success shrink-0">✓</span>}
+      </div>
     </div>
   );
 }
