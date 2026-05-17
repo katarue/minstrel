@@ -56,7 +56,10 @@ async function fetchPageData(url: string): Promise<{ text: string; startTimes: s
       },
       signal: AbortSignal.timeout(12000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`[fetchPageData] HTTP ${res.status} for ${url}`);
+      return null;
+    }
     const html = await res.text();
     // タグ削除前に og:image URL を抽出して保持する
     const ogImageMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
@@ -874,4 +877,160 @@ export async function ingestFromUrl(
 
   revalidatePath("/admin/review");
   return { ok: true, message: `「${extracted.event_name}」を登録しました`, eventId: newEvent.id };
+}
+
+// ── スクリーンショット取込 ────────────────────────────────────────────────────
+
+type ScreenshotExtraction = {
+  event_name: string;
+  organizer_name: string | null;
+  organizer_official_url: string | null;
+  game_titles: string[];
+  description: string | null;
+  performances: {
+    start_datetime: string | null;
+    venue_name: string | null;
+    prefecture: string | null;
+    ticket_url: string | null;
+  }[];
+};
+
+async function extractFromScreenshot(
+  base64: string,
+  mediaType: string,
+): Promise<ScreenshotExtraction | null> {
+  const prompt = `このスクリーンショットからコンサート情報を抽出してください。JSONのみ返してください。
+
+ルール:
+- event_name: イベント全体のタイトル
+- performances: 公演ごとの配列（1公演でも必ず配列にする）
+- start_datetime: ISO8601形式（JST）。例: "2026-05-24T14:00:00+09:00"。不明はnull
+- venue_name: 会場名。不明はnull
+- prefecture: 都道府県名（例: 東京都）。会場から推定可。不明はnull
+- game_titles: ゲームが最初の発表媒体のタイトルのみ（アニメ・映画原作は除く）。シリーズ名で統一
+- organizer_official_url: 主催者の公式サイトURL（チケットサイト・SNS除く）
+
+{
+  "event_name": "イベント名",
+  "organizer_name": "主催者名 or null",
+  "organizer_official_url": "URL or null",
+  "game_titles": ["タイトル1"],
+  "description": "100〜200字の日本語要約 or null",
+  "performances": [
+    {
+      "start_datetime": "2026-05-24T14:00:00+09:00",
+      "venue_name": "会場名",
+      "prefecture": "東京都",
+      "ticket_url": null
+    }
+  ]
+}`;
+
+  try {
+    const resp = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+              data: base64,
+            },
+          },
+          { type: "text", text: prompt },
+        ],
+      }],
+    });
+    const block = resp.content[0];
+    if (block.type !== "text") return null;
+    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]) as ScreenshotExtraction;
+    if (!parsed.event_name || !Array.isArray(parsed.performances) || parsed.performances.length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export async function ingestFromScreenshot(
+  base64: string,
+  mediaType: string,
+): Promise<{ ok: boolean; message: string }> {
+  const supabase = createAdminClient();
+
+  const extracted = await extractFromScreenshot(base64, mediaType);
+  if (!extracted) {
+    return { ok: false, message: "画像から情報を抽出できませんでした" };
+  }
+
+  const organizerId = extracted.organizer_name
+    ? await upsertOrganizer(supabase, extracted.organizer_name, extracted.organizer_official_url)
+    : null;
+
+  const sourceRef = `screenshot:${Date.now()}`;
+  const isMulti = extracted.performances.length >= 2;
+
+  let created = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const perf of extracted.performances) {
+    if (!perf.start_datetime || !perf.prefecture || !perf.venue_name) { skipped++; continue; }
+
+    const locationLabel = perf.prefecture ?? perf.venue_name ?? "";
+    const eventName = isMulti
+      ? `${extracted.event_name}（${locationLabel} ${perf.start_datetime.substring(11, 16)}）`
+      : extracted.event_name;
+
+    const { data: dupCheck } = await supabase
+      .from("events").select("id").eq("event_name", eventName).limit(1);
+    if (dupCheck?.length) { skipped++; continue; }
+
+    const { data: newEvent, error: insertErr } = await supabase.from("events").insert({
+      event_name: eventName,
+      start_datetime: perf.start_datetime,
+      venue_name: perf.venue_name,
+      prefecture: perf.prefecture,
+      organizer_id: organizerId,
+      ticket_urls: perf.ticket_url ? { primary: perf.ticket_url } : null,
+      description: extracted.description ?? null,
+      source_url: sourceRef,
+      source_rank: "A",
+      is_published: false,
+      auto_publish_eligible: false,
+      is_canceled: false,
+    }).select("id").single();
+
+    if (insertErr || !newEvent) {
+      console.error("[screenshot] insert failed:", insertErr?.message, "event:", eventName);
+      failed++;
+      continue;
+    }
+
+    await supabase.from("event_sources").insert({
+      event_id: newEvent.id,
+      source_url: sourceRef,
+      source_name: "screenshot_ingest",
+      match_status: "new",
+    });
+
+    await insertGameTitlesForEvent(supabase, newEvent.id, extracted.game_titles ?? []);
+    created++;
+  }
+
+  revalidatePath("/admin/review");
+  const parts = [
+    created > 0 ? `${created}件登録` : null,
+    skipped > 0 ? `${skipped}件スキップ` : null,
+    failed > 0 ? `${failed}件失敗` : null,
+  ].filter(Boolean).join("、");
+  return {
+    ok: created > 0,
+    message: parts || `抽出できませんでした（${extracted.event_name.slice(0, 20)}）`,
+  };
 }
