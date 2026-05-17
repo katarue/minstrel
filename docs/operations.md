@@ -96,8 +96,8 @@ Prefect で定期実行（デスクトップ常時稼働）。起動コマンド
 <!-- SCHEDULE_TABLE_START -->
 | フロー | 対象 | 頻度 | 時刻 (JST) |
 |---|---|---|---|
-| `flow_collect.py` | チケット6サイト | 3日おき | 09:00 |
-| `flow_collect_x.py` | X検索・フォローリスト | 毎日 | 07:00 |
+| `flow_collect.py` | チケット6サイト | 毎日 | 01:00 |
+| `flow_collect_x.py` | X検索・フォローリスト | 毎日 | 01:00 |
 | `flow_post_weekly.py` | X自動投稿（月） | 月曜 | 09:00 |
 | `flow_post_weekly.py` | X自動投稿（金） | 金曜 | 09:00 |
 <!-- SCHEDULE_TABLE_END -->
@@ -109,9 +109,9 @@ Prefect で定期実行（デスクトップ常時稼働）。起動コマンド
 flowchart LR
     DB[(Supabase)]
     collectflow["チケット6サイト
-3日おき 09:00"] --> DB
+毎日 01:00"] --> DB
     collectxflow["X検索・フォローリスト
-毎日 07:00"] --> DB
+毎日 01:00"] --> DB
     DB --> postmondayflow["X自動投稿（月）
 月曜 09:00"]
     DB --> postfridayflow["X自動投稿（金）

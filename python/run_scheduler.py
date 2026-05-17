@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
     parser.add_argument("--run-sync-following", action="store_true", help="@minstrel_live フォローリスト同期")
     parser.add_argument("--run-sync-lists", action="store_true", help="X リスト → trust_tier 同期（即時）")
-    parser.add_argument("--serve-scheduled", action="store_true", help="チケット収集フロー: 3日おき09:00 JST")
+    parser.add_argument("--serve-scheduled", action="store_true", help="チケット収集フロー: 毎日01:00 JST")
     parser.add_argument("--serve-x", action="store_true", help="X 収集フロー: 毎日07:00 JST")
     parser.add_argument("--serve-post", action="store_true", help="投稿フロー: 月・金 09:00 JST")
     parser.add_argument("--serve-all", action="store_true", help="全フロー常駐")
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     elif args.serve_scheduled:
         collect_flow.serve(
             name="minstrel-collect-scheduled",
-            schedules=[CronSchedule(cron="0 9 */3 * *", timezone="Asia/Tokyo")],
+            schedules=[CronSchedule(cron="0 1 * * *", timezone="Asia/Tokyo")],
         )
     elif args.serve_x:
         collect_x_flow.serve(
@@ -97,12 +97,12 @@ if __name__ == "__main__":
         runner.add_flow(
             collect_flow,
             name="minstrel-collect-scheduled",
-            schedules=[CronSchedule(cron="0 9 */3 * *", timezone="Asia/Tokyo")],
+            schedules=[CronSchedule(cron="0 1 * * *", timezone="Asia/Tokyo")],
         )
         runner.add_flow(
             collect_x_flow,
             name="minstrel-collect-x-scheduled",
-            schedules=[CronSchedule(cron="0 7 * * *", timezone="Asia/Tokyo")],
+            schedules=[CronSchedule(cron="0 1 * * *", timezone="Asia/Tokyo")],
         )
         runner.add_flow(
             post_monday_flow,
