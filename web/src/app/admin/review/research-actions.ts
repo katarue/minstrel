@@ -563,6 +563,44 @@ export async function reresearchEvent(
     : { ok: true, message: "新しい情報は見つかりませんでした" };
 }
 
+// ── 共通ヘルパー ─────────────────────────────────────────────────────────────
+
+async function upsertOrganizer(
+  supabase: ReturnType<typeof createAdminClient>,
+  name: string,
+  officialUrl?: string | null,
+): Promise<string | null> {
+  const { data: existing } = await supabase
+    .from("organizers").select("id").eq("name", name).single();
+  return existing?.id ?? (
+    await supabase.from("organizers").insert({
+      name,
+      official_url: officialUrl ?? null,
+    }).select("id").single()
+  ).data?.id ?? null;
+}
+
+async function insertGameTitlesForEvent(
+  supabase: ReturnType<typeof createAdminClient>,
+  eventId: string,
+  titles: string[],
+): Promise<void> {
+  for (const title of titles) {
+    if (!title?.trim()) continue;
+    const { data: gt } = await supabase
+      .from("game_titles").select("id").eq("title_name", title).single();
+    const gtId = gt?.id ?? (
+      await supabase.from("game_titles").insert({ title_name: title }).select("id").single()
+    ).data?.id;
+    if (gtId) {
+      await supabase.from("event_game_titles")
+        .upsert({ event_id: eventId, game_title_id: gtId });
+    }
+  }
+}
+
+// ── 単一イベント抽出 ──────────────────────────────────────────────────────────
+
 type IngestExtraction = {
   event_name?: string;
   start_datetime?: string | null;
@@ -619,6 +657,76 @@ ${pageText}`;
   }
 }
 
+// ── ツアー（複数公演）抽出 ────────────────────────────────────────────────────
+
+type TourEventItem = {
+  start_datetime: string | null;
+  venue_name: string | null;
+  prefecture: string | null;
+  ticket_url?: string | null;
+};
+
+type TourExtraction = {
+  tour_title: string;
+  organizer_name: string | null;
+  organizer_official_url: string | null;
+  game_titles: string[];
+  description: string | null;
+  events: TourEventItem[];
+};
+
+async function extractTourEvents(pageText: string, sourceUrl: string): Promise<TourExtraction | null> {
+  const prompt = `以下はコンサートのツアーページです。複数の公演が含まれている場合、各公演を別々に抽出してください。JSONのみ返してください。
+
+ルール:
+- tour_title: ツアー全体のタイトル（共通タイトル）
+- events: 各公演の配列。2件以上ある場合のみこの形式を使う
+- start_datetime: ISO8601形式（JST）。年が不明な場合はURLや文脈から推定
+- prefecture: 都道府県名（例: 北海道、東京都、大阪府）
+- game_titles: ゲームが最初の発表媒体のタイトル（アニメ・漫画原作は除く）。シリーズ名で統一
+- 公演が1件しかない場合は events を空配列 [] にする
+
+出典URL: ${sourceUrl}
+
+{
+  "tour_title": "ツアータイトル",
+  "organizer_name": "主催者名 or null",
+  "organizer_official_url": "公式URL or null",
+  "game_titles": ["タイトル1"],
+  "description": "50〜100字の日本語要約 or null",
+  "events": [
+    {
+      "start_datetime": "2026-04-05T00:00:00+09:00",
+      "venue_name": "会場名",
+      "prefecture": "北海道",
+      "ticket_url": null
+    }
+  ]
+}
+
+テキスト:
+${pageText}`;
+
+  try {
+    const resp = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = resp.content[0];
+    if (block.type !== "text") return null;
+    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]) as TourExtraction;
+    if (!parsed.tour_title || !Array.isArray(parsed.events)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// ── ingestFromUrl ─────────────────────────────────────────────────────────────
+
 export async function ingestFromUrl(
   url: string,
 ): Promise<{ ok: boolean; message: string; eventId?: string }> {
@@ -629,7 +737,7 @@ export async function ingestFromUrl(
     return { ok: false, message: "URLを入力してください" };
   }
 
-  // 重複チェック
+  // 重複チェック（このURLから既に登録済みか）
   const { data: existing } = await supabase
     .from("event_sources")
     .select("event_id")
@@ -646,30 +754,82 @@ export async function ingestFromUrl(
     return { ok: false, message: "ページの取得に失敗しました（URLを確認してください）" };
   }
 
-  // Claude で全フィールド抽出
+  // ── ツアーページ判定（複数公演抽出を試みる）──────────────────────────────
+  const tourResult = await extractTourEvents(pageData.text, trimmedUrl);
+
+  if (tourResult && tourResult.events.length >= 2) {
+    // 複数公演モード
+    const organizerId = tourResult.organizer_name
+      ? await upsertOrganizer(supabase, tourResult.organizer_name, tourResult.organizer_official_url)
+      : null;
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const ev of tourResult.events) {
+      if (!ev.start_datetime && !ev.venue_name) continue;
+
+      // 同名イベント重複チェック
+      const eventName = ev.prefecture
+        ? `${tourResult.tour_title}（${ev.prefecture}）`
+        : `${tourResult.tour_title}（${ev.venue_name}）`;
+
+      const { data: dupEvent } = await supabase
+        .from("events")
+        .select("id")
+        .eq("event_name", eventName)
+        .limit(1);
+
+      if (dupEvent?.length) { skipped++; continue; }
+
+      const { data: newEvent } = await supabase.from("events").insert({
+        event_name: eventName,
+        start_datetime: ev.start_datetime ?? null,
+        venue_name: ev.venue_name ?? null,
+        prefecture: ev.prefecture ?? null,
+        organizer_id: organizerId,
+        official_url: tourResult.organizer_official_url ?? null,
+        ticket_url: ev.ticket_url ?? null,
+        source_url: trimmedUrl,
+        description: tourResult.description ?? null,
+        source_rank: "A",
+        is_published: false,
+        auto_publish_eligible: false,
+        is_canceled: false,
+      }).select("id").single();
+
+      if (!newEvent) continue;
+
+      await supabase.from("event_sources").insert({
+        event_id: newEvent.id,
+        source_url: trimmedUrl,
+        source_name: "manual_ingest",
+        match_status: "new",
+      });
+
+      await insertGameTitlesForEvent(supabase, newEvent.id, tourResult.game_titles ?? []);
+      created++;
+    }
+
+    revalidatePath("/admin/review");
+    const parts = [
+      created > 0 ? `${created}件登録` : null,
+      skipped > 0 ? `${skipped}件スキップ（登録済み）` : null,
+    ].filter(Boolean).join("、");
+    return { ok: created > 0, message: parts || "登録できませんでした" };
+  }
+
+  // ── 単一イベントモード ───────────────────────────────────────────────────
   const extracted = await extractFullEvent(pageData.text, trimmedUrl);
 
   if (!extracted.event_name) {
     return { ok: false, message: "イベント名を抽出できませんでした" };
   }
 
-  // 主催者の upsert
-  let organizerId: string | null = null;
-  if (extracted.organizer_name) {
-    const { data: existingOrg } = await supabase
-      .from("organizers")
-      .select("id")
-      .eq("name", extracted.organizer_name)
-      .single();
-    organizerId = existingOrg?.id ?? (
-      await supabase.from("organizers").insert({
-        name: extracted.organizer_name,
-        official_url: extracted.organizer_official_url ?? null,
-      }).select("id").single()
-    ).data?.id ?? null;
-  }
+  const organizerId = extracted.organizer_name
+    ? await upsertOrganizer(supabase, extracted.organizer_name, extracted.organizer_official_url)
+    : null;
 
-  // イベント挿入
   const { data: newEvent, error: insertError } = await supabase
     .from("events")
     .insert({
@@ -694,7 +854,6 @@ export async function ingestFromUrl(
     return { ok: false, message: `登録エラー: ${insertError?.message ?? "不明なエラー"}` };
   }
 
-  // event_sources 挿入
   await supabase.from("event_sources").insert({
     event_id: newEvent.id,
     source_url: trimmedUrl,
@@ -702,18 +861,7 @@ export async function ingestFromUrl(
     match_status: "new",
   });
 
-  // ゲームタイトル挿入
-  for (const title of (extracted.game_titles ?? [])) {
-    if (!title?.trim()) continue;
-    const { data: gt } = await supabase
-      .from("game_titles").select("id").eq("title_name", title).single();
-    const gtId = gt?.id ?? (
-      await supabase.from("game_titles").insert({ title_name: title }).select("id").single()
-    ).data?.id;
-    if (gtId) {
-      await supabase.from("event_game_titles").insert({ event_id: newEvent.id, game_title_id: gtId });
-    }
-  }
+  await insertGameTitlesForEvent(supabase, newEvent.id, extracted.game_titles ?? []);
 
   revalidatePath("/admin/review");
   return { ok: true, message: `「${extracted.event_name}」を登録しました`, eventId: newEvent.id };
