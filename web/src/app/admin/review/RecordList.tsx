@@ -11,6 +11,7 @@ export type EventRecord = {
   start_datetime: string | null;
   venue_name: string | null;
   prefecture: string | null;
+  description: string | null;
   source_url: string | null;
   official_url: string | null;
   reference_url: string | null;
@@ -320,6 +321,28 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
   );
 }
 
+function DescriptionCell({ description }: { description: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!description) return null;
+  const isLong = description.length > 100;
+
+  return (
+    <div className="mt-2 border-t border-gold/15 pt-1.5">
+      <p className={`text-[10px] text-ink-body/50 leading-relaxed whitespace-pre-wrap ${!expanded ? "line-clamp-3" : ""}`}>
+        {description}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(p => !p)}
+          className="text-[9px] text-ink-body/30 hover:text-bordeaux transition-colors mt-0.5"
+        >
+          {expanded ? "▲ 折りたたむ" : "▼ 全文を見る"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ImageModal({ url, onClose }: { url: string; onClose: () => void }) {
   return (
     <div
@@ -498,13 +521,10 @@ export function RecordList({ events }: { events: EventRecord[] }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gold/30 text-xs text-ink-body/50 uppercase tracking-wider">
-              <th className="text-left py-2 pr-2 font-medium w-40">画像</th>
-              <th className="text-left py-2 pr-2 font-medium min-w-[150px]">イベント名</th>
-              <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">日付</th>
-              <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">時間</th>
-              <th className="text-left py-2 pr-2 font-medium min-w-[110px]">会場</th>
-              <th className="text-left py-2 pr-2 font-medium w-20">都道府県</th>
-              <th className="text-left py-2 pr-2 font-medium min-w-[80px]">主催者</th>
+              <th className="text-left py-2 pr-2 font-medium w-36">画像</th>
+              <th className="text-left py-2 pr-2 font-medium min-w-[180px]">イベント名 / 説明</th>
+              <th className="text-left py-2 pr-2 font-medium whitespace-nowrap w-24">日時</th>
+              <th className="text-left py-2 pr-2 font-medium min-w-[120px]">場所 / 主催</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[100px]">ゲームタイトル</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">状態</th>
               <th className="text-right py-2 font-medium">操作</th>
@@ -513,7 +533,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className="text-center py-8 text-ink-body/40 text-sm">
+                <td colSpan={7} className="text-center py-8 text-ink-body/40 text-sm">
                   該当するレコードはありません
                 </td>
               </tr>
@@ -543,61 +563,47 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     <ImageCell ev={ev} onOpenModal={setModalImage} />
                   </td>
 
-                  {/* イベント名 + URL */}
+                  {/* イベント名 + URL + 説明 */}
                   <td className="py-2.5 pr-2">
                     <p className="font-medium text-ink-heading leading-snug line-clamp-2 text-xs">
                       {ev.event_name}
                     </p>
-                    <>
-                      <SourceUrlField
-                        eventId={ev.id}
-                        initialUrl={ev.source_url}
-                        onValueChange={url => setUrlOverrides(prev => ({ ...prev, [ev.id]: url }))}
-                      />
-                      <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
-                      <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
-                      <ManualImageUrlField eventId={ev.id} initialUrl={ev.flyer_image_url} />
-                    </>
+                    <SourceUrlField
+                      eventId={ev.id}
+                      initialUrl={ev.source_url}
+                      onValueChange={url => setUrlOverrides(prev => ({ ...prev, [ev.id]: url }))}
+                    />
+                    <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
+                    <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
+                    <ManualImageUrlField eventId={ev.id} initialUrl={ev.flyer_image_url} />
+                    <DescriptionCell description={ev.description} />
                   </td>
 
-                  {/* 日付 */}
-                  <td className="py-2.5 pr-2 whitespace-nowrap">
+                  {/* 日時（日付 + 時間を縦並び） */}
+                  <td className="py-2.5 pr-2 whitespace-nowrap align-top">
                     {date
-                      ? <span className="text-ink-body/80 text-xs">{date}</span>
+                      ? <span className="block text-ink-body/80 text-xs">{date}</span>
                       : <Empty label="日付なし" />
                     }
-                  </td>
-
-                  {/* 時間 */}
-                  <td className="py-2.5 pr-2 whitespace-nowrap">
                     {time
-                      ? <span className="text-ink-body/80 text-xs">{time}</span>
-                      : <Empty label="時間なし" />
+                      ? <span className="block text-ink-body/50 text-xs mt-0.5">{time}</span>
+                      : <span className="block mt-0.5"><Empty label="時間なし" /></span>
                     }
                   </td>
 
-                  {/* 会場 */}
-                  <td className="py-2.5 pr-2">
-                    {ev.venue_name
-                      ? <span className="text-ink-body/80 text-xs leading-snug">{ev.venue_name}</span>
-                      : <Empty label="会場なし" />
-                    }
-                  </td>
-
-                  {/* 都道府県 */}
-                  <td className="py-2.5 pr-2">
+                  {/* 場所 / 主催（都道府県 + 会場 + 主催者を縦並び） */}
+                  <td className="py-2.5 pr-2 align-top">
                     {ev.prefecture
-                      ? <span className="text-ink-body/80 text-xs">{ev.prefecture}</span>
-                      : <Empty label="都道府県なし" />
+                      ? <span className="block text-ink-body/50 text-[10px]">{ev.prefecture}</span>
+                      : <span className="block"><Empty label="都道府県なし" /></span>
                     }
-                  </td>
-
-                  {/* 主催者 */}
-                  <td className="py-2.5 pr-2">
-                    {ev.organizers?.name
-                      ? <span className="text-ink-body/80 text-xs leading-snug">{ev.organizers.name}</span>
-                      : <Empty label="主催者なし" />
+                    {ev.venue_name
+                      ? <span className="block text-ink-body/80 text-xs leading-snug mt-0.5">{ev.venue_name}</span>
+                      : <span className="block mt-0.5"><Empty label="会場なし" /></span>
                     }
+                    {ev.organizers?.name && (
+                      <span className="block text-ink-body/40 text-[10px] mt-1 leading-snug">{ev.organizers.name}</span>
+                    )}
                   </td>
 
                   {/* ゲームタイトル */}
