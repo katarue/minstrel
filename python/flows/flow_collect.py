@@ -442,6 +442,13 @@ def fetch_ticket_sale_dates_from_x() -> int:
     return _fetch()
 
 
+@task
+def announce_ticket_sales() -> int:
+    """ticket_sale_start=今日のイベントをXに告知ツイートする。"""
+    from processor.ticket_sale_announcer import announce_ticket_sales_today
+    return announce_ticket_sales_today()
+
+
 def _log_run(
     started_at: datetime,
     status: str,
@@ -507,6 +514,9 @@ def collect_flow():
 
         ticket_sale_x_count = fetch_ticket_sale_dates_from_x()
         print(f"ticket sale dates fetched (X): {ticket_sale_x_count}")
+
+        announced_count = announce_ticket_sales()
+        print(f"ticket sale announced (X): {announced_count}")
 
         _log_run(started_at, "success", scraped_count, inserted_count)
         notify_success(FLOW_NAME, scraped_count, inserted_count)
