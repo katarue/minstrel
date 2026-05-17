@@ -56,7 +56,7 @@ function getMissingFields(ev: EventRecord): string[] {
 }
 
 function Empty({ label }: { label: string }) {
-  return <span className="text-error text-xs font-medium">✗ {label}</span>;
+  return <span className="text-red-600 text-sm font-bold">✗ {label}</span>;
 }
 
 function ImageCell({ ev, onOpenModal }: { ev: EventRecord; onOpenModal: (url: string) => void }) {
