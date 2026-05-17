@@ -112,19 +112,19 @@ function ActionButtons({ ev }: { ev: UnpublishedEvent }) {
   };
 
   if (publishDone) return <span className="text-xs text-success font-medium">✓ 公開済み</span>;
-  if (deleteDone)  return <span className="text-xs text-ink-body/40">削除済み</span>;
+  if (deleteDone)  return <span className="text-xs text-ink-body/60">削除済み</span>;
   if (error)       return <span className="text-xs text-error">{error}</span>;
 
   return (
     <div className="flex flex-col gap-1.5 items-end">
       {researchMsg && (
-        <span className="text-xs text-ink-body/50 text-right leading-tight">{researchMsg}</span>
+        <span className="text-xs text-ink-body/70 text-right leading-tight">{researchMsg}</span>
       )}
       {!canPublish && (
         <button
           disabled={isPending || isResearching}
           onClick={handleResearch}
-          className="text-xs px-3 py-1 border border-gold/40 text-ink-body/60 rounded hover:bg-gold/10 disabled:opacity-40 transition-colors whitespace-nowrap"
+          className="text-xs px-3 py-1 border border-gold/40 text-ink-body/70 rounded hover:bg-gold/10 disabled:opacity-40 transition-colors whitespace-nowrap"
         >
           {isResearching ? "検索中..." : "再リサーチ"}
         </button>
@@ -152,7 +152,7 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
   const [modalImage, setModalImage] = useState<string | null>(null);
 
   if (events.length === 0) {
-    return <p className="text-sm text-ink-body/40 py-4 text-center">未公開イベントはありません</p>;
+    return <p className="text-sm text-ink-body/60 py-4 text-center">未公開イベントはありません</p>;
   }
 
   const readyCount   = events.filter(ev => getMissingFields(ev).length === 0).length;
@@ -161,7 +161,7 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
   return (
     <div className="space-y-2">
       {/* サマリー */}
-      <div className="flex gap-4 text-xs text-ink-body/60">
+      <div className="flex gap-4 text-xs text-ink-body/70">
         <span>全 {events.length} 件</span>
         <span className="text-success font-medium">公開可 {readyCount} 件</span>
         {pendingCount > 0 && (
@@ -173,7 +173,7 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="border-b border-gold/30 text-xs text-ink-body/50 uppercase tracking-wider">
+            <tr className="border-b border-gold/30 text-xs text-ink-body/70 uppercase tracking-wider">
               <th className="text-left py-2 pr-3 font-medium w-20">画像</th>
               <th className="text-left py-2 pr-3 font-medium">イベント名</th>
               <th className="text-left py-2 pr-3 font-medium whitespace-nowrap">開催日時</th>
@@ -264,7 +264,7 @@ export function UnpublishedEvents({ events }: { events: UnpublishedEvent[] }) {
                       <span className="text-ink-body/80">
                         {gameTitles[0]}
                         {gameTitles.length > 1 && (
-                          <span className="text-ink-body/40 ml-1">+{gameTitles.length - 1}</span>
+                          <span className="text-ink-body/70 ml-1">+{gameTitles.length - 1}</span>
                         )}
                       </span>
                     ) : (

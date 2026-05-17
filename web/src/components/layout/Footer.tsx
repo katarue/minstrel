@@ -20,7 +20,7 @@ export default function Footer() {
         >
           MINSTREL
         </Link>
-        <p className="font-body text-ink-body/70 text-sm tracking-wide">
+        <p className="font-body text-ink-body/80 text-sm tracking-wide">
           {t("tagline")}
         </p>
 
@@ -31,17 +31,17 @@ export default function Footer() {
             <Link
               key={link.key}
               href={link.href}
-              className="font-body text-ink-body/70 hover:text-bordeaux transition-colors text-sm"
+              className="font-body text-ink-body/80 hover:text-bordeaux transition-colors text-sm"
             >
               {t(link.key)}
             </Link>
           ))}
         </nav>
 
-        <p className="font-body text-ink-body/50 text-xs text-center max-w-lg">
+        <p className="font-body text-ink-body/70 text-sm text-center max-w-lg">
           {t("disclaimer")}
         </p>
-        <p className="font-body text-ink-body/50 text-xs text-center">
+        <p className="font-body text-ink-body/70 text-sm text-center">
           {t("copyright")}
         </p>
       </div>

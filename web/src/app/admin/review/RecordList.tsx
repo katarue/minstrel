@@ -115,14 +115,14 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
         value={value}
         onChange={e => { setValue(e.target.value); setSaved(false); }}
         onKeyDown={e => e.key === "Enter" && handleSave()}
-        className="flex-1 min-w-0 text-xs bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body/80"
+        className="flex-1 min-w-0 text-sm bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body"
         placeholder="タイトルなし（カンマ区切り）"
       />
       {dirty && !saved && (
         <button
           onClick={handleSave}
           disabled={isPending}
-          className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
         >
           {isPending ? "…" : "保存"}
         </button>
@@ -146,19 +146,19 @@ function OfficialUrlField({ eventId, initialUrl }: { eventId: string; initialUrl
 
   return (
     <div className="mt-1.5">
-      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">公式</span>
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">公式</span>
       <div className="flex items-center gap-1">
         <input
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false); }}
           onKeyDown={e => e.key === "Enter" && handleSave()}
-          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          className="flex-1 min-w-0 text-sm text-bordeaux/90 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="公式サイトURL..."
         />
         {value && (
           <a href={value} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
+            className="text-xs text-ink-body/60 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
             ↗
           </a>
         )}
@@ -166,7 +166,7 @@ function OfficialUrlField({ eventId, initialUrl }: { eventId: string; initialUrl
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
           >
             {isPending ? "…" : "保存"}
           </button>
@@ -191,19 +191,19 @@ function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUr
 
   return (
     <div className="mt-1.5">
-      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">参考</span>
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">参考</span>
       <div className="flex items-center gap-1">
         <input
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false); }}
           onKeyDown={e => e.key === "Enter" && handleSave()}
-          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          className="flex-1 min-w-0 text-sm text-bordeaux/90 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="その他参考URL（X投稿など）..."
         />
         {value && (
           <a href={value} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
+            className="text-xs text-ink-body/60 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
             ↗
           </a>
         )}
@@ -211,7 +211,7 @@ function ReferenceUrlField({ eventId, initialUrl }: { eventId: string; initialUr
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
           >
             {isPending ? "…" : "保存"}
           </button>
@@ -244,7 +244,7 @@ function SourceUrlField({
 
   return (
     <div className="mt-1">
-      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">チケット</span>
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">チケット</span>
       <div className="flex items-center gap-1">
         <input
           type="url"
@@ -255,12 +255,12 @@ function SourceUrlField({
             onValueChange?.(e.target.value);
           }}
           onKeyDown={e => e.key === "Enter" && handleSave()}
-          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          className="flex-1 min-w-0 text-sm text-bordeaux/90 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="チケットページURL..."
         />
         {value && (
           <a href={value} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] text-ink-body/40 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
+            className="text-xs text-ink-body/60 hover:text-bordeaux transition-colors whitespace-nowrap shrink-0">
             ↗
           </a>
         )}
@@ -268,7 +268,7 @@ function SourceUrlField({
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
           >
             {isPending ? "…" : "保存"}
           </button>
@@ -295,21 +295,21 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
 
   return (
     <div className="mt-1.5">
-      <span className="text-[9px] text-ink-body/30 uppercase tracking-wide">画像URL</span>
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">画像URL</span>
       <div className="flex items-center gap-1">
         <input
           type="url"
           value={value}
           onChange={e => { setValue(e.target.value); setStatus("idle"); }}
           onKeyDown={e => e.key === "Enter" && handleSave()}
-          className="flex-1 min-w-0 text-xs text-bordeaux/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          className="flex-1 min-w-0 text-sm text-bordeaux/90 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="画像URLを貼り付け..."
         />
         {value.trim() && status === "idle" && (
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-ink-body/60 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
           >
             {isPending ? "…" : "保存"}
           </button>
@@ -328,13 +328,13 @@ function DescriptionCell({ description }: { description: string | null }) {
 
   return (
     <div className="mt-2 border-t border-gold/15 pt-1.5">
-      <p className={`text-[10px] text-ink-body/50 leading-relaxed whitespace-pre-wrap ${!expanded ? "line-clamp-3" : ""}`}>
+      <p className={`text-xs text-ink-body/80 leading-relaxed whitespace-pre-wrap ${!expanded ? "line-clamp-3" : ""}`}>
         {description}
       </p>
       {isLong && (
         <button
           onClick={() => setExpanded(p => !p)}
-          className="text-[9px] text-ink-body/30 hover:text-bordeaux transition-colors mt-0.5"
+          className="text-xs text-ink-body/60 hover:text-bordeaux transition-colors mt-0.5"
         >
           {expanded ? "▲ 折りたたむ" : "▼ 全文を見る"}
         </button>
@@ -407,7 +407,7 @@ function RowActions({
       onResearchMsg(res.message ?? (res.ok ? "完了" : "エラー"));
     });
 
-  if (done === "deleted")     return <span className="text-xs text-ink-body/40">削除済み</span>;
+  if (done === "deleted")     return <span className="text-xs text-ink-body/60">削除済み</span>;
   if (done === "published")   return <span className="text-xs text-success font-medium">✓ 公開済み</span>;
   if (done === "unpublished") return <span className="text-xs text-warning font-medium">非公開に変更</span>;
   if (error)                  return <span className="text-xs text-error">{error}</span>;
@@ -426,7 +426,7 @@ function RowActions({
           <button
             disabled={isPending || isResearching}
             onClick={handleResearch}
-            className="text-xs px-2.5 py-1 border border-gold/40 text-ink-body/60 rounded hover:bg-gold/10 disabled:opacity-40 whitespace-nowrap"
+            className="text-xs px-2.5 py-1 border border-gold/40 text-ink-body/70 rounded hover:bg-gold/10 disabled:opacity-40 whitespace-nowrap"
           >
             {isResearching ? "検索中..." : "再リサーチ"}
           </button>
@@ -436,7 +436,7 @@ function RowActions({
           <button
             disabled={isPending || isResearching}
             onClick={handleResearch}
-            className="text-xs px-2.5 py-1 border border-gold/40 text-ink-body/60 rounded hover:bg-gold/10 disabled:opacity-40 whitespace-nowrap"
+            className="text-xs px-2.5 py-1 border border-gold/40 text-ink-body/70 rounded hover:bg-gold/10 disabled:opacity-40 whitespace-nowrap"
           >
             {isResearching ? "検索中..." : "再リサーチ"}
           </button>
@@ -508,7 +508,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
             className={`px-3 py-1.5 rounded-full border transition-colors ${
               filter === f.key
                 ? "bg-bordeaux text-parchment border-bordeaux"
-                : "border-gold/40 text-ink-body/60 hover:border-gold hover:text-ink-body"
+                : "border-gold/40 text-ink-body/70 hover:border-gold hover:text-ink-body"
             }`}
           >
             {f.label} ({f.count})
@@ -520,7 +520,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
-            <tr className="border-b border-gold/30 text-xs text-ink-body/50 uppercase tracking-wider">
+            <tr className="border-b border-gold/30 text-xs text-ink-body/70 uppercase tracking-wider">
               <th className="text-left py-2 pr-2 font-medium w-36">画像</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[180px]">イベント名 / 説明</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap w-24">日時</th>
@@ -534,7 +534,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-ink-body/40 text-sm">
+                <td colSpan={8} className="text-center py-8 text-ink-body/60 text-sm">
                   該当するレコードはありません
                 </td>
               </tr>
@@ -582,11 +582,11 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   {/* 日時（日付 + 時間を縦並び） */}
                   <td className="py-2.5 pr-2 whitespace-nowrap align-top">
                     {date
-                      ? <span className="block text-ink-body/80 text-xs">{date}</span>
+                      ? <span className="block text-sm text-ink-body">{date}</span>
                       : <Empty label="日付なし" />
                     }
                     {time
-                      ? <span className="block text-ink-body/50 text-xs mt-0.5">{time}</span>
+                      ? <span className="block text-sm text-ink-body/80 mt-0.5">{time}</span>
                       : <span className="block mt-0.5"><Empty label="時間なし" /></span>
                     }
                   </td>
@@ -594,15 +594,15 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   {/* 場所 / 主催（都道府県 + 会場 + 主催者を縦並び） */}
                   <td className="py-2.5 pr-2 align-top">
                     {ev.prefecture
-                      ? <span className="block text-ink-body/50 text-[10px]">{ev.prefecture}</span>
+                      ? <span className="block text-xs text-ink-body/80">{ev.prefecture}</span>
                       : <span className="block"><Empty label="都道府県なし" /></span>
                     }
                     {ev.venue_name
-                      ? <span className="block text-ink-body/80 text-xs leading-snug mt-0.5">{ev.venue_name}</span>
+                      ? <span className="block text-sm text-ink-body leading-snug mt-0.5">{ev.venue_name}</span>
                       : <span className="block mt-0.5"><Empty label="会場なし" /></span>
                     }
                     {ev.organizers?.name && (
-                      <span className="block text-ink-body/40 text-[10px] mt-1 leading-snug">{ev.organizers.name}</span>
+                      <span className="block text-xs text-ink-body/70 mt-1 leading-snug">{ev.organizers.name}</span>
                     )}
                   </td>
 
@@ -612,7 +612,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     {gameTitles.length === 0 && (() => {
                       const reason = ev.event_sources?.[0]?.raw_data?.game_music_reason;
                       return reason ? (
-                        <p className="text-[10px] text-ink-body/35 mt-1 leading-snug max-w-[160px]" title={reason}>
+                        <p className="text-xs text-ink-body/70 mt-1 leading-snug max-w-[160px]" title={reason}>
                           理由: {reason}
                         </p>
                       ) : null;
@@ -640,7 +640,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   {/* 操作 */}
                   <td className="py-2.5 text-right">
                     {researchMsg && (
-                      <div className="text-xs text-ink-body/50 text-right mb-1 leading-tight max-w-[100px] ml-auto">
+                      <div className="text-xs text-ink-body/70 text-right mb-1 leading-tight max-w-[100px] ml-auto">
                         {researchMsg}
                       </div>
                     )}

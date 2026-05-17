@@ -95,7 +95,7 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
             {title}
           </h3>
           {titleEn && (
-            <p className="font-body text-ink-body/70 text-sm italic leading-snug line-clamp-2 -mt-1">
+            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-2 -mt-1">
               {titleEn}
             </p>
           )}
@@ -104,7 +104,7 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-body text-ink-body text-sm shrink-0">{date}</p>
             {prefecture && (
-              <p className="font-body text-ink-body/60 text-sm truncate">{prefecture}</p>
+              <p className="font-body text-ink-body/80 text-sm truncate">{prefecture}</p>
             )}
             {tourCount && tourCount > 1 && tourId && (
               <Link
@@ -124,16 +124,16 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 text-ink-body/40 hover:text-bordeaux transition-colors"
+              className="shrink-0 text-ink-body/60 hover:text-bordeaux transition-colors"
               aria-label="Google マップで見る"
             >
               <MapPin size={13} strokeWidth={1.8} />
             </a>
-            <p className="font-body text-ink-body/70 text-sm truncate">{venue}</p>
+            <p className="font-body text-ink-body/80 text-sm truncate">{venue}</p>
           </div>
 
           {organizer && (
-            <p className="font-body text-ink-body/60 text-sm truncate">{organizer}</p>
+            <p className="font-body text-ink-body/80 text-sm truncate">{organizer}</p>
           )}
         </div>
       </article>

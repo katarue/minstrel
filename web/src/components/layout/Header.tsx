@@ -49,7 +49,7 @@ export default function Header() {
           <Link
             href={pathname}
             locale={otherLocale}
-            className="inline-flex items-center gap-1.5 font-body text-ink-body/60 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2.5 py-1"
+            className="inline-flex items-center gap-1.5 font-body text-ink-body/70 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2.5 py-1"
           >
             <Globe size={12} strokeWidth={1.6} />
             {langLabel}
@@ -93,7 +93,7 @@ export default function Header() {
           <Link
             href={pathname}
             locale={otherLocale}
-            className="font-body text-ink-body/60 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2 py-1 self-start"
+            className="font-body text-ink-body/70 hover:text-bordeaux transition-colors text-xs tracking-wider border border-gold/40 rounded px-2 py-1 self-start"
             onClick={() => setMenuOpen(false)}
           >
             {langLabel}
