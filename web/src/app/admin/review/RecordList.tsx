@@ -462,7 +462,7 @@ function RowActions({
 }
 
 export function RecordList({ events }: { events: EventRecord[] }) {
-  const [filter, setFilter] = useState<Filter>("unpublished");
+  const [filter, setFilter] = useState<Filter>("published");
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [researchMsgs, setResearchMsgs] = useState<Record<string, string>>({});
   const [urlOverrides, setUrlOverrides] = useState<Record<string, string>>({});
@@ -491,8 +491,8 @@ export function RecordList({ events }: { events: EventRecord[] }) {
   });
 
   const filters: { key: Filter; label: string; count: number }[] = [
-    { key: "unpublished", label: "未公開",     count: upcomingUnpublished },
     { key: "published",   label: "公開済み",   count: upcomingPublished },
+    { key: "unpublished", label: "未公開",     count: upcomingUnpublished },
     { key: "upcoming",    label: "全件",       count: upcomingAll },
     { key: "archive",     label: "アーカイブ", count: archiveCount },
   ];
@@ -526,7 +526,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap w-24">日時</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[120px]">場所 / 主催</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[100px]">ゲームタイトル</th>
-              <th className="text-left py-2 pr-2 font-medium min-w-[160px]">説明</th>
+              <th className="text-left py-2 pr-2 font-medium min-w-[100px] max-w-[110px]">説明</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">状態</th>
               <th className="text-right py-2 font-medium">操作</th>
             </tr>
@@ -620,7 +620,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   </td>
 
                   {/* 説明 */}
-                  <td className="py-2.5 pr-2 align-top">
+                  <td className="py-2.5 pr-2 align-top max-w-[110px]">
                     <DescriptionCell description={ev.description} />
                   </td>
 
