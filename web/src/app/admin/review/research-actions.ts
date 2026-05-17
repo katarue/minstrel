@@ -759,20 +759,24 @@ export async function ingestFromUrl(
 
   if (tourResult && tourResult.events.length >= 2) {
     // 複数公演モード
+    console.log("[ingest] tour mode:", tourResult.tour_title, "events:", tourResult.events.length);
+    console.log("[ingest] events sample:", JSON.stringify(tourResult.events.slice(0, 2)));
+
     const organizerId = tourResult.organizer_name
       ? await upsertOrganizer(supabase, tourResult.organizer_name, tourResult.organizer_official_url)
       : null;
 
     let created = 0;
     let skipped = 0;
+    let failed = 0;
 
     for (const ev of tourResult.events) {
-      if (!ev.start_datetime && !ev.venue_name) continue;
+      // venue_name がない場合はスキップ（必須情報として扱う）
+      if (!ev.venue_name) { skipped++; continue; }
 
       // 同名イベント重複チェック
-      const eventName = ev.prefecture
-        ? `${tourResult.tour_title}（${ev.prefecture}）`
-        : `${tourResult.tour_title}（${ev.venue_name}）`;
+      const locationLabel = ev.prefecture ?? ev.venue_name;
+      const eventName = `${tourResult.tour_title}（${locationLabel}）`;
 
       const { data: dupEvent } = await supabase
         .from("events")
@@ -782,7 +786,7 @@ export async function ingestFromUrl(
 
       if (dupEvent?.length) { skipped++; continue; }
 
-      const { data: newEvent } = await supabase.from("events").insert({
+      const { data: newEvent, error: insertErr } = await supabase.from("events").insert({
         event_name: eventName,
         start_datetime: ev.start_datetime ?? null,
         venue_name: ev.venue_name ?? null,
@@ -798,7 +802,11 @@ export async function ingestFromUrl(
         is_canceled: false,
       }).select("id").single();
 
-      if (!newEvent) continue;
+      if (insertErr || !newEvent) {
+        console.error("[ingest] insert failed:", insertErr?.message, "event:", eventName);
+        failed++;
+        continue;
+      }
 
       await supabase.from("event_sources").insert({
         event_id: newEvent.id,
@@ -814,9 +822,10 @@ export async function ingestFromUrl(
     revalidatePath("/admin/review");
     const parts = [
       created > 0 ? `${created}件登録` : null,
-      skipped > 0 ? `${skipped}件スキップ（登録済み）` : null,
+      skipped > 0 ? `${skipped}件スキップ` : null,
+      failed > 0 ? `${failed}件失敗` : null,
     ].filter(Boolean).join("、");
-    return { ok: created > 0, message: parts || "登録できませんでした" };
+    return { ok: created > 0, message: parts || `抽出0件（tour: ${tourResult.tour_title.slice(0, 30)}）` };
   }
 
   // ── 単一イベントモード ───────────────────────────────────────────────────
