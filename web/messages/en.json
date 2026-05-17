@@ -32,7 +32,7 @@
     "empty": "No concerts are currently listed."
   },
   "event": {
-    "backToList": "← Back to list",
+    "backToList": "Back to list",
     "date": "Date",
     "venue": "Venue",
     "organizer": "Organizer",
