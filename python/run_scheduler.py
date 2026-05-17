@@ -38,7 +38,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from flows.flow_collect import collect_flow
 from flows.flow_collect_x import collect_x_flow
-from flows.flow_collect_broadcasts import collect_broadcasts_flow, collect_broadcasts_weekly_flow
 from flows.flow_collect_organizer_x import collect_organizer_x_flow
 from flows.flow_post_weekly import post_friday_flow, post_monday_flow
 
@@ -46,8 +45,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-now", action="store_true", help="チケット収集フロー即時実行")
     parser.add_argument("--run-x", action="store_true", help="X 収集フロー即時実行")
-    parser.add_argument("--run-broadcasts", action="store_true", help="放送収集フロー即時実行（X監視）")
-    parser.add_argument("--run-broadcasts-weekly", action="store_true", help="bangumi.org 週次収集フロー即時実行")
     parser.add_argument("--run-organizer-x", action="store_true", help="演奏団体 X プロフィール収集フロー即時実行")
     parser.add_argument("--run-post-monday", action="store_true", help="月曜投稿フロー即時実行")
     parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
@@ -55,7 +52,6 @@ if __name__ == "__main__":
     parser.add_argument("--run-sync-lists", action="store_true", help="X リスト → trust_tier 同期（即時）")
     parser.add_argument("--serve-scheduled", action="store_true", help="チケット収集フロー: 3日おき09:00 JST")
     parser.add_argument("--serve-x", action="store_true", help="X 収集フロー: 毎日07:00 JST")
-    parser.add_argument("--serve-broadcasts", action="store_true", help="放送収集フロー: 毎日08:00 JST")
     parser.add_argument("--serve-post", action="store_true", help="投稿フロー: 月・金 09:00 JST")
     parser.add_argument("--serve-all", action="store_true", help="全フロー常駐")
     args = parser.parse_args()
@@ -72,21 +68,12 @@ if __name__ == "__main__":
         collect_flow()
     elif args.run_x:
         collect_x_flow()
-    elif args.run_broadcasts:
-        collect_broadcasts_flow()
-    elif args.run_broadcasts_weekly:
-        collect_broadcasts_weekly_flow()
     elif args.run_organizer_x:
         collect_organizer_x_flow()
     elif args.run_post_monday:
         post_monday_flow()
     elif args.run_post_friday:
         post_friday_flow()
-    elif args.serve_broadcasts:
-        collect_broadcasts_flow.serve(
-            name="minstrel-collect-broadcasts-scheduled",
-            schedules=[CronSchedule(cron="0 8 * * *", timezone="Asia/Tokyo")],
-        )
     elif args.serve_scheduled:
         collect_flow.serve(
             name="minstrel-collect-scheduled",
@@ -123,16 +110,6 @@ if __name__ == "__main__":
             collect_x_flow,
             name="minstrel-collect-x-scheduled",
             schedules=[CronSchedule(cron="0 7 * * *", timezone="Asia/Tokyo")],
-        )
-        runner.add_flow(
-            collect_broadcasts_flow,
-            name="minstrel-collect-broadcasts-scheduled",
-            schedules=[CronSchedule(cron="0 8 * * *", timezone="Asia/Tokyo")],
-        )
-        runner.add_flow(
-            collect_broadcasts_weekly_flow,
-            name="minstrel-collect-broadcasts-weekly-scheduled",
-            schedules=[CronSchedule(cron="0 7 */2 * *", timezone="Asia/Tokyo")],
         )
         runner.add_flow(
             collect_organizer_x_flow,

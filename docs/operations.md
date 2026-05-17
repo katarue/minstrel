@@ -51,8 +51,13 @@
 | スクレイパー | 内容 |
 |---|---|
 | `scraper_organizer_x.py` | 演奏団体のXプロフィール画像を更新する（情報収集ではない） |
-| `scraper_bangumi.py` | 番組表.Gガイド（TV・ラジオ放送情報） |
-| `scraper_broadcasts.py` | 放送局公式XアカウントからTV放送情報を収集 |
+
+### 停止中スクレイパー（ファイルは残存・スケジューラーから除外済み）
+
+| スクレイパー | 内容 | 停止理由 |
+|---|---|---|
+| `scraper_bangumi.py` | 番組表.Gガイド（TV・ラジオ放送情報） | 管理負荷削減のため一時停止（2026-05-17） |
+| `scraper_broadcasts.py` | 放送局公式XアカウントからTV放送情報を収集 | 同上 |
 
 ---
 
@@ -83,7 +88,16 @@ DB upsert
 auto_enrich（不足フィールドをweb検索で補完）
 ```
 
-Prefect で定期実行。フロー定義: `python/flows/flow_collect.py`
+Prefect で定期実行（デスクトップ常時稼働）。起動コマンド: `python run_scheduler.py --serve-all`
+
+### スケジュール一覧（現行）
+
+| フロー | 対象 | 頻度 | 時刻 (JST) |
+|---|---|---|---|
+| `flow_collect.py` | チケット6サイト | 3日おき | 09:00 |
+| `flow_collect_x.py` | X検索・フォローリスト | 毎日 | 07:00 |
+| `flow_collect_organizer_x.py` | 演奏団体Xプロフ画像 | 毎月1日 | 06:00 |
+| `flow_post_weekly.py` | X自動投稿（月・金） | 週2回 | 09:00 |
 
 ---
 
