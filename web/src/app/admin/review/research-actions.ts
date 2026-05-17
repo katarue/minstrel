@@ -771,8 +771,8 @@ export async function ingestFromUrl(
     let failed = 0;
 
     for (const ev of tourResult.events) {
-      // venue_name がない場合はスキップ（必須情報として扱う）
-      if (!ev.venue_name) { skipped++; continue; }
+      // DB の NOT NULL 制約: start_datetime / prefecture / venue_name が必須
+      if (!ev.start_datetime || !ev.prefecture || !ev.venue_name) { skipped++; continue; }
 
       // 同名イベント重複チェック
       const locationLabel = ev.prefecture ?? ev.venue_name;
