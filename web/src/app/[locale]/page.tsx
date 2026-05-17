@@ -48,6 +48,7 @@ type LightEvent = {
 };
 
 type CalendarEvent = { id: string; tour_id: string | null; event_name: string; start_datetime: string };
+type TicketSaleEvent = { id: string; tour_id: string | null; event_name: string; source_url: string | null };
 
 function toGenre(val: string | null | undefined): Genre | undefined {
   if (val && (VALID_GENRES as readonly string[]).includes(val)) return val as Genre;
@@ -74,6 +75,7 @@ export default async function Home() {
   let allEvents: LightEvent[] = [];
   let upcomingBroadcasts: BroadcastRow[] = [];
   let calendarEvents: CalendarEvent[] = [];
+  let ticketSaleToday: TicketSaleEvent[] = [];
 
   try {
     const cookieStore = await cookies();
@@ -81,7 +83,7 @@ export default async function Home() {
 
     const broadcastEnd = new Date(nowUtc.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [topResult, allResult, broadcastResult, calendarResult] = await Promise.all([
+    const [topResult, allResult, broadcastResult, calendarResult, ticketSaleResult] = await Promise.all([
       supabase
         .from("events")
         .select(`
@@ -118,6 +120,12 @@ export default async function Home() {
         .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
         .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
         .order("start_datetime", { ascending: true }),
+      supabase
+        .from("events")
+        .select("id, tour_id, event_name, source_url")
+        .eq("is_published", true)
+        .eq("ticket_sale_start", todayJst)
+        .order("event_name", { ascending: true }),
     ]);
 
     if (topResult.error) console.error("Failed to fetch top events:", topResult.error);
@@ -131,6 +139,9 @@ export default async function Home() {
 
     if (!calendarResult.error)
       calendarEvents = (calendarResult.data ?? []) as unknown as CalendarEvent[];
+
+    if (!ticketSaleResult.error)
+      ticketSaleToday = (ticketSaleResult.data ?? []) as unknown as TicketSaleEvent[];
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
@@ -235,6 +246,30 @@ export default async function Home() {
           <HeroSearch />
         </div>
       </section>
+
+      {/* チケット発売バナー */}
+      {ticketSaleToday.length > 0 && (
+        <section className="py-4 border-b border-gold/30 bg-bordeaux/5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="font-heading text-bordeaux font-bold text-sm tracking-wide whitespace-nowrap">
+              🎫 本日チケット発売
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {ticketSaleToday.map((ev) => (
+                <a
+                  key={ev.id}
+                  href={ev.source_url ?? `/tours/${ev.tour_id ?? ev.id}`}
+                  target={ev.source_url ? "_blank" : undefined}
+                  rel={ev.source_url ? "noopener noreferrer" : undefined}
+                  className="font-body text-sm text-bordeaux underline underline-offset-2 hover:text-bordeaux/70 transition-colors"
+                >
+                  {ev.event_name}
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Section 1: 直近6件 */}
       <section className="py-12 border-b border-gold/30">

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName, saveTicketSaleStart } from "./publish-actions";
 import { reresearchEvent, generateDescription } from "./research-actions";
 
 export type EventRecord = {
@@ -13,6 +13,7 @@ export type EventRecord = {
   venue_name: string | null;
   prefecture: string | null;
   description: string | null;
+  ticket_sale_start: string | null;
   source_url: string | null;
   official_url: string | null;
   reference_url: string | null;
@@ -145,6 +146,43 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
           onKeyDown={e => e.key === "Enter" && handleSave()}
           className="flex-1 min-w-0 text-xs bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body/70"
           placeholder="カンマ区切りで入力"
+        />
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-xs text-success shrink-0">✓</span>}
+      </div>
+    </div>
+  );
+}
+
+function TicketSaleDateField({ eventId, initialDate }: { eventId: string; initialDate: string | null }) {
+  const [value, setValue] = useState(initialDate ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== (initialDate ?? "");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveTicketSaleStart(eventId, value);
+      if (res.ok) setSaved(true);
+    });
+
+  return (
+    <div className="mt-1">
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">発売開始日</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="date"
+          value={value}
+          onChange={e => { setValue(e.target.value); setSaved(false); }}
+          className="flex-1 min-w-0 text-sm text-ink-body bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
         />
         {dirty && !saved && (
           <button
@@ -690,6 +728,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       )}
                     </div>
                     <SeriesNameField eventId={ev.id} initialName={ev.series_name} />
+                    <TicketSaleDateField eventId={ev.id} initialDate={ev.ticket_sale_start} />
                     <SourceUrlField
                       eventId={ev.id}
                       initialUrl={ev.source_url}
