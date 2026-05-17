@@ -186,6 +186,18 @@ export async function saveSourceUrl(id: string, url: string): Promise<{ ok: bool
   return { ok: true };
 }
 
+export async function saveSeriesName(id: string, name: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ series_name: name.trim() || null })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  return { ok: true };
+}
+
 export async function saveReferenceUrl(id: string, url: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
   const { error } = await supabase

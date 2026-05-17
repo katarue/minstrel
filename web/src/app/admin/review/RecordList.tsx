@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName } from "./publish-actions";
 import { reresearchEvent, generateDescription } from "./research-actions";
 
 export type EventRecord = {
   id: string;
   event_name: string;
+  series_name: string | null;
   start_datetime: string | null;
   venue_name: string | null;
   prefecture: string | null;
@@ -144,6 +145,45 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
           onKeyDown={e => e.key === "Enter" && handleSave()}
           className="flex-1 min-w-0 text-xs bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 text-ink-body/70"
           placeholder="カンマ区切りで入力"
+        />
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-xs text-success shrink-0">✓</span>}
+      </div>
+    </div>
+  );
+}
+
+function SeriesNameField({ eventId, initialName }: { eventId: string; initialName: string | null }) {
+  const [value, setValue] = useState(initialName ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== (initialName ?? "");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveSeriesName(eventId, value);
+      if (res.ok) setSaved(true);
+    });
+
+  return (
+    <div className="mt-1">
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">イベント名</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="text"
+          value={value}
+          onChange={e => { setValue(e.target.value); setSaved(false); }}
+          onKeyDown={e => e.key === "Enter" && handleSave()}
+          className="flex-1 min-w-0 text-sm text-ink-body bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+          placeholder="例: BRA★BRA FINAL FANTASY 2026"
         />
         {dirty && !saved && (
           <button
@@ -649,6 +689,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                         </span>
                       )}
                     </div>
+                    <SeriesNameField eventId={ev.id} initialName={ev.series_name} />
                     <SourceUrlField
                       eventId={ev.id}
                       initialUrl={ev.source_url}
