@@ -121,6 +121,18 @@ export async function deleteEvent(id: string): Promise<{ ok: boolean; message?: 
   return { ok: true };
 }
 
+export async function saveDescription(id: string, description: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ description: description.trim() || null })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  return { ok: true };
+}
+
 export async function saveOfficialUrl(id: string, url: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
   const { error } = await supabase

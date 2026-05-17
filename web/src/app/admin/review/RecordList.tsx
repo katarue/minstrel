@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription } from "./publish-actions";
 import { reresearchEvent } from "./research-actions";
 
 export type EventRecord = {
@@ -332,12 +332,40 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
   );
 }
 
-function DescriptionCell({ description }: { description: string | null }) {
-  if (!description) return null;
+function DescriptionCell({ eventId, initialDescription }: { eventId: string; initialDescription: string | null }) {
+  const [value, setValue] = useState(initialDescription ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const dirty = value !== (initialDescription ?? "");
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveDescription(eventId, value);
+      if (res.ok) setSaved(true);
+    });
+
   return (
-    <p className="text-xs text-ink-body/80 leading-relaxed whitespace-pre-wrap">
-      {description}
-    </p>
+    <div>
+      <textarea
+        value={value}
+        onChange={e => { setValue(e.target.value); setSaved(false); }}
+        rows={4}
+        className="w-full text-xs text-ink-body/80 bg-transparent border border-gold/30 focus:border-bordeaux outline-none rounded px-1.5 py-1 leading-relaxed resize-y"
+        placeholder="説明文を入力..."
+      />
+      <div className="flex items-center gap-1 mt-0.5">
+        {dirty && !saved && (
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap"
+          >
+            {isPending ? "…" : "保存"}
+          </button>
+        )}
+        {saved && <span className="text-xs text-success">✓</span>}
+      </div>
+    </div>
   );
 }
 
@@ -619,7 +647,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
 
                   {/* 説明 */}
                   <td className="py-2.5 pr-2 align-top min-w-[400px]">
-                    <DescriptionCell description={ev.description} />
+                    <DescriptionCell eventId={ev.id} initialDescription={ev.description} />
                   </td>
 
                   {/* 状態 */}
