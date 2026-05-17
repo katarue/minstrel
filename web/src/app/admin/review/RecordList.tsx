@@ -284,7 +284,7 @@ function ManualImageUrlField({ eventId }: { eventId: string }) {
     startTransition(async () => {
       if (!value.trim()) return;
       const res = await saveImageFromUrl(eventId, value.trim());
-      if (res.ok) { setStatus("ok"); setValue(""); }
+      if (res.ok) { setStatus("ok"); }
       else { setStatus("error"); setErrMsg(res.message ?? "エラー"); }
     });
 
