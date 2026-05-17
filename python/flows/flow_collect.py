@@ -435,6 +435,13 @@ def fetch_ticket_sale_dates() -> int:
     return updated
 
 
+@task
+def fetch_ticket_sale_dates_from_x() -> int:
+    """X（Twitter）の監視アカウント投稿からチケット発売日を取得してDBを更新する。"""
+    from processor.ticket_sale_fetcher import fetch_ticket_sale_dates_from_x as _fetch
+    return _fetch()
+
+
 def _log_run(
     started_at: datetime,
     status: str,
@@ -496,7 +503,10 @@ def collect_flow():
         print(f"igdb covers fetched: {igdb_count}")
 
         ticket_sale_count = fetch_ticket_sale_dates()
-        print(f"ticket sale dates fetched: {ticket_sale_count}")
+        print(f"ticket sale dates fetched (source_url): {ticket_sale_count}")
+
+        ticket_sale_x_count = fetch_ticket_sale_dates_from_x()
+        print(f"ticket sale dates fetched (X): {ticket_sale_x_count}")
 
         _log_run(started_at, "success", scraped_count, inserted_count)
         notify_success(FLOW_NAME, scraped_count, inserted_count)
