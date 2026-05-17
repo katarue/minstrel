@@ -58,6 +58,7 @@
 |---|---|---|
 | `scraper_bangumi.py` | 番組表.Gガイド（TV・ラジオ放送情報） | 管理負荷削減のため一時停止（2026-05-17） |
 | `scraper_broadcasts.py` | 放送局公式XアカウントからTV放送情報を収集 | 同上 |
+| `scraper_organizer_x.py` | 演奏団体のXプロフィール画像取得 | 演奏団体ページ廃止に伴い停止（2026-05-17） |
 
 ---
 
@@ -97,7 +98,6 @@ Prefect で定期実行（デスクトップ常時稼働）。起動コマンド
 |---|---|---|---|
 | `flow_collect.py` | チケット6サイト | 3日おき | 09:00 |
 | `flow_collect_x.py` | X検索・フォローリスト | 毎日 | 07:00 |
-| `flow_collect_organizer_x.py` | 演奏団体Xプロフ画像 | 毎月1日 | 06:00 |
 | `flow_post_weekly.py` | X自動投稿（月） | 月曜 | 09:00 |
 | `flow_post_weekly.py` | X自動投稿（金） | 金曜 | 09:00 |
 <!-- SCHEDULE_TABLE_END -->
@@ -112,8 +112,6 @@ flowchart LR
 3日おき 09:00"] --> DB
     collectxflow["X検索・フォローリスト
 毎日 07:00"] --> DB
-    collectorganizerxflow["演奏団体Xプロフ画像
-毎月1日 06:00"] --> DB
     DB --> postmondayflow["X自動投稿（月）
 月曜 09:00"]
     DB --> postfridayflow["X自動投稿（金）

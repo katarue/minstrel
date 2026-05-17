@@ -15,7 +15,6 @@ export default function Header() {
     { label: t("calendar"), href: "/calendar" },
     { label: t("concerts"), href: "/concerts" },
     { label: t("titles"), href: "/titles" },
-    { label: t("organizers"), href: "/organizers" },
   ];
 
   const otherLocale = locale === "ja" ? "en" : "ja";
