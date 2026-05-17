@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime, timezone, timedelta
 from prefect import flow, task
 from scrapers.scraper_teket import ScraperTeket
@@ -397,6 +398,43 @@ def fetch_missing_igdb_covers() -> int:
     return found
 
 
+@task
+def fetch_ticket_sale_dates() -> int:
+    """ticket_sale_start が未設定の公開済みイベントの発売日を source_url からスクレイピングする。"""
+    from processor.ticket_sale_fetcher import fetch_ticket_sale_date
+
+    db = get_client()
+    result = (
+        db.table("events")
+        .select("id, source_url")
+        .eq("is_published", True)
+        .is_("ticket_sale_start", "null")
+        .not_.is_("source_url", "null")
+        .execute()
+    )
+
+    events = [
+        e for e in (result.data or [])
+        if e.get("source_url") and not e["source_url"].startswith("screenshot:")
+    ]
+    if not events:
+        print("[ticket_sale] No events to process")
+        return 0
+
+    print(f"[ticket_sale] Processing {len(events)} events")
+    updated = 0
+    for event in events:
+        sale_date = fetch_ticket_sale_date(event["source_url"])
+        if sale_date:
+            db.table("events").update({"ticket_sale_start": sale_date}).eq("id", event["id"]).execute()
+            print(f"[ticket_sale] {event['id'][:8]} → {sale_date}")
+            updated += 1
+        time.sleep(0.5)
+
+    print(f"[ticket_sale] updated {updated} / {len(events)} events")
+    return updated
+
+
 def _log_run(
     started_at: datetime,
     status: str,
@@ -456,6 +494,9 @@ def collect_flow():
 
         igdb_count = fetch_missing_igdb_covers()
         print(f"igdb covers fetched: {igdb_count}")
+
+        ticket_sale_count = fetch_ticket_sale_dates()
+        print(f"ticket sale dates fetched: {ticket_sale_count}")
 
         _log_run(started_at, "success", scraped_count, inserted_count)
         notify_success(FLOW_NAME, scraped_count, inserted_count)
