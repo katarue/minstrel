@@ -44,6 +44,23 @@ function formatTime(dt: string | null): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function getDuplicateIds(events: EventRecord[]): Set<string> {
+  const seen = new Map<string, string>();
+  const dupes = new Set<string>();
+  for (const ev of events) {
+    if (!ev.start_datetime) continue;
+    const key = `${ev.event_name}|${ev.start_datetime}|${(ev.venue_name ?? "").replace(/\s/g, "")}`;
+    const prev = seen.get(key);
+    if (prev) {
+      dupes.add(ev.id);
+      dupes.add(prev);
+    } else {
+      seen.set(key, ev.id);
+    }
+  }
+  return dupes;
+}
+
 function getMissingFields(ev: EventRecord): string[] {
   const missing: string[] = [];
   if (!ev.flyer_image_url && !ev.key_visual_url) missing.push("画像");
@@ -518,6 +535,8 @@ export function RecordList({ events }: { events: EventRecord[] }) {
   const [researchMsgs, setResearchMsgs] = useState<Record<string, string>>({});
   const [urlOverrides, setUrlOverrides] = useState<Record<string, string>>({});
 
+  const duplicateIds = getDuplicateIds(events);
+
   // JST での「今日の開始」を算出（本日 00:00 JST）
   const todayJSTStart = (() => {
     const nowJST = new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -592,6 +611,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
             )}
             {filtered.map(ev => {
               const missing = getMissingFields(ev);
+              const isDuplicate = duplicateIds.has(ev.id);
               const date    = formatDate(ev.start_datetime);
               const time       = formatTime(ev.start_datetime);
               const gameTitles = ev.event_game_titles
@@ -603,7 +623,9 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                 <tr
                   key={ev.id}
                   className={`border-b border-gold/15 align-top ${
-                    ev.is_published
+                    isDuplicate
+                      ? "bg-red-50 hover:bg-red-100/60"
+                      : ev.is_published
                       ? "hover:bg-success/5"
                       : missing.length > 0
                       ? "bg-error/[0.03] hover:bg-error/5"
@@ -617,9 +639,16 @@ export function RecordList({ events }: { events: EventRecord[] }) {
 
                   {/* イベント名 + URL + 説明 */}
                   <td className="py-2.5 pr-2">
-                    <p className="font-medium text-ink-heading leading-snug line-clamp-2 text-xs">
-                      {ev.event_name}
-                    </p>
+                    <div className="flex items-start gap-1.5 flex-wrap mb-0.5">
+                      <p className="font-medium text-ink-heading leading-snug line-clamp-2 text-xs">
+                        {ev.event_name}
+                      </p>
+                      {isDuplicate && (
+                        <span className="shrink-0 text-xs font-bold text-white bg-red-600 px-1.5 py-0.5 rounded leading-tight">
+                          ⚠ 重複
+                        </span>
+                      )}
+                    </div>
                     <SourceUrlField
                       eventId={ev.id}
                       initialUrl={ev.source_url}
