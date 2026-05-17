@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription } from "./publish-actions";
-import { reresearchEvent } from "./research-actions";
+import { reresearchEvent, generateDescription } from "./research-actions";
 
 export type EventRecord = {
   id: string;
@@ -335,7 +335,9 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
 function DescriptionCell({ eventId, initialDescription }: { eventId: string; initialDescription: string | null }) {
   const [value, setValue] = useState(initialDescription ?? "");
   const [saved, setSaved] = useState(false);
+  const [genError, setGenError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [isGenerating, startGenerate] = useTransition();
   const dirty = value !== (initialDescription ?? "");
 
   const handleSave = () =>
@@ -344,12 +346,35 @@ function DescriptionCell({ eventId, initialDescription }: { eventId: string; ini
       if (res.ok) setSaved(true);
     });
 
+  const handleGenerate = () => {
+    setGenError("");
+    startGenerate(async () => {
+      const res = await generateDescription(eventId);
+      if (res.ok && res.text) {
+        setValue(res.text);
+        setSaved(false);
+      } else {
+        setGenError(res.message ?? "生成に失敗しました");
+      }
+    });
+  };
+
   return (
     <div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating || isPending}
+          className="text-xs px-2 py-0.5 border border-gold/50 text-ink-body/70 rounded hover:bg-gold/15 hover:text-ink-body disabled:opacity-40 whitespace-nowrap"
+        >
+          {isGenerating ? "生成中..." : "✦ 自動生成"}
+        </button>
+        {genError && <span className="text-xs text-error leading-tight">{genError}</span>}
+      </div>
       <textarea
         value={value}
         onChange={e => { setValue(e.target.value); setSaved(false); }}
-        rows={4}
+        rows={8}
         className="w-full text-xs text-ink-body/80 bg-transparent border border-gold/30 focus:border-bordeaux outline-none rounded px-1.5 py-1 leading-relaxed resize-y"
         placeholder="説明文を入力..."
       />
@@ -357,7 +382,7 @@ function DescriptionCell({ eventId, initialDescription }: { eventId: string; ini
         {dirty && !saved && (
           <button
             onClick={handleSave}
-            disabled={isPending}
+            disabled={isPending || isGenerating}
             className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap"
           >
             {isPending ? "…" : "保存"}

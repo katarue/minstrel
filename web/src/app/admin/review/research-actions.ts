@@ -272,6 +272,50 @@ async function callClaudeWithWebSearch(prompt: string): Promise<string> {
   return resultText;
 }
 
+export async function generateDescription(
+  id: string,
+): Promise<{ ok: boolean; text?: string; message?: string }> {
+  const supabase = createAdminClient();
+
+  const { data: event } = await supabase
+    .from("events")
+    .select(`
+      event_name, venue_name, prefecture, start_datetime,
+      organizers(name),
+      event_game_titles(game_titles(title_name))
+    `)
+    .eq("id", id)
+    .single();
+
+  if (!event) return { ok: false, message: "イベントが見つかりません" };
+
+  const organizer = (event.organizers as unknown as { name: string } | null)?.name ?? "";
+  const gameTitles = (event.event_game_titles as unknown as Array<{ game_titles: { title_name: string } | null }>)
+    .map(e => e.game_titles?.title_name)
+    .filter((t): t is string => !!t);
+
+  const prompt = `コンサート「${event.event_name}」について、公式サイト・X（Twitter）・チケットサイト等をウェブ検索してください。
+
+イベント情報:
+- 会場: ${event.venue_name ?? "不明"}
+- 都道府県: ${event.prefecture ?? "不明"}
+- 主催/演奏団体: ${organizer || "不明"}
+- ゲームタイトル: ${gameTitles.length > 0 ? gameTitles.join("、") : "不明"}
+
+上記の情報をもとに、100〜200字の日本語で簡潔な紹介文を作成してください。
+「どんなコンサートか」「誰が演奏するか」「何の音楽を演奏するか」を中心に、読者が興味を持てる文章にしてください。
+説明文のテキストのみを返してください（JSONや前置きは不要）。`;
+
+  try {
+    const text = await callClaudeWithWebSearch(prompt);
+    const cleaned = text.trim().replace(/^["「]|["」]$/g, "");
+    if (!cleaned) return { ok: false, message: "説明文を生成できませんでした" };
+    return { ok: true, text: cleaned };
+  } catch (err) {
+    return { ok: false, message: `エラー: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
 export async function reresearchEvent(
   id: string,
   overrideUrl?: string,
