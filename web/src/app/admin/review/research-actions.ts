@@ -308,7 +308,7 @@ export async function generateDescription(
 
   try {
     const text = await callClaudeWithWebSearch(prompt);
-    const cleaned = text.trim().replace(/^["「]|["」]$/g, "");
+    const cleaned = text.trim().replace(/^(-{3,}|\*{3,})\s*/g, "").replace(/^["「]|["」]$/g, "");
     if (!cleaned) return { ok: false, message: "説明文を生成できませんでした" };
     return { ok: true, text: cleaned };
   } catch (err) {
