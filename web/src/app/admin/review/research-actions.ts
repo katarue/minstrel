@@ -994,14 +994,15 @@ export async function ingestFromScreenshot(
       continue;
     }
 
-    const locationLabel = perf.prefecture ?? perf.venue_name ?? "";
-    const eventName = isMulti
-      ? `${extracted.event_name}（${locationLabel} ${perf.start_datetime.substring(11, 16)}）`
-      : extracted.event_name;
+    const eventName = extracted.event_name;
 
+    // 重複チェック: タイトル + 日時が一致するものを弾く
     const { data: dupCheck } = await supabase
-      .from("events").select("id").eq("event_name", eventName).limit(1);
-    if (dupCheck?.length) { skipReasons.push(`スキップ（重複: ${eventName.slice(0, 20)}）`); skipped++; continue; }
+      .from("events").select("id")
+      .eq("event_name", eventName)
+      .eq("start_datetime", perf.start_datetime)
+      .limit(1);
+    if (dupCheck?.length) { skipReasons.push(`スキップ（重複: ${eventName.slice(0, 20)} ${perf.start_datetime.substring(0, 16)}）`); skipped++; continue; }
 
     const { data: newEvent, error: insertErr } = await supabase.from("events").insert({
       event_name: eventName,
