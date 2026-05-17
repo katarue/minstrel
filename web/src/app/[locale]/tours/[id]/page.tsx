@@ -50,6 +50,7 @@ type TourEvent = {
   flyer_image_url: string | null;
   key_visual_url: string | null;
   ticket_urls: { primary?: string } | null;
+  source_url: string | null;
   official_url: string | null;
   description: string | null;
   organizers: { name: string; official_site_url: string | null } | null;
@@ -70,7 +71,7 @@ export default async function TourPage({
   const SELECT_FIELDS = `
     id, event_name, event_name_en, start_datetime,
     venue_name, prefecture, flyer_image_url, key_visual_url,
-    ticket_urls, official_url, description,
+    ticket_urls, source_url, official_url, description,
     organizers ( name, official_site_url ),
     event_game_titles ( game_titles ( title_name, english_name ) )
   `;
@@ -190,12 +191,12 @@ export default async function TourPage({
                     </div>
                   </div>
                   {/* 右：チケット・公式サイトボタン */}
-                  {(ev.ticket_urls?.primary || ev.official_url) && (
+                  {(ev.ticket_urls?.primary || ev.source_url || ev.official_url) && (
                     <div className="sm:pl-4 sm:border-l sm:border-gold/20 sm:self-stretch sm:flex sm:items-center">
                       <div className="flex flex-col gap-2 w-full sm:w-auto">
-                        {ev.ticket_urls?.primary && (
+                        {(ev.ticket_urls?.primary ?? ev.source_url) && (
                           <a
-                            href={ev.ticket_urls.primary}
+                            href={(ev.ticket_urls?.primary ?? ev.source_url)!}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-body rounded inline-flex items-center justify-center transition-colors cursor-pointer bg-bordeaux text-parchment hover:bg-bordeaux/80 px-5 py-2.5 text-sm w-full sm:min-w-[9rem]"
