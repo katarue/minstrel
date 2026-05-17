@@ -524,7 +524,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap w-24">日時</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[120px]">場所 / 主催</th>
               <th className="text-left py-2 pr-2 font-medium min-w-[100px]">ゲームタイトル</th>
-              <th className="text-left py-2 pr-2 font-medium min-w-[100px] min-w-[500px]">説明</th>
+              <th className="text-left py-2 pr-2 font-medium min-w-[100px] min-w-[400px]">説明</th>
               <th className="text-left py-2 pr-2 font-medium whitespace-nowrap">状態</th>
               <th className="text-right py-2 font-medium">操作</th>
             </tr>
@@ -618,7 +618,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   </td>
 
                   {/* 説明 */}
-                  <td className="py-2.5 pr-2 align-top min-w-[500px]">
+                  <td className="py-2.5 pr-2 align-top min-w-[400px]">
                     <DescriptionCell description={ev.description} />
                   </td>
 
