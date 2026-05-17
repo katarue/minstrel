@@ -14,4 +14,9 @@ else
     echo "[post-commit] Auto-push failed. Run 'git push origin $branch' manually."
 fi
 
+# [decision] タグ検出 → GitHub Issue 自動起票
+if [ -f "$HOME/.claude/hooks/decision-issue.sh" ]; then
+    sh "$HOME/.claude/hooks/decision-issue.sh"
+fi
+
 exit 0
