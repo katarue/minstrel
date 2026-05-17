@@ -35,37 +35,35 @@ export async function publishEvent(id: string): Promise<{ ok: boolean; message?:
   if (target?.start_datetime) {
     const dateStr = target.start_datetime.substring(0, 10);
 
-    // チェック1: 同名+同日
+    // チェック1: 同名+同日時
     if (target.event_name) {
       const { data: nameMatch } = await supabase
         .from("events")
         .select("id, event_name")
         .eq("event_name", target.event_name)
         .eq("is_published", true)
-        .gte("start_datetime", `${dateStr}T00:00:00+00:00`)
-        .lt("start_datetime", `${dateStr}T23:59:59+00:00`)
+        .eq("start_datetime", target.start_datetime)
         .neq("id", id)
         .limit(1);
       if (nameMatch && nameMatch.length > 0) {
-        return { ok: false, message: `同名・同日のイベントが既に公開されています:「${nameMatch[0].event_name}」` };
+        return { ok: false, message: `同名・同日時のイベントが既に公開されています:「${nameMatch[0].event_name}」` };
       }
     }
 
-    // チェック2: 同会場+同日（会場名スペース除去後に一致）
+    // チェック2: 同会場+同日時（会場名スペース除去後に一致）
     if (target.venue_name) {
       const normalize = (s: string) => s.replace(/\s/g, "");
-      const { data: sameDay } = await supabase
+      const { data: sameSlot } = await supabase
         .from("events")
         .select("id, event_name, venue_name")
         .eq("is_published", true)
-        .gte("start_datetime", `${dateStr}T00:00:00+00:00`)
-        .lt("start_datetime", `${dateStr}T23:59:59+00:00`)
+        .eq("start_datetime", target.start_datetime)
         .neq("id", id);
-      const venueMatch = (sameDay ?? []).find(
+      const venueMatch = (sameSlot ?? []).find(
         (ev) => ev.venue_name && normalize(ev.venue_name) === normalize(target.venue_name!)
       );
       if (venueMatch) {
-        return { ok: false, message: `同日・同会場のイベントが既に公開されています:「${venueMatch.event_name}」` };
+        return { ok: false, message: `同日時・同会場のイベントが既に公開されています:「${venueMatch.event_name}」` };
       }
     }
 
