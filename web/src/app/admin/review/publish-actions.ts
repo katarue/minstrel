@@ -188,13 +188,31 @@ export async function saveSourceUrl(id: string, url: string): Promise<{ ok: bool
 
 export async function saveSeriesName(id: string, name: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
+  const trimmed = name.trim() || null;
+
+  // series_name が設定される場合、同名の既存イベントから tour_id を探して統一する
+  let tourId: string | null = null;
+  if (trimmed) {
+    const { data: siblings } = await supabase
+      .from("events")
+      .select("tour_id")
+      .eq("series_name", trimmed)
+      .not("tour_id", "is", null)
+      .limit(1);
+    tourId = siblings?.[0]?.tour_id ?? crypto.randomUUID();
+
+    // 同じ series_name を持つ全イベントに同一 tour_id を付与
+    await supabase.from("events").update({ tour_id: tourId }).eq("series_name", trimmed);
+  }
+
   const { error } = await supabase
     .from("events")
-    .update({ series_name: name.trim() || null })
+    .update({ series_name: trimmed, ...(trimmed ? { tour_id: tourId } : {}) })
     .eq("id", id);
 
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/review");
+  revalidatePath("/");
   return { ok: true };
 }
 
