@@ -543,26 +543,16 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     <p className="font-medium text-ink-heading leading-snug line-clamp-2 text-xs">
                       {ev.event_name}
                     </p>
-                    {!ev.is_published ? (
-                      <>
-                        <SourceUrlField
-                          eventId={ev.id}
-                          initialUrl={ev.source_url}
-                          onValueChange={url => setUrlOverrides(prev => ({ ...prev, [ev.id]: url }))}
-                        />
-                        <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
-                        <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
-                        {!ev.flyer_image_url && !ev.key_visual_url && (
-                          <ManualImageUrlField eventId={ev.id} />
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <SourceUrlField eventId={ev.id} initialUrl={ev.source_url} />
-                        <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
-                        <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
-                      </>
-                    )}
+                    <>
+                      <SourceUrlField
+                        eventId={ev.id}
+                        initialUrl={ev.source_url}
+                        onValueChange={url => setUrlOverrides(prev => ({ ...prev, [ev.id]: url }))}
+                      />
+                      <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
+                      <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
+                      <ManualImageUrlField eventId={ev.id} />
+                    </>
                   </td>
 
                   {/* 日付 */}
