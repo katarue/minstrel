@@ -8,16 +8,14 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 def enrich_event_fields(event_name: str, organizer: str = "") -> dict:
     """Claude web search でイベントの不足フィールドを補完する。
-    Returns dict with keys: game_titles, venue_name, prefecture, start_time
+    Returns dict with keys: venue_name, prefecture, start_time
+    Note: game_titles はスクレイパー抽出・手動入力のみ。web検索では補完しない。
     """
     org_str = f"（主催: {organizer}）" if organizer else ""
     prompt = f"""コンサート「{event_name}」{org_str}について、公式サイト・X（Twitter）・チケットサイト等をウェブ検索して以下の情報を収集してください。
 
-ゲームタイトルは「最初にゲームとしてリリースされたタイトルのみ」（ビジュアルノベル含む。アニメ・漫画原作は除く）。シリーズ名で統一すること。
-
 以下のJSON形式のみで返してください：
 {{
-  "game_titles": ["タイトル1", "タイトル2"],
   "venue_name": "会場名 または null",
   "prefecture": "都道府県名（例: 東京都）または null",
   "start_time": "HH:MM または null"

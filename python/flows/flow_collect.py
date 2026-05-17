@@ -325,14 +325,10 @@ def auto_enrich() -> int:
 
     enriched = 0
     for event in events:
-        needs_venue  = not event.get("venue_name")
-        needs_pref   = not event.get("prefecture")
-        has_titles   = bool(
-            db.table("event_game_titles").select("event_id").eq("event_id", event["id"]).limit(1).execute().data
-        )
-        needs_titles = not has_titles
+        needs_venue = not event.get("venue_name")
+        needs_pref  = not event.get("prefecture")
 
-        if not needs_venue and not needs_pref and not needs_titles:
+        if not needs_venue and not needs_pref:
             continue
 
         organizer = ""
@@ -351,11 +347,6 @@ def auto_enrich() -> int:
             updates["prefecture"] = enriched_data["prefecture"]
         if updates:
             db.table("events").update(updates).eq("id", event["id"]).execute()
-
-        if needs_titles and enriched_data.get("game_titles"):
-            save_game_titles(db, event["id"], enriched_data["game_titles"])
-
-        if updates or (needs_titles and enriched_data.get("game_titles")):
             enriched += 1
             print(f"[enrich] done: {event['event_name'][:40]} fields={list(updates.keys())}")
 
