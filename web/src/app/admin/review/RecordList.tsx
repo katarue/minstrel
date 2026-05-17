@@ -274,8 +274,8 @@ function SourceUrlField({
   );
 }
 
-function ManualImageUrlField({ eventId }: { eventId: string }) {
-  const [value, setValue] = useState("");
+function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initialUrl?: string | null }) {
+  const [value, setValue] = useState(initialUrl ?? "");
   const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
   const [errMsg, setErrMsg] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -551,7 +551,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       />
                       <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
                       <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
-                      <ManualImageUrlField eventId={ev.id} />
+                      <ManualImageUrlField eventId={ev.id} initialUrl={ev.flyer_image_url} />
                     </>
                   </td>
 
