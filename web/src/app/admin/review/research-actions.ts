@@ -968,6 +968,8 @@ export async function ingestFromScreenshot(
     return { ok: false, message: "画像から情報を抽出できませんでした" };
   }
 
+  console.log("[screenshot] extracted:", JSON.stringify(extracted, null, 2));
+
   const organizerId = extracted.organizer_name
     ? await upsertOrganizer(supabase, extracted.organizer_name, extracted.organizer_official_url)
     : null;
@@ -978,9 +980,19 @@ export async function ingestFromScreenshot(
   let created = 0;
   let skipped = 0;
   let failed = 0;
+  const skipReasons: string[] = [];
 
   for (const perf of extracted.performances) {
-    if (!perf.start_datetime || !perf.prefecture || !perf.venue_name) { skipped++; continue; }
+    if (!perf.start_datetime || !perf.prefecture || !perf.venue_name) {
+      const missing = [
+        !perf.start_datetime && "日時",
+        !perf.prefecture && "都道府県",
+        !perf.venue_name && "会場名",
+      ].filter(Boolean).join("・");
+      skipReasons.push(`スキップ（${missing}なし）`);
+      skipped++;
+      continue;
+    }
 
     const locationLabel = perf.prefecture ?? perf.venue_name ?? "";
     const eventName = isMulti
@@ -989,7 +1001,7 @@ export async function ingestFromScreenshot(
 
     const { data: dupCheck } = await supabase
       .from("events").select("id").eq("event_name", eventName).limit(1);
-    if (dupCheck?.length) { skipped++; continue; }
+    if (dupCheck?.length) { skipReasons.push(`スキップ（重複: ${eventName.slice(0, 20)}）`); skipped++; continue; }
 
     const { data: newEvent, error: insertErr } = await supabase.from("events").insert({
       event_name: eventName,
@@ -1029,8 +1041,9 @@ export async function ingestFromScreenshot(
     skipped > 0 ? `${skipped}件スキップ` : null,
     failed > 0 ? `${failed}件失敗` : null,
   ].filter(Boolean).join("、");
+  const detail = skipReasons.length > 0 ? ` / ${skipReasons.join(" / ")}` : "";
   return {
     ok: created > 0,
-    message: parts || `抽出できませんでした（${extracted.event_name.slice(0, 20)}）`,
+    message: (parts || `抽出できませんでした（${extracted.event_name.slice(0, 20)}）`) + detail,
   };
 }
