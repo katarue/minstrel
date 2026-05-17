@@ -575,7 +575,7 @@ async function upsertOrganizer(
   return existing?.id ?? (
     await supabase.from("organizers").insert({
       name,
-      official_url: officialUrl ?? null,
+      official_site_url: officialUrl ?? null,
     }).select("id").single()
   ).data?.id ?? null;
 }
@@ -793,7 +793,7 @@ export async function ingestFromUrl(
         prefecture: ev.prefecture ?? null,
         organizer_id: organizerId,
         official_url: tourResult.organizer_official_url ?? null,
-        ticket_url: ev.ticket_url ?? null,
+        ticket_urls: ev.ticket_url ? { primary: ev.ticket_url } : null,
         source_url: trimmedUrl,
         description: tourResult.description ?? null,
         source_rank: "A",
@@ -848,7 +848,7 @@ export async function ingestFromUrl(
       prefecture: extracted.prefecture ?? null,
       organizer_id: organizerId,
       official_url: extracted.organizer_official_url ?? null,
-      ticket_url: extracted.ticket_url ?? null,
+      ticket_urls: extracted.ticket_url ? { primary: extracted.ticket_url } : null,
       source_url: trimmedUrl,
       description: extracted.description ?? null,
       source_rank: "A",
