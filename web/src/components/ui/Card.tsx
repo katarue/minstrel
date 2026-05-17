@@ -84,10 +84,10 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
         {/* 情報エリア */}
         <div className="p-4 flex flex-col gap-2">
           {gameTitles && gameTitles.length > 0 && (
-            <span className="inline-flex items-center gap-1 self-start bg-bordeaux text-white font-body text-xs font-medium px-2 py-0.5 rounded max-w-full">
+            <span className="inline-flex items-center gap-1 self-start bg-white border border-bordeaux text-bordeaux font-body text-sm font-medium px-2 py-0.5 rounded max-w-full">
               <span className="truncate">{gameTitles[0]}</span>
               {gameTitles.length > 1 && (
-                <span className="opacity-80 shrink-0">+{gameTitles.length - 1}</span>
+                <span className="shrink-0">+{gameTitles.length - 1}</span>
               )}
             </span>
           )}
