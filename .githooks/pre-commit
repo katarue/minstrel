@@ -46,4 +46,21 @@ if [ "$blocked" = "1" ]; then
   exit 1
 fi
 
+# operations.md 自動更新（run_scheduler.py からスケジュール表・Mermaid図を再生成）
+REPO_ROOT=$(git rev-parse --show-toplevel)
+VENV_PYTHON="$REPO_ROOT/python/.venv/Scripts/python"
+GEN_SCRIPT="$REPO_ROOT/python/scripts/gen_operations_doc.py"
+
+if [ -f "$VENV_PYTHON" ]; then
+  GEN_PYTHON="$VENV_PYTHON"
+else
+  GEN_PYTHON="python"
+fi
+
+if "$GEN_PYTHON" "$GEN_SCRIPT" 2>&1; then
+  git add "$REPO_ROOT/docs/operations.md"
+else
+  echo "[pre-commit] operations.md の自動更新に失敗しました（コミットは続行します）"
+fi
+
 exit 0
