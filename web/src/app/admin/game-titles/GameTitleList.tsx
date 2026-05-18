@@ -217,6 +217,14 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
                 {t.english_name && t.english_name !== t.title_name && (
                   <span className="text-xs text-ink-body/50">{t.english_name}</span>
                 )}
+                <a
+                  href={`https://www.amazon.co.jp/s?k=${encodeURIComponent((t.english_name || t.title_name) + " サウンドトラック")}&tag=k0642-22`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-xs text-ink-body/30 hover:text-bordeaux border border-transparent hover:border-bordeaux/20 px-2 py-0.5 rounded transition-colors"
+                >
+                  Amazon で検索 →
+                </a>
                 <DeleteButton id={t.id} name={t.title_name} />
               </div>
 
