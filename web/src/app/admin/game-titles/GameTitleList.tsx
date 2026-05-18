@@ -107,6 +107,41 @@ function EditableField({
   );
 }
 
+function KeyVisualUrlField({ id, initialUrl }: { id: string; initialUrl: string | null }) {
+  const [value, setValue] = useState(initialUrl ?? "");
+  const [pending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
+
+  const isDirty = value !== (initialUrl ?? "");
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-ink-body/40 shrink-0">画像URL:</span>
+      <input
+        className="text-xs border-b border-gold/40 bg-transparent flex-1 min-w-0 py-0.5 focus:outline-none focus:border-bordeaux/60 text-ink-body/70"
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setSaved(false); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && isDirty) {
+            startTransition(async () => { await saveGameTitle(id, { key_visual_url: value }); setSaved(true); });
+          }
+        }}
+        placeholder="画像URLを貼り付け..."
+      />
+      {isDirty && !saved && (
+        <button
+          disabled={pending}
+          onClick={() => startTransition(async () => { await saveGameTitle(id, { key_visual_url: value }); setSaved(true); })}
+          className="shrink-0 text-bordeaux/60 hover:text-bordeaux underline underline-offset-2 disabled:opacity-50"
+        >
+          保存
+        </button>
+      )}
+      {saved && <span className="text-ink-body/40 shrink-0">✓</span>}
+    </div>
+  );
+}
+
 function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string | null }) {
   const [input, setInput] = useState(existingAsin ?? "");
   const [preview, setPreview] = useState<{ asin: string; imageUrl: string | null; affiliateUrl: string } | null>(null);
@@ -243,16 +278,7 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
                 value={t.series_name}
                 onSave={(v) => saveGameTitle(t.id, { series_name: v }).then(() => {})}
               />
-              <EditableField
-                label="パブリッシャー"
-                value={t.publisher}
-                onSave={(v) => saveGameTitle(t.id, { publisher: v }).then(() => {})}
-              />
-              <EditableField
-                label="画像URL"
-                value={t.key_visual_url}
-                onSave={(v) => saveGameTitle(t.id, { key_visual_url: v }).then(() => {})}
-              />
+              <KeyVisualUrlField id={t.id} initialUrl={t.key_visual_url} />
 
               <div className="flex items-center gap-3 text-xs pt-0.5">
                 {t.amazon_asin ? (
