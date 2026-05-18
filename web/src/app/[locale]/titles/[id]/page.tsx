@@ -1,18 +1,20 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { formatDateFull } from "@/utils/formatDate";
+import { TitleCoverImage } from "../TitleCoverImage";
 
 type GameTitleDetail = {
   id: string;
   title_name: string;
   english_name: string | null;
   series_name: string | null;
-  publisher: string | null;
+  amazon_asin: string | null;
+  key_visual_url: string | null;
   igdb_cover_url: string | null;
+  amazon_affiliate_url: string | null;
 };
 type EventRow = { id: string; tour_id: string | null; event_name: string; start_datetime: string; venue_name: string; prefecture: string };
 
@@ -26,7 +28,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
 
   const { data: titleData, error: titleError } = await supabase
     .from("game_titles")
-    .select("id, title_name, english_name, series_name, publisher, igdb_cover_url")
+    .select("id, title_name, english_name, series_name, amazon_asin, key_visual_url, igdb_cover_url, amazon_affiliate_url")
     .eq("id", id)
     .single();
   if (titleError || !titleData) notFound();
@@ -47,6 +49,9 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
     .flatMap((link) => { const e = link.events; if (!e) return []; return Array.isArray(e) ? e : [e]; })
     .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime));
 
+  const affiliateUrl = title.amazon_affiliate_url
+    ?? (title.amazon_asin ? `https://www.amazon.co.jp/dp/${title.amazon_asin}?tag=k0642-22` : null);
+
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-8 py-12">
       <Link
@@ -60,36 +65,26 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
         className="bg-parchment-dark rounded-md overflow-hidden flex flex-col sm:flex-row gap-0 mb-8"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
       >
-        {title.igdb_cover_url && (
-          <div className="relative w-full sm:w-36 aspect-[3/4] sm:aspect-auto shrink-0">
-            <Image
-              src={title.igdb_cover_url}
-              alt={displayName}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, 144px"
-              priority
-            />
-          </div>
-        )}
+        <div className="relative w-full sm:w-36 aspect-[3/4] shrink-0">
+          <TitleCoverImage
+            asin={title.amazon_asin}
+            keyVisualUrl={title.key_visual_url}
+            igdbUrl={title.igdb_cover_url}
+            alt={displayName}
+          />
+        </div>
         <div className="p-6 md:p-8 flex flex-col gap-4 justify-center">
           <h1 className="font-heading text-ink-heading text-2xl md:text-3xl font-bold leading-snug">
             {displayName}
           </h1>
-          <dl className="flex flex-col gap-3">
-            {title.series_name && (
+          {title.series_name && (
+            <dl className="flex flex-col gap-3">
               <div className="flex flex-col gap-0.5">
                 <dt className="font-body text-ink-body/60 text-xs tracking-wide">{t("series")}</dt>
                 <dd className="font-body text-ink-body text-base">{title.series_name}</dd>
               </div>
-            )}
-            {title.publisher && (
-              <div className="flex flex-col gap-0.5">
-                <dt className="font-body text-ink-body/60 text-xs tracking-wide">{t("publisher")}</dt>
-                <dd className="font-body text-ink-body text-base">{title.publisher}</dd>
-              </div>
-            )}
-          </dl>
+            </dl>
+          )}
         </div>
       </div>
 
@@ -117,6 +112,24 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
           </div>
         )}
       </section>
+
+      {affiliateUrl && (
+        <div className="mt-8 border-t border-gold/30 pt-6">
+          <a
+            href={affiliateUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square max-w-[200px] mx-auto"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/amazon-image?asin=${title.amazon_asin}`}
+              alt={displayName}
+              className="w-full h-full object-cover"
+            />
+          </a>
+        </div>
+      )}
     </div>
   );
 }
