@@ -57,7 +57,11 @@ export default function JapanMapSection({ regionCounts, locale }: Props) {
                 className={`font-heading text-base font-semibold leading-tight ${count > 0 ? "" : "text-ink-body/40"}`}
                 style={count > 0 ? { color: REGION_COLORS[region] } : undefined}
               >
-                {locale === "en" ? REGION_EN[region] : region}
+                {locale === "en"
+                  ? REGION_EN[region].includes("/")
+                    ? <>{REGION_EN[region].split("/")[0]}/<br />{REGION_EN[region].split("/")[1]}</>
+                    : REGION_EN[region]
+                  : region}
               </p>
               <p className={`mt-0.5 ${count > 0 ? "" : "text-ink-body/30"}`}>
                 <span
