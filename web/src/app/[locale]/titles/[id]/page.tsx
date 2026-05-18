@@ -143,13 +143,13 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
             href={affiliateUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square max-w-[400px] mx-auto"
+            className="relative block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square max-w-[400px] mx-auto"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/amazon-image?asin=${title.amazon_asin}`}
+            <TitleCoverImage
+              asin={title.amazon_asin}
+              keyVisualUrl={title.key_visual_url}
+              igdbUrl={title.igdb_cover_url}
               alt={displayName}
-              className="w-full h-full object-cover"
             />
           </a>
         </div>
