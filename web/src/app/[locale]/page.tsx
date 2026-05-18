@@ -48,7 +48,7 @@ type LightEvent = {
   }>;
 };
 
-type CalendarEvent = { id: string; tour_id: string | null; event_name: string; start_datetime: string };
+type CalendarEvent = { id: string; tour_id: string | null; event_name: string; event_name_en: string | null; start_datetime: string };
 type TicketSaleEvent = { id: string; tour_id: string | null; event_name: string; source_url: string | null };
 
 function toGenre(val: string | null | undefined): Genre | undefined {
@@ -116,7 +116,7 @@ export default async function Home() {
         .limit(3),
       supabase
         .from("events")
-        .select("id, tour_id, event_name, start_datetime")
+        .select("id, tour_id, event_name, event_name_en, start_datetime")
         .eq("is_published", true)
         .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
         .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
@@ -205,7 +205,7 @@ export default async function Home() {
   }
 
   // Section 4: events per day for full calendar grid
-  const eventsByDay: Record<number, { id: string; tour_id: string | null; event_name: string }[]> = {};
+  const eventsByDay: Record<number, { id: string; tour_id: string | null; event_name: string; event_name_en: string | null }[]> = {};
   for (const ev of calendarEvents) {
     const evJst = new Date(new Date(ev.start_datetime).getTime() + 9 * 60 * 60 * 1000);
     const day = evJst.getUTCDate();
@@ -411,8 +411,8 @@ export default async function Home() {
                       {(eventsByDay[day] ?? []).map((ev) => (
                         <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
                           className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug truncate transition-colors"
-                          title={ev.event_name}>
-                          {ev.event_name}
+                          title={locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}>
+                          {locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}
                         </Link>
                       ))}
                     </div>
