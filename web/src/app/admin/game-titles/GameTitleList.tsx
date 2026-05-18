@@ -16,6 +16,7 @@ export type GameTitle = {
   amazon_asin: string | null;
   amazon_image_url: string | null;
   amazon_affiliate_url: string | null;
+  event_count: number;
 };
 
 function CoverImage({ url, fallbackUrl, alt }: { url: string | null; fallbackUrl?: string | null; alt: string }) {
@@ -266,6 +267,13 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
                     {t.igdb_cover_url ? "✓ IGDB画像あり" : "△ 画像なし"}
                   </span>
                 )}
+              </div>
+
+              <div className="text-xs pt-0.5">
+                <span className="text-ink-body/40">イベント紐付け: </span>
+                <span className={t.event_count === 0 ? "text-red-500 font-semibold" : "text-ink-body/60"}>
+                  {t.event_count} 件
+                </span>
               </div>
 
               <AsinInputPanel id={t.id} existingAsin={t.amazon_asin} />
