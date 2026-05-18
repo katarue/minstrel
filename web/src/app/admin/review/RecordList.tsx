@@ -411,7 +411,7 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
           className="flex-1 min-w-0 text-sm text-bordeaux/90 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
           placeholder="画像URLを貼り付け..."
         />
-        {value.trim() && status === "idle" && (
+        {value.trim() && value !== (initialUrl ?? "") && status === "idle" && (
           <button
             onClick={handleSave}
             disabled={isPending}
