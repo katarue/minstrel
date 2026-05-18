@@ -297,8 +297,7 @@ export default async function Home() {
                 return (
                   <Card
                     key={ev.id}
-                    title={ev.event_name}
-                    titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
+                    title={locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}
                     date={dateDisplay}
                     venue={(locale === "en" && ev.venue_name_en ? ev.venue_name_en : ev.venue_name) ?? "—"}
                     prefecture={(locale === "en" ? (prefectureEn(ev.prefecture) ?? ev.prefecture) : ev.prefecture) ?? undefined}

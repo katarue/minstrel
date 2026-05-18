@@ -275,8 +275,7 @@ export default async function ConcertsPage({
                   return (
                     <Card
                       key={event.id}
-                      title={event.event_name}
-                      titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
+                      title={locale === "en" ? (event.event_name_en ?? event.event_name) : event.event_name}
                       date={dateDisplay}
                       venue={(locale === "en" && event.venue_name_en ? event.venue_name_en : event.venue_name) ?? "—"}
                       prefecture={(locale === "en" ? (prefectureEn(event.prefecture) ?? event.prefecture) : event.prefecture) ?? undefined}
