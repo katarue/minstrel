@@ -21,13 +21,13 @@ export type GameTitle = {
 function CoverImage({ url, alt }: { url: string | null; alt: string }) {
   if (!url) {
     return (
-      <div className="w-16 h-20 bg-parchment-dark border border-gold/20 rounded flex items-center justify-center shrink-0">
+      <div className="w-32 h-40 bg-parchment-dark border border-gold/20 rounded flex items-center justify-center shrink-0">
         <span className="text-ink-body/30 text-xs">No image</span>
       </div>
     );
   }
   return (
-    <div className="w-16 h-20 relative shrink-0 rounded overflow-hidden border border-gold/20">
+    <div className="w-32 h-40 relative shrink-0 rounded overflow-hidden border border-gold/20">
       <Image src={url} alt={alt} fill className="object-cover" unoptimized />
     </div>
   );
@@ -204,7 +204,9 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
   return (
     <div className="space-y-2">
       {titles.map((t) => {
-        const displayImage = t.amazon_image_url ?? t.igdb_cover_url ?? t.key_visual_url;
+        const displayImage = t.amazon_asin
+          ? `/api/amazon-image?asin=${t.amazon_asin}`
+          : t.key_visual_url;
         return (
           <div
             key={t.id}
