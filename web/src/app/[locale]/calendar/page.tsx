@@ -1,21 +1,23 @@
 import { cookies } from "next/headers";
-import { getTranslations, getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { Link } from "@/i18n/navigation";
 import CalendarNav from "./CalendarNav";
 
 export default async function CalendarPage({
+  params: routeParams,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ year?: string; month?: string }>;
 }) {
-  const params = await searchParams;
+  const { locale } = await routeParams;
+  const sp = await searchParams;
   const now = new Date();
-  const year = parseInt(params.year ?? String(now.getFullYear()), 10);
-  const month = parseInt(params.month ?? String(now.getMonth() + 1), 10);
+  const year = parseInt(sp.year ?? String(now.getFullYear()), 10);
+  const month = parseInt(sp.month ?? String(now.getMonth() + 1), 10);
 
   const t = await getTranslations("calendar");
-  const locale = await getLocale();
   const days = t.raw("days") as string[];
 
   const monthStart = new Date(Date.UTC(year, month - 1, 1));
