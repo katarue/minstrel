@@ -19,9 +19,24 @@ export type GameTitle = {
 };
 
 function CoverImage({ url, fallbackUrl, alt }: { url: string | null; fallbackUrl?: string | null; alt: string }) {
-  const [errored, setErrored] = useState(false);
-  useEffect(() => { setErrored(false); }, [url]);
-  const effectiveUrl = errored ? (fallbackUrl ?? null) : url;
+  const [primaryErrored, setPrimaryErrored] = useState(false);
+  const [fallbackErrored, setFallbackErrored] = useState(false);
+
+  useEffect(() => { setPrimaryErrored(false); setFallbackErrored(false); }, [url]);
+
+  let effectiveUrl: string | null;
+  if (!primaryErrored) {
+    effectiveUrl = url;
+  } else if (!fallbackErrored && fallbackUrl) {
+    effectiveUrl = fallbackUrl;
+  } else {
+    effectiveUrl = null;
+  }
+
+  const handleError = () => {
+    if (!primaryErrored) setPrimaryErrored(true);
+    else setFallbackErrored(true);
+  };
 
   if (!effectiveUrl) {
     return (
@@ -33,7 +48,7 @@ function CoverImage({ url, fallbackUrl, alt }: { url: string | null; fallbackUrl
   return (
     <div className="w-32 h-40 shrink-0 rounded overflow-hidden border border-gold/20">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={effectiveUrl} alt={alt} className="w-full h-full object-cover" onError={() => setErrored(true)} />
+      <img src={effectiveUrl} alt={alt} className="w-full h-full object-cover" onError={handleError} />
     </div>
   );
 }
