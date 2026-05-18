@@ -9,17 +9,24 @@ export async function GET(request: NextRequest) {
   const url = `https://m.media-amazon.com/images/P/${asin.toUpperCase()}.09.LZZZZZZZ.jpg`;
   try {
     const res = await fetch(url);
-    if (!res.ok) return new NextResponse("Not found", { status: 404 });
     const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.startsWith("image/")) return new NextResponse("Not an image", { status: 404 });
     const buffer = await res.arrayBuffer();
+    console.log(`[amazon-image] ASIN=${asin} status=${res.status} content-type="${contentType}" bytes=${buffer.byteLength}`);
+    if (!res.ok) return new NextResponse("Not found", { status: 404 });
+    if (!contentType.startsWith("image/")) return new NextResponse("Not an image", { status: 404 });
+    // Reject suspiciously small images (likely 1x1 transparent placeholders, typically < 200 bytes)
+    if (buffer.byteLength < 200) {
+      console.log(`[amazon-image] ASIN=${asin} rejected: too small (${buffer.byteLength} bytes)`);
+      return new NextResponse("Not found", { status: 404 });
+    }
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": "image/jpeg",
         "Cache-Control": "public, max-age=86400",
       },
     });
-  } catch {
+  } catch (err) {
+    console.error(`[amazon-image] ASIN=${asin} error:`, err);
     return new NextResponse("Error", { status: 500 });
   }
 }
