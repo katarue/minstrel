@@ -14,18 +14,32 @@ export async function deleteGameTitle(id: string): Promise<{ ok: boolean; messag
 
 export async function searchAmazonForTitle(
   gameTitle: string
-): Promise<{ ok: boolean; items?: AmazonItem[]; message?: string }> {
+): Promise<{ ok: boolean; items?: AmazonItem[]; message?: string; debug?: Record<string, unknown> }> {
   const accessKey  = process.env.AMAZON_ACCESS_KEY_ID;
   const secretKey  = process.env.AMAZON_SECRET_ACCESS_KEY;
   const partnerTag = process.env.AMAZON_PARTNER_TAG;
   if (!accessKey || !secretKey || !partnerTag) {
-    return { ok: false, message: "Amazon PA API の環境変数が未設定です" };
+    return {
+      ok: false,
+      message: "Amazon PA API の環境変数が未設定です",
+      debug: {
+        hasAccessKey: !!accessKey,
+        hasSecretKey: !!secretKey,
+        hasPartnerTag: !!partnerTag,
+      },
+    };
   }
+  const debug = {
+    accessKeyPrefix: accessKey.slice(0, 4),
+    accessKeyLength: accessKey.length,
+    secretKeyLength: secretKey.length,
+    partnerTag,
+  };
   try {
     const items = await searchAmazonSoundtrack(gameTitle, accessKey, secretKey, partnerTag);
     return { ok: true, items };
   } catch (e) {
-    return { ok: false, message: String(e) };
+    return { ok: false, message: String(e), debug };
   }
 }
 

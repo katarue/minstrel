@@ -116,7 +116,11 @@ function AmazonSearchPanel({ id, titleName }: { id: string; titleName: string })
     setOpen(true);
     startSearch(async () => {
       const res = await searchAmazonForTitle(titleName);
-      if (!res.ok) { setError(res.message ?? "エラー"); return; }
+      if (!res.ok) {
+        const debugInfo = res.debug ? ` [debug: ${JSON.stringify(res.debug)}]` : "";
+        setError((res.message ?? "エラー") + debugInfo);
+        return;
+      }
       setResults(res.items ?? []);
     });
   }
