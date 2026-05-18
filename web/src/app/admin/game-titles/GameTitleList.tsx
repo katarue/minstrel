@@ -129,7 +129,7 @@ function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string
 
   function handleSave() {
     if (!preview) return;
-    const item: AmazonItem = { asin: preview.asin, title: "", imageUrl: imgError ? null : preview.imageUrl, affiliateUrl: preview.affiliateUrl };
+    const item: AmazonItem = { asin: preview.asin, title: "", imageUrl: null, affiliateUrl: preview.affiliateUrl };
     startSave(async () => {
       await saveAmazonItem(id, item);
       setPreview(null);
