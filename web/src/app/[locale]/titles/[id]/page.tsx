@@ -102,7 +102,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
                     className="bg-parchment-dark rounded-md overflow-hidden flex items-stretch transition-all duration-200 ease-in-out group-hover:-translate-y-0.5 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
                     style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
                   >
-                    <div className="relative w-20 shrink-0 bg-parchment-dark/60">
+                    <div className="relative w-20 aspect-square shrink-0 bg-parchment-dark/60">
                       {eventImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
