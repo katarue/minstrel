@@ -8,7 +8,7 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
-from processor.claude_extractor import extract_event, extract_event_from_image, extract_game_titles, translate_event_names_en
+from processor.claude_extractor import extract_event, extract_event_from_image, extract_game_titles, translate_event_names_en, translate_event_descriptions_en
 from processor.web_enricher import enrich_event_fields
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
@@ -342,7 +342,7 @@ def auto_enrich() -> int:
     db = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     result = db.table("events").select(
-        "id, event_name, event_name_en, venue_name, prefecture, venue_name_en, organizers(name)"
+        "id, event_name, event_name_en, venue_name, prefecture, venue_name_en, description, description_en, organizers(name)"
     ).eq("is_published", False).gte("created_at", cutoff).execute()
 
     events = result.data or []
@@ -361,6 +361,15 @@ def auto_enrich() -> int:
         name_en_map = {e["id"]: t for e, t in zip(needs_name_en, translated)}
     else:
         name_en_map = {}
+
+    # description_en が未設定のイベントをまとめて翻訳
+    needs_desc_en = [e for e in events if e.get("description") and not e.get("description_en")]
+    if needs_desc_en:
+        print(f"[enrich] description_en 翻訳: {len(needs_desc_en)} 件")
+        translated_desc = translate_event_descriptions_en([e["description"] for e in needs_desc_en])
+        desc_en_map = {e["id"]: t for e, t in zip(needs_desc_en, translated_desc)}
+    else:
+        desc_en_map = {}
 
     for event in events:
         needs_venue = not event.get("venue_name")
@@ -386,6 +395,12 @@ def auto_enrich() -> int:
         if en_name:
             updates["event_name_en"] = en_name
             print(f"[enrich] event_name_en: {event['event_name'][:40]} → {en_name}")
+
+        # description_en
+        en_desc = desc_en_map.get(event["id"])
+        if en_desc:
+            updates["description_en"] = en_desc
+            print(f"[enrich] description_en: set ({len(en_desc)} chars)")
 
         # venue_name_en が未設定で venue_name が確定している場合に English 名を取得
         final_venue = updates.get("venue_name") or event.get("venue_name")

@@ -55,6 +55,7 @@ type TourEvent = {
   source_url: string | null;
   official_url: string | null;
   description: string | null;
+  description_en: string | null;
   organizers: { name: string; official_site_url: string | null } | null;
   event_game_titles: Array<{ game_titles: { title_name: string; english_name: string | null; amazon_asin: string | null; amazon_affiliate_url: string | null } | null }>;
 };
@@ -73,7 +74,7 @@ export default async function TourPage({
   const SELECT_FIELDS = `
     id, event_name, event_name_en, start_datetime,
     venue_name, venue_name_en, prefecture, flyer_image_url, key_visual_url,
-    ticket_urls, source_url, official_url, description,
+    ticket_urls, source_url, official_url, description, description_en,
     organizers ( name, official_site_url ),
     event_game_titles ( game_titles ( title_name, english_name, amazon_asin, amazon_affiliate_url ) )
   `;
@@ -270,10 +271,10 @@ export default async function TourPage({
         )}
 
         {/* 概要 */}
-        {first.description && (
+        {(first.description || first.description_en) && (
           <div className="border-t border-gold/30 pt-6">
             <p className="font-body text-ink-body text-base leading-relaxed">
-              {first.description}
+              {(locale === "en" && first.description_en) ? first.description_en : first.description}
             </p>
           </div>
         )}

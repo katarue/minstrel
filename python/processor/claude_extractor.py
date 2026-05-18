@@ -334,3 +334,46 @@ def translate_event_names_en(event_names: list[str]) -> list[str | None]:
     except Exception as e:
         print(f"[translate] error: {e}")
     return [None] * len(event_names)
+
+
+_TRANSLATE_DESC_SYSTEM = """You are a translator for Japanese game music concert event descriptions.
+
+Rules:
+1. Translate naturally into fluent English prose
+2. Game/brand names: use official English names (e.g., ファイナルファンタジー→Final Fantasy, アーケードアーカイブス→Arcade Archives, ドラゴンクエスト→Dragon Quest)
+3. Japanese quotes: 「text」→ "text"
+4. Preserve all factual information (dates, venues, performer names) exactly
+5. Performer/organizer names: romanize Japanese (e.g., 植松伸夫→Nobuo Uematsu) when a known English form exists; otherwise keep as-is
+6. If already mostly English, clean up and return as-is
+
+Return a JSON array of translated strings in the same order as input. Output JSON only."""
+
+
+def _parse_translated_list(text: str, expected_len: int) -> list[str | None]:
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    result = json.loads(text.strip())
+    if isinstance(result, list) and len(result) == expected_len:
+        return [str(r) if r else None for r in result]
+    return [None] * expected_len
+
+
+def translate_event_descriptions_en(descriptions: list[str]) -> list[str | None]:
+    """description リストを英語に一括翻訳する（最大10件）。"""
+    if not descriptions:
+        return []
+    prompt = f"Translate these Japanese game music concert descriptions to English:\n{json.dumps(descriptions, ensure_ascii=False)}"
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+            system=_TRANSLATE_DESC_SYSTEM,
+        )
+        return _parse_translated_list(resp.content[0].text, len(descriptions))
+    except Exception as e:
+        print(f"[translate-desc] error: {e}")
+    return [None] * len(descriptions)
