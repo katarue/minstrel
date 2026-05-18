@@ -7,7 +7,7 @@ import type { Region } from "@/utils/regions";
 const REGION_POSITIONS: Record<Region, { top: string; left: string }> = {
   北海道:       { top: "22%", left: "75%" },
   東北:         { top: "42%", left: "67%" },
-  関東:         { top: "59%", left: "62%" },
+  関東:         { top: "59%", left: "64%" },
   中部:         { top: "61%", left: "52%" },
   関西:         { top: "64%", left: "41%" },
   "中国・四国": { top: "68%", left: "27%" },
