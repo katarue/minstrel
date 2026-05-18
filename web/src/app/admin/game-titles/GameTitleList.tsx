@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useTransition, useEffect } from "react";
 import { saveGameTitle, deleteGameTitle, fetchAmazonByAsin, saveAmazonItem } from "./actions";
 import type { AmazonItem } from "@/lib/amazon-pa";
@@ -32,8 +31,9 @@ function CoverImage({ url, fallbackUrl, alt }: { url: string | null; fallbackUrl
     );
   }
   return (
-    <div className="w-32 h-40 relative shrink-0 rounded overflow-hidden border border-gold/20">
-      <Image src={effectiveUrl} alt={alt} fill className="object-cover" unoptimized onError={() => setErrored(true)} />
+    <div className="w-32 h-40 shrink-0 rounded overflow-hidden border border-gold/20">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={effectiveUrl} alt={alt} className="w-full h-full object-cover" onError={() => setErrored(true)} />
     </div>
   );
 }
