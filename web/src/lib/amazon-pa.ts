@@ -1,8 +1,9 @@
 /**
  * Amazon Product Advertising API v5 クライアント（Japan向け）
- * aws4 パッケージで AWS Signature Version 4 署名を行う。
+ * Node.js https モジュールで直接リクエストを送り、fetch の加工を回避する。
  */
 import aws4 from "aws4";
+import https from "node:https";
 
 const HOST    = "webservices.amazon.co.jp";
 const PATH    = "/paapi5/searchitems";
@@ -22,6 +23,27 @@ export type AmazonItem = {
   imageUrl: string | null;
   affiliateUrl: string;
 };
+
+function httpsPost(
+  hostname: string,
+  path: string,
+  headers: Record<string, string>,
+  body: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      { hostname, path, method: "POST", headers },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: Buffer) => { data += chunk.toString(); });
+        res.on("end", () => resolve(data));
+      }
+    );
+    req.on("error", reject);
+    req.write(body, "utf8");
+    req.end();
+  });
+}
 
 export async function searchAmazonSoundtrack(
   gameTitle: string,
@@ -49,27 +71,33 @@ export async function searchAmazonSoundtrack(
       "Content-Encoding": "amz-1.0",
       "Content-Type":     "application/json; charset=utf-8",
       "X-Amz-Target":    TARGET,
+      "Content-Length":  String(Buffer.byteLength(body, "utf8")),
     },
     body,
   };
 
   aws4.sign(opts, { accessKeyId: accessKey, secretAccessKey: secretKey });
 
-  const resp = await fetch(`https://${HOST}${PATH}`, {
-    method:  "POST",
-    headers: opts.headers as Record<string, string>,
-    body,
-  });
+  const responseText = await httpsPost(
+    HOST,
+    PATH,
+    opts.headers as Record<string, string>,
+    body
+  );
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`PA API ${resp.status}: ${text.slice(0, 300)}`);
+  let parsed: { SearchResult?: { Items?: PaApiRawItem[] }; __type?: string; Errors?: { Code: string; Message: string }[] };
+  try {
+    parsed = JSON.parse(responseText) as typeof parsed;
+  } catch {
+    throw new Error(`PA API parse error: ${responseText.slice(0, 200)}`);
   }
 
-  const data = await resp.json() as {
-    SearchResult?: { Items?: PaApiRawItem[] };
-  };
-  const items = data?.SearchResult?.Items ?? [];
+  if (parsed.__type?.includes("Exception") || parsed.Errors) {
+    const msg = parsed.Errors?.[0]?.Message ?? parsed.__type ?? "Unknown error";
+    throw new Error(`PA API error: ${msg}`);
+  }
+
+  const items = parsed?.SearchResult?.Items ?? [];
 
   return items.map((item) => ({
     asin:         item.ASIN ?? "",
