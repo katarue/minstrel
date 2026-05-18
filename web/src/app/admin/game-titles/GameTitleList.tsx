@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import { saveGameTitle, deleteGameTitle, searchAmazonForTitle, saveAmazonItem } from "./actions";
+import { saveGameTitle, deleteGameTitle, fetchAmazonByAsin, saveAmazonItem } from "./actions";
 import type { AmazonItem } from "@/lib/amazon-pa";
 
 export type GameTitle = {
@@ -103,79 +103,70 @@ function EditableField({
   );
 }
 
-function AmazonSearchPanel({ id, titleName }: { id: string; titleName: string }) {
-  const [open, setOpen] = useState(false);
-  const [results, setResults] = useState<AmazonItem[]>([]);
+function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string | null }) {
+  const [asin, setAsin] = useState(existingAsin ?? "");
+  const [preview, setPreview] = useState<{ title: string; imageUrl: string | null; affiliateUrl: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searching, startSearch] = useTransition();
+  const [fetching, startFetch] = useTransition();
   const [saving, startSave] = useTransition();
 
-  function handleSearch() {
+  function handleFetch() {
     setError(null);
-    setResults([]);
-    setOpen(true);
-    startSearch(async () => {
-      const res = await searchAmazonForTitle(titleName);
-      if (!res.ok) {
-        const debugInfo = res.debug ? ` [debug: ${JSON.stringify(res.debug)}]` : "";
-        setError((res.message ?? "エラー") + debugInfo);
-        return;
-      }
-      setResults(res.items ?? []);
+    setPreview(null);
+    startFetch(async () => {
+      const res = await fetchAmazonByAsin(asin);
+      if (!res.ok) { setError(res.message ?? "エラー"); return; }
+      setPreview({ title: res.title ?? "", imageUrl: res.imageUrl ?? null, affiliateUrl: res.affiliateUrl ?? "" });
     });
   }
 
-  function handleSelect(item: AmazonItem) {
+  function handleSave() {
+    if (!preview) return;
+    const item: AmazonItem = { asin: asin.trim().toUpperCase(), title: preview.title, imageUrl: preview.imageUrl, affiliateUrl: preview.affiliateUrl };
     startSave(async () => {
       await saveAmazonItem(id, item);
-      setOpen(false);
-      setResults([]);
+      setPreview(null);
     });
   }
 
   return (
-    <div className="pt-1">
-      <button
-        onClick={handleSearch}
-        disabled={searching}
-        className="text-xs text-bordeaux/70 hover:text-bordeaux underline underline-offset-2 disabled:opacity-40"
-      >
-        {searching ? "検索中…" : "Amazon サウンドトラック検索"}
-      </button>
+    <div className="pt-1 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-ink-body/40 shrink-0">ASIN:</span>
+        <input
+          className="text-xs border border-gold/40 rounded px-2 py-0.5 bg-white w-32 focus:outline-none focus:border-bordeaux/60 font-mono uppercase"
+          value={asin}
+          onChange={(e) => { setAsin(e.target.value); setPreview(null); setError(null); }}
+          placeholder="B0XXXXXXXXX"
+          maxLength={10}
+        />
+        <button
+          onClick={handleFetch}
+          disabled={fetching || asin.trim().length === 0}
+          className="text-xs text-bordeaux/70 hover:text-bordeaux underline underline-offset-2 disabled:opacity-40"
+        >
+          {fetching ? "取得中…" : "確認"}
+        </button>
+      </div>
 
-      {open && (
-        <div className="mt-2 space-y-2">
-          {error && <p className="text-xs text-red-500">{error}</p>}
-          {!searching && results.length === 0 && !error && (
-            <p className="text-xs text-ink-body/40">結果なし</p>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
+      {preview && (
+        <div className="flex items-center gap-3 bg-white border border-gold/20 rounded px-3 py-2">
+          {preview.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview.imageUrl} alt={preview.title} className="w-10 h-14 object-cover rounded shrink-0" />
           )}
-          {results.map((item) => (
-            <div
-              key={item.asin}
-              className="flex items-center gap-3 bg-white border border-gold/20 rounded px-3 py-2"
-            >
-              {item.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.imageUrl} alt={item.title} className="w-10 h-14 object-cover rounded shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-ink-heading line-clamp-2">{item.title}</p>
-                <p className="text-xs text-ink-body/40 mt-0.5">ASIN: {item.asin}</p>
-              </div>
-              <button
-                disabled={saving}
-                onClick={() => handleSelect(item)}
-                className="shrink-0 text-xs bg-bordeaux text-white px-2 py-1 rounded hover:bg-bordeaux/80 disabled:opacity-40"
-              >
-                選択
-              </button>
-            </div>
-          ))}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-ink-heading line-clamp-2">{preview.title}</p>
+            <p className="text-xs text-ink-body/40 mt-0.5">ASIN: {asin.trim().toUpperCase()}</p>
+          </div>
           <button
-            onClick={() => setOpen(false)}
-            className="text-xs text-ink-body/40 hover:text-ink-body"
+            disabled={saving}
+            onClick={handleSave}
+            className="shrink-0 text-xs bg-bordeaux text-white px-2 py-1 rounded hover:bg-bordeaux/80 disabled:opacity-40"
           >
-            閉じる
+            {saving ? "保存中…" : "保存"}
           </button>
         </div>
       )}
@@ -237,7 +228,7 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
                 )}
               </div>
 
-              <AmazonSearchPanel id={t.id} titleName={t.title_name} />
+              <AsinInputPanel id={t.id} existingAsin={t.amazon_asin} />
             </div>
           </div>
         );

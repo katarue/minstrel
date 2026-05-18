@@ -69,11 +69,12 @@ function buildAuthHeader(
   ].join("\n");
 
   const credentialScope = `${dateStamp}/${REGION}/${SERVICE}/aws4_request`;
+  const canonicalRequestHash = sha256(canonicalRequest);
   const stringToSign = [
     ALGORITHM,
     amzDate,
     credentialScope,
-    sha256(canonicalRequest),
+    canonicalRequestHash,
   ].join("\n");
 
   const signingKey = getSignatureKey(secretKey, dateStamp);
