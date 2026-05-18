@@ -22,6 +22,11 @@ export default async function AdminPage() {
             title="イベント管理"
             description="収集済みイベントの公開・非公開を管理する"
           />
+          <NavCard
+            href="/admin/game-titles"
+            title="ゲームタイトル管理"
+            description="ゲームタイトルのビジュアル・メタ情報を管理する"
+          />
         </div>
       </div>
     </div>
