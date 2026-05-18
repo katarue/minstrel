@@ -14,7 +14,7 @@ from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
 from utils.db import get_client
 from utils.notify import notify_failure, notify_success
-from utils.config import IGDB_CLIENT_ID, IGDB_CLIENT_SECRET
+from utils.config import IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, GOOGLE_PLACES_API_KEY
 from utils.entity_resolution import (
     extract_hard_keys,
     find_existing_event,
@@ -310,13 +310,39 @@ def upsert_to_db(events: list[dict]) -> int:
     return inserted
 
 
+def _fetch_venue_name_en(venue_name: str, prefecture: str | None) -> str | None:
+    """Google Places API (New) で会場の英語名を取得する。"""
+    if not GOOGLE_PLACES_API_KEY:
+        return None
+    import requests
+    query = venue_name + (f" {prefecture}" if prefecture else "")
+    try:
+        res = requests.post(
+            "https://places.googleapis.com/v1/places:searchText",
+            json={"textQuery": query, "languageCode": "en"},
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
+                "X-Goog-FieldMask": "places.displayName",
+            },
+            timeout=10,
+        )
+        if res.ok:
+            places = res.json().get("places", [])
+            if places:
+                return places[0].get("displayName", {}).get("text")
+    except Exception as e:
+        print(f"[enrich] venue_name_en fetch error ({venue_name}): {e}")
+    return None
+
+
 @task
 def auto_enrich() -> int:
     """直近のスクレイピングで作成された未公開イベントの不足フィールドをウェブ検索で補完する。"""
     db = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     result = db.table("events").select(
-        "id, event_name, venue_name, prefecture, organizers(name)"
+        "id, event_name, venue_name, prefecture, venue_name_en, organizers(name)"
     ).eq("is_published", False).gte("created_at", cutoff).execute()
 
     events = result.data or []
@@ -325,27 +351,42 @@ def auto_enrich() -> int:
         return 0
 
     enriched = 0
+    venue_en_cache: dict[str, str | None] = {}
+
     for event in events:
         needs_venue = not event.get("venue_name")
         needs_pref  = not event.get("prefecture")
 
-        if not needs_venue and not needs_pref:
-            continue
-
-        organizer = ""
-        if isinstance(event.get("organizers"), dict):
-            organizer = event["organizers"].get("name", "")
-
-        print(f"[enrich] enriching: {event['event_name'][:50]}")
-        enriched_data = enrich_event_fields(event["event_name"], organizer)
-        if not enriched_data:
-            continue
-
         updates = {}
-        if needs_venue and enriched_data.get("venue_name"):
-            updates["venue_name"] = enriched_data["venue_name"]
-        if needs_pref and enriched_data.get("prefecture"):
-            updates["prefecture"] = enriched_data["prefecture"]
+
+        if needs_venue or needs_pref:
+            organizer = ""
+            if isinstance(event.get("organizers"), dict):
+                organizer = event["organizers"].get("name", "")
+
+            print(f"[enrich] enriching: {event['event_name'][:50]}")
+            enriched_data = enrich_event_fields(event["event_name"], organizer)
+            if enriched_data:
+                if needs_venue and enriched_data.get("venue_name"):
+                    updates["venue_name"] = enriched_data["venue_name"]
+                if needs_pref and enriched_data.get("prefecture"):
+                    updates["prefecture"] = enriched_data["prefecture"]
+
+        # venue_name_en が未設定で venue_name が確定している場合に English 名を取得
+        final_venue = updates.get("venue_name") or event.get("venue_name")
+        final_pref  = updates.get("prefecture") or event.get("prefecture")
+        if final_venue and not event.get("venue_name_en"):
+            cache_key = f"{final_venue}|{final_pref or ''}"
+            if cache_key not in venue_en_cache:
+                en_name = _fetch_venue_name_en(final_venue, final_pref)
+                venue_en_cache[cache_key] = en_name
+                time.sleep(0.3)
+            else:
+                en_name = venue_en_cache[cache_key]
+            if en_name:
+                updates["venue_name_en"] = en_name
+                print(f"[enrich] venue_name_en: {final_venue} → {en_name}")
+
         if updates:
             db.table("events").update(updates).eq("id", event["id"]).execute()
             enriched += 1
