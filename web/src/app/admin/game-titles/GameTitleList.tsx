@@ -160,38 +160,40 @@ function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       {preview && (
-        <div className="flex items-center gap-3 bg-white border border-gold/20 rounded px-3 py-2">
+        <div className="flex items-start gap-4 bg-white border border-gold/20 rounded px-4 py-3">
           {!imgError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={preview.imageUrl ?? ""}
               alt={preview.asin}
-              className="w-10 h-14 object-cover rounded shrink-0"
+              className="w-40 h-56 object-cover rounded shrink-0"
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="w-10 h-14 bg-parchment-dark border border-gold/20 rounded flex items-center justify-center shrink-0">
-              <span className="text-ink-body/30 text-[10px]">No img</span>
+            <div className="w-40 h-56 bg-parchment-dark border border-gold/20 rounded flex items-center justify-center shrink-0">
+              <span className="text-ink-body/30 text-xs">No image</span>
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-ink-body/40">ASIN: {preview.asin}</p>
-            <a
-              href={preview.affiliateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-bordeaux/60 hover:text-bordeaux underline underline-offset-2"
+          <div className="flex flex-col justify-between h-56 min-w-0">
+            <div className="space-y-1">
+              <p className="text-xs text-ink-body/40">ASIN: {preview.asin}</p>
+              <a
+                href={preview.affiliateUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-bordeaux/60 hover:text-bordeaux underline underline-offset-2"
+              >
+                Amazon で確認 →
+              </a>
+            </div>
+            <button
+              disabled={saving}
+              onClick={handleSave}
+              className="self-start text-xs bg-bordeaux text-white px-3 py-1.5 rounded hover:bg-bordeaux/80 disabled:opacity-40"
             >
-              Amazon で確認 →
-            </a>
+              {saving ? "保存中…" : "保存"}
+            </button>
           </div>
-          <button
-            disabled={saving}
-            onClick={handleSave}
-            className="shrink-0 text-xs bg-bordeaux text-white px-2 py-1 rounded hover:bg-bordeaux/80 disabled:opacity-40"
-          >
-            {saving ? "保存中…" : "保存"}
-          </button>
         </div>
       )}
     </div>
