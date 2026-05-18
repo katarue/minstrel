@@ -56,7 +56,7 @@ export default async function CalendarPage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-20 min-h-screen py-10">
-      <h1 className="font-heading text-ink-heading text-3xl md:text-4xl font-semibold mb-8">{t("title")}</h1>
+      <h1 className="font-heading text-ink-heading text-3xl md:text-4xl font-semibold mb-8">{t("title")} <span className="text-sm font-body text-bordeaux">[DEBUG locale={locale} ev0_en={events?.[0]?.event_name_en ?? "null"}]</span></h1>
 
       <CalendarNav year={year} month={month} prevYear={prevYear} prevMonth={prevMonth} nextYear={nextYear} nextMonth={nextMonth} />
 
