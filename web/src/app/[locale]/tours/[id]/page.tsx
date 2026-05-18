@@ -265,39 +265,30 @@ export default async function TourPage({
           </div>
         )}
 
-        {/* サウンドトラック */}
+        {/* Amazon サウンドトラック */}
         {(() => {
           const items = first.event_game_titles
             .map((egt) => egt.game_titles)
             .filter((gt): gt is NonNullable<typeof gt> => gt != null && gt.amazon_asin != null)
-            .slice(0, 2);
+            .slice(0, 4);
           if (items.length === 0) return null;
           return (
-            <div className="border-t border-gold/30 pt-6 flex flex-col gap-3">
-              <p className="font-body text-ink-body/60 text-xs tracking-wide">サウンドトラック</p>
-              <div className="flex gap-4 flex-wrap">
+            <div className="border-t border-gold/30 pt-6">
+              <div className="grid grid-cols-2 gap-3">
                 {items.map((gt) => (
                   <a
                     key={gt.amazon_asin}
                     href={gt.amazon_affiliate_url ?? `https://www.amazon.co.jp/dp/${gt.amazon_asin}?tag=k0642-22`}
                     target="_blank"
                     rel="noopener noreferrer sponsored"
-                    className="flex items-center gap-3 bg-parchment rounded-md border border-gold/20 px-4 py-3 hover:border-gold/50 transition-colors group"
+                    className="block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`/api/amazon-image?asin=${gt.amazon_asin}`}
                       alt={gt.title_name}
-                      className="w-14 h-14 object-cover rounded shrink-0 bg-parchment-dark"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="font-body text-ink-body text-sm leading-snug line-clamp-2">
-                        {gt.title_name}
-                      </span>
-                      <span className="font-body text-bordeaux/70 group-hover:text-bordeaux text-xs transition-colors">
-                        Amazon で見る →
-                      </span>
-                    </div>
                   </a>
                 ))}
               </div>
