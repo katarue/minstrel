@@ -8,7 +8,7 @@ async function getGameTitles(): Promise<GameTitle[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("game_titles")
-    .select("id, title_name, english_name, series_name, publisher, igdb_cover_url, key_visual_url")
+    .select("id, title_name, english_name, series_name, publisher, igdb_cover_url, key_visual_url, amazon_asin, amazon_image_url, amazon_affiliate_url")
     .order("title_name", { ascending: true });
 
   if (error) {

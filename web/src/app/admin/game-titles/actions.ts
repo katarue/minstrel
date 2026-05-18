@@ -2,10 +2,46 @@
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { searchAmazonSoundtrack, type AmazonItem } from "@/lib/amazon-pa";
 
 export async function deleteGameTitle(id: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
   const { error } = await supabase.from("game_titles").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/game-titles");
+  return { ok: true };
+}
+
+export async function searchAmazonForTitle(
+  gameTitle: string
+): Promise<{ ok: boolean; items?: AmazonItem[]; message?: string }> {
+  const accessKey  = process.env.AMAZON_ACCESS_KEY_ID;
+  const secretKey  = process.env.AMAZON_SECRET_ACCESS_KEY;
+  const partnerTag = process.env.AMAZON_PARTNER_TAG;
+  if (!accessKey || !secretKey || !partnerTag) {
+    return { ok: false, message: "Amazon PA API の環境変数が未設定です" };
+  }
+  try {
+    const items = await searchAmazonSoundtrack(gameTitle, accessKey, secretKey, partnerTag);
+    return { ok: true, items };
+  } catch (e) {
+    return { ok: false, message: String(e) };
+  }
+}
+
+export async function saveAmazonItem(
+  id: string,
+  item: AmazonItem
+): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("game_titles")
+    .update({
+      amazon_asin: item.asin,
+      amazon_image_url: item.imageUrl,
+      amazon_affiliate_url: item.affiliateUrl,
+    })
+    .eq("id", id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/game-titles");
   return { ok: true };
