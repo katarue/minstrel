@@ -206,7 +206,7 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
       {titles.map((t) => {
         const displayImage = t.amazon_asin
           ? `/api/amazon-image?asin=${t.amazon_asin}`
-          : t.key_visual_url;
+          : t.igdb_cover_url ?? t.key_visual_url;
         return (
           <div
             key={t.id}
