@@ -296,3 +296,41 @@ JSONのみ返してください。"""
     except Exception as e:
         print(f"[vision] extraction failed for {image_url[:60]}: {e}")
         return None
+
+
+_TRANSLATE_SYSTEM = """You are a translator for Japanese game music concert event names.
+
+Rules:
+1. Game/brand names: use official English names (e.g., ファイナルファンタジー→Final Fantasy, ゼルダの伝説→The Legend of Zelda, アーケードアーカイブス→Arcade Archives, ドラゴンクエスト→Dragon Quest, ポケモン→Pokémon)
+2. Descriptive words: translate naturally (周年記念→Anniversary, コンサート→Concert, ツアー→Tour, 演奏会→Concert, 公演→Performance, 記念イベント→Anniversary Event, 定期演奏会→Regular Concert, 特別公演→Special Performance)
+3. Abbreviations/nicknames: romanize (アケアカ→AkeAka, ドラクエ→DraQue)
+4. Japanese quotes: 「text」→ "text"
+5. If already mostly English, clean up and return as-is
+6. Location suffixes like （東京）keep them: (Tokyo)
+
+Return a JSON array of translated strings in the same order as input. Output JSON only."""
+
+
+def translate_event_names_en(event_names: list[str]) -> list[str | None]:
+    """イベント名リストを英語に一括翻訳する（最大20件）。"""
+    if not event_names:
+        return []
+    prompt = f"Translate these Japanese concert event names to English:\n{json.dumps(event_names, ensure_ascii=False)}"
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+            system=_TRANSLATE_SYSTEM,
+        )
+        text = resp.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        result = json.loads(text.strip())
+        if isinstance(result, list) and len(result) == len(event_names):
+            return [str(r) if r else None for r in result]
+    except Exception as e:
+        print(f"[translate] error: {e}")
+    return [None] * len(event_names)

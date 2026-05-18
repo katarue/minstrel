@@ -8,7 +8,7 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
-from processor.claude_extractor import extract_event, extract_event_from_image, extract_game_titles
+from processor.claude_extractor import extract_event, extract_event_from_image, extract_game_titles, translate_event_names_en
 from processor.web_enricher import enrich_event_fields
 from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
@@ -342,7 +342,7 @@ def auto_enrich() -> int:
     db = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     result = db.table("events").select(
-        "id, event_name, venue_name, prefecture, venue_name_en, organizers(name)"
+        "id, event_name, event_name_en, venue_name, prefecture, venue_name_en, organizers(name)"
     ).eq("is_published", False).gte("created_at", cutoff).execute()
 
     events = result.data or []
@@ -352,6 +352,15 @@ def auto_enrich() -> int:
 
     enriched = 0
     venue_en_cache: dict[str, str | None] = {}
+
+    # event_name_en が未設定のイベントをまとめて翻訳
+    needs_name_en = [e for e in events if not e.get("event_name_en")]
+    if needs_name_en:
+        print(f"[enrich] event_name_en 翻訳: {len(needs_name_en)} 件")
+        translated = translate_event_names_en([e["event_name"] for e in needs_name_en])
+        name_en_map = {e["id"]: t for e, t in zip(needs_name_en, translated)}
+    else:
+        name_en_map = {}
 
     for event in events:
         needs_venue = not event.get("venue_name")
@@ -372,20 +381,26 @@ def auto_enrich() -> int:
                 if needs_pref and enriched_data.get("prefecture"):
                     updates["prefecture"] = enriched_data["prefecture"]
 
+        # event_name_en
+        en_name = name_en_map.get(event["id"])
+        if en_name:
+            updates["event_name_en"] = en_name
+            print(f"[enrich] event_name_en: {event['event_name'][:40]} → {en_name}")
+
         # venue_name_en が未設定で venue_name が確定している場合に English 名を取得
         final_venue = updates.get("venue_name") or event.get("venue_name")
         final_pref  = updates.get("prefecture") or event.get("prefecture")
         if final_venue and not event.get("venue_name_en"):
             cache_key = f"{final_venue}|{final_pref or ''}"
             if cache_key not in venue_en_cache:
-                en_name = _fetch_venue_name_en(final_venue, final_pref)
-                venue_en_cache[cache_key] = en_name
+                en_venue = _fetch_venue_name_en(final_venue, final_pref)
+                venue_en_cache[cache_key] = en_venue
                 time.sleep(0.3)
             else:
-                en_name = venue_en_cache[cache_key]
-            if en_name:
-                updates["venue_name_en"] = en_name
-                print(f"[enrich] venue_name_en: {final_venue} → {en_name}")
+                en_venue = venue_en_cache[cache_key]
+            if en_venue:
+                updates["venue_name_en"] = en_venue
+                print(f"[enrich] venue_name_en: {final_venue} → {en_venue}")
 
         if updates:
             db.table("events").update(updates).eq("id", event["id"]).execute()
