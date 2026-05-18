@@ -30,6 +30,16 @@ export const REGION_COLORS: Record<Region, string> = {
   "九州・沖縄": "#7A3D55",
 };
 
+export const REGION_EN: Record<Region, string> = {
+  北海道: "Hokkaido",
+  東北: "Tohoku",
+  関東: "Kanto",
+  中部: "Chubu",
+  関西: "Kansai",
+  "中国・四国": "Chugoku/Shikoku",
+  "九州・沖縄": "Kyushu/Okinawa",
+};
+
 export const PREFECTURE_EN: Record<string, string> = {
   北海道: "Hokkaido", 青森県: "Aomori", 岩手県: "Iwate", 宮城県: "Miyagi",
   秋田県: "Akita", 山形県: "Yamagata", 福島県: "Fukushima",

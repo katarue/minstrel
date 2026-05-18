@@ -1,6 +1,6 @@
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
-import { REGIONS, REGION_COLORS } from "@/utils/regions";
+import { REGIONS, REGION_COLORS, REGION_EN } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
 // 地図画像上の各地域ボタンの位置（画像全体に対するパーセンテージ）
@@ -16,9 +16,10 @@ const REGION_POSITIONS: Record<Region, { top: string; left: string }> = {
 
 interface Props {
   regionCounts: Map<Region, number>;
+  locale?: string;
 }
 
-export default function JapanMapSection({ regionCounts }: Props) {
+export default function JapanMapSection({ regionCounts, locale }: Props) {
   return (
     <>
       {/* 地図（md以上） */}
@@ -56,7 +57,7 @@ export default function JapanMapSection({ regionCounts }: Props) {
                 className={`font-heading text-base font-semibold leading-tight ${count > 0 ? "" : "text-ink-body/40"}`}
                 style={count > 0 ? { color: REGION_COLORS[region] } : undefined}
               >
-                {region}
+                {locale === "en" ? REGION_EN[region] : region}
               </p>
               <p className={`mt-0.5 ${count > 0 ? "" : "text-ink-body/30"}`}>
                 <span
@@ -65,7 +66,9 @@ export default function JapanMapSection({ regionCounts }: Props) {
                 >
                   {count}
                 </span>
-                <span className="font-body text-base font-medium" style={count > 0 ? { color: REGION_COLORS[region] } : undefined}>件</span>
+                <span className="font-body text-base font-medium" style={count > 0 ? { color: REGION_COLORS[region] } : undefined}>
+                  {locale === "en" ? " events" : "件"}
+                </span>
               </p>
             </Link>
           );
@@ -87,7 +90,7 @@ export default function JapanMapSection({ regionCounts }: Props) {
               }`}
             >
               <span className={`font-body text-sm ${count > 0 ? "text-ink-body" : "text-ink-body/40"}`}>
-                {region}
+                {locale === "en" ? REGION_EN[region] : region}
               </span>
               <span className={`font-heading text-2xl font-bold mt-1 ${count > 0 ? "text-bordeaux" : "text-ink-body/25"}`}>
                 {count}

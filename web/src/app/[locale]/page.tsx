@@ -375,7 +375,7 @@ export default async function Home() {
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
           {t("regionTitle")}
         </h2>
-        <JapanMapSection regionCounts={regionCounts} />
+        <JapanMapSection regionCounts={regionCounts} locale={locale} />
       </section>
 
       {/* Section 4: カレンダー */}
