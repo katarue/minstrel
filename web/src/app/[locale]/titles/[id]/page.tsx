@@ -143,7 +143,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
             href={affiliateUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className="block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square max-w-[200px] mx-auto"
+            className="block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square max-w-[400px] mx-auto"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
