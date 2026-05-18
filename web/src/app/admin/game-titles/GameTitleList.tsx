@@ -248,6 +248,11 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
                 value={t.publisher}
                 onSave={(v) => saveGameTitle(t.id, { publisher: v }).then(() => {})}
               />
+              <EditableField
+                label="画像URL"
+                value={t.key_visual_url}
+                onSave={(v) => saveGameTitle(t.id, { key_visual_url: v }).then(() => {})}
+              />
 
               <div className="flex items-center gap-3 text-xs pt-0.5">
                 {t.amazon_asin ? (
