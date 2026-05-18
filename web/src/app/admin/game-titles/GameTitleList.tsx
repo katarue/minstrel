@@ -205,7 +205,7 @@ function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string
 
 export function GameTitleList({ titles }: { titles: GameTitle[] }) {
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-2 gap-2">
       {titles.map((t) => {
         const displayImage = t.amazon_asin
           ? `/api/amazon-image?asin=${t.amazon_asin}`

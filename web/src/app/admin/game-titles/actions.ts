@@ -54,6 +54,64 @@ export async function saveAmazonItem(
   return { ok: true };
 }
 
+export async function fetchIgdbCovers(): Promise<{ ok: boolean; updated: number; skipped: number; message?: string }> {
+  const clientId = process.env.IGDB_CLIENT_ID;
+  const clientSecret = process.env.IGDB_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return { ok: false, updated: 0, skipped: 0, message: "IGDB_CLIENT_ID / IGDB_CLIENT_SECRET が未設定です" };
+  }
+
+  const tokenRes = await fetch(
+    `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`,
+    { method: "POST" }
+  );
+  if (!tokenRes.ok) return { ok: false, updated: 0, skipped: 0, message: "IGDBトークン取得失敗" };
+  const { access_token: token } = await tokenRes.json() as { access_token: string };
+
+  const supabase = createAdminClient();
+  const { data: titles } = await supabase
+    .from("game_titles")
+    .select("id, title_name, english_name")
+    .is("igdb_cover_url", null);
+
+  if (!titles?.length) return { ok: true, updated: 0, skipped: 0 };
+
+  let updated = 0;
+  let skipped = 0;
+
+  for (const title of titles) {
+    const candidates = title.english_name ? [title.english_name, title.title_name] : [title.title_name];
+    let url: string | null = null;
+
+    for (const query of candidates) {
+      const res = await fetch("https://api.igdb.com/v4/games", {
+        method: "POST",
+        headers: { "Client-ID": clientId, Authorization: `Bearer ${token}` },
+        body: `search "${query}"; fields name, cover.url; limit 1;`,
+      });
+      if (!res.ok) continue;
+      const data = await res.json() as { cover?: { url?: string } }[];
+      const raw = data[0]?.cover?.url;
+      if (raw) {
+        url = raw.replace("t_thumb", "t_cover_big");
+        if (url.startsWith("//")) url = "https:" + url;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
+    if (url) {
+      await supabase.from("game_titles").update({ igdb_cover_url: url }).eq("id", title.id);
+      updated++;
+    } else {
+      skipped++;
+    }
+  }
+
+  revalidatePath("/admin/game-titles");
+  return { ok: true, updated, skipped };
+}
+
 export async function saveGameTitle(
   id: string,
   fields: { key_visual_url?: string; publisher?: string; series_name?: string }

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { GameTitleList, type GameTitle } from "./GameTitleList";
+import { IgdbFetchButton } from "./IgdbFetchButton";
 
 export const revalidate = 0;
 
@@ -41,9 +42,12 @@ export default async function GameTitlesPage() {
             ビジュアル・メタ情報の確認・編集
           </p>
         </div>
-        <span className="shrink-0 text-xs text-ink-body/40 mt-2">
-          全 {titles.length} 件（画像あり {withCover} 件）
-        </span>
+        <div className="flex flex-col items-end gap-2 shrink-0 mt-1">
+          <span className="text-xs text-ink-body/40">
+            全 {titles.length} 件（画像あり {withCover} 件）
+          </span>
+          <IgdbFetchButton />
+        </div>
       </div>
 
       <GameTitleList titles={titles} />
