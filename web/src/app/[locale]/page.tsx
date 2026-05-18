@@ -440,7 +440,7 @@ export default async function Home() {
               📺 {tb("homeTitle")}
             </h2>
             <Link
-              href="/concerts?tab=broadcasts"
+              href="/concerts"
               className="font-body text-bordeaux hover:text-bordeaux/70 text-sm transition-colors"
             >
               {tb("seeAll")}
