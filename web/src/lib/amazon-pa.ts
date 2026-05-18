@@ -25,6 +25,12 @@ function signingKey(secretKey: string, dateStamp: string): Buffer {
   return hmac(kService, "aws4_request");
 }
 
+type PaApiRawItem = {
+  ASIN?: string;
+  ItemInfo?: { Title?: { DisplayValue?: string } };
+  Images?: { Primary?: { Large?: { URL?: string } } };
+};
+
 export type AmazonItem = {
   asin: string;
   title: string;
@@ -107,10 +113,12 @@ export async function searchAmazonSoundtrack(
     throw new Error(`PA API ${resp.status}: ${text.slice(0, 200)}`);
   }
 
-  const data = await resp.json();
-  const items: unknown[] = data?.SearchResult?.Items ?? [];
+  const data = await resp.json() as {
+    SearchResult?: { Items?: PaApiRawItem[] };
+  };
+  const items = data?.SearchResult?.Items ?? [];
 
-  return items.map((item: any) => ({
+  return items.map((item) => ({
     asin: item.ASIN ?? "",
     title: item.ItemInfo?.Title?.DisplayValue ?? "",
     imageUrl: item.Images?.Primary?.Large?.URL ?? null,
