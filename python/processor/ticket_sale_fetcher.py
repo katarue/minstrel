@@ -14,7 +14,7 @@
 
 import re
 import time
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import requests
@@ -50,6 +50,117 @@ def _extract_sale_date(text: str) -> Optional[str]:
                 return date(y, mo, d).isoformat()
             except ValueError:
                 continue
+    return None
+
+
+# ── 相対日付解決 ───────────────────────────────────────────────────────────
+
+_JST = timezone(timedelta(hours=9))
+
+_WEEKDAY_JA = {"月": 0, "火": 1, "水": 2, "木": 3, "金": 4, "土": 5, "日": 6}
+
+# 発売文脈キーワード（近傍チェック用）
+_SALE_NEAR = r'(?:発売|販売開始|チケット)'
+
+
+def _parse_posted_at(created_at: str | None) -> Optional[datetime]:
+    """ツイートの投稿日時文字列を JST の datetime に変換する。"""
+    if not created_at:
+        return None
+    for fmt in (
+        "%a %b %d %H:%M:%S %z %Y",   # Twitter標準形式 "Mon May 18 10:00:00 +0000 2026"
+        "%Y-%m-%dT%H:%M:%S.%fZ",      # ISO拡張
+        "%Y-%m-%dT%H:%M:%SZ",         # ISO基本
+    ):
+        try:
+            dt = datetime.strptime(created_at, fmt)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(_JST)
+        except ValueError:
+            continue
+    return None
+
+
+def _resolve_relative_date(text: str, posted_at: datetime) -> Optional[str]:
+    """
+    ツイートテキストから相対日付表現を解決して YYYY-MM-DD 形式で返す。
+    posted_at は JST の datetime であること。
+
+    対応パターン:
+      - 本日 / 今日  → 投稿日当日
+      - 明日         → 投稿日 +1日
+      - 来週〇曜日   → 翌週の該当曜日
+      - 今週〇曜日   → 今週の該当曜日（当日以降）
+      - 〇月〇日     → 年なし（過去日なら翌年）
+      - 〇/〇        → 年なし（過去日なら翌年）
+    """
+    # 発売文脈がなければスキップ（誤検知防止）
+    if not re.search(_SALE_NEAR, text):
+        return None
+
+    base = posted_at.date()
+
+    # 1. 本日・今日
+    if re.search(r'(?:本日|今日).{0,25}' + _SALE_NEAR, text) or \
+       re.search(_SALE_NEAR + r'.{0,25}(?:本日|今日)', text):
+        return base.isoformat()
+
+    # 2. 明日
+    if re.search(r'明日.{0,25}' + _SALE_NEAR, text) or \
+       re.search(_SALE_NEAR + r'.{0,25}明日', text):
+        return (base + timedelta(days=1)).isoformat()
+
+    # 3. 来週〇曜日
+    # 「来週」= 次の月曜日を週頭とした月〜日の範囲
+    m = re.search(r'来週([月火水木金土日])曜', text)
+    if m and re.search(_SALE_NEAR, text):
+        target_wd = _WEEKDAY_JA[m.group(1)]
+        today_wd = base.weekday()
+        # 次の月曜まで何日か（月曜=0 の場合は 7 日後）
+        days_to_next_monday = (7 - today_wd) % 7 or 7
+        next_monday = base + timedelta(days=days_to_next_monday)
+        return (next_monday + timedelta(days=target_wd)).isoformat()
+
+    # 4. 今週〇曜日
+    m = re.search(r'今週([月火水木金土日])曜', text)
+    if m and re.search(_SALE_NEAR, text):
+        target_wd = _WEEKDAY_JA[m.group(1)]
+        diff = (target_wd - base.weekday()) % 7
+        return (base + timedelta(days=diff)).isoformat()
+
+    # 5. 〇月〇日（年なし）
+    for pat in (
+        r'(\d{1,2})月\s*(\d{1,2})日.{0,30}' + _SALE_NEAR,
+        _SALE_NEAR + r'.{0,30}(\d{1,2})月\s*(\d{1,2})日',
+    ):
+        m = re.search(pat, text)
+        if m:
+            mo, d = int(m.group(1)), int(m.group(2))
+            for year in (base.year, base.year + 1):
+                try:
+                    candidate = date(year, mo, d)
+                    if candidate >= base:
+                        return candidate.isoformat()
+                except ValueError:
+                    continue
+
+    # 6. 〇/〇（年なし）
+    for pat in (
+        r'(\d{1,2})/(\d{1,2}).{0,30}' + _SALE_NEAR,
+        _SALE_NEAR + r'.{0,30}(\d{1,2})/(\d{1,2})',
+    ):
+        m = re.search(pat, text)
+        if m:
+            mo, d = int(m.group(1)), int(m.group(2))
+            for year in (base.year, base.year + 1):
+                try:
+                    candidate = date(year, mo, d)
+                    if candidate >= base:
+                        return candidate.isoformat()
+                except ValueError:
+                    continue
+
     return None
 
 
@@ -172,9 +283,18 @@ def fetch_ticket_sale_dates_from_x() -> int:
         if not candidate_events:
             continue
 
-        # ツイートテキストから発売日を抽出
+        # ツイートテキストから発売日を抽出（絶対日付 → 相対日付 → URLスクレイピングの順）
         tweet_text = tweet.get("_tweet_text") or tweet.get("raw_text", "")
         sale_date = _extract_sale_date(tweet_text)
+
+        if not sale_date:
+            posted_at = _parse_posted_at(tweet.get("created_at"))
+            if posted_at:
+                # 相対日付はページ内容ではなくツイート本文から判定する
+                tweet_body = tweet.get("_tweet_text", "")
+                sale_date = _resolve_relative_date(tweet_body, posted_at)
+                if sale_date:
+                    print(f"[ticket_sale_x] {author}: 相対日付解決 → {sale_date}")
 
         # テキストになければ外部 URL をスクレイピング
         if not sale_date:
