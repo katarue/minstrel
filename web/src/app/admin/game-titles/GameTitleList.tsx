@@ -145,6 +145,7 @@ function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string
           className="text-xs border border-gold/40 rounded px-2 py-0.5 bg-white flex-1 min-w-0 focus:outline-none focus:border-bordeaux/60"
           value={input}
           onChange={(e) => { setInput(e.target.value); setPreview(null); setError(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter") handleConfirm(); }}
           placeholder="SiteStripe の URL または ASIN を貼り付け"
         />
         <button
