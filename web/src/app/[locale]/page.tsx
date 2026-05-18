@@ -7,7 +7,7 @@ import Card from "@/components/ui/Card";
 import { TitleCoverImage } from "./titles/TitleCoverImage";
 import HeroSearch from "./HeroSearch";
 import JapanMapSection from "@/components/ui/JapanMapSection";
-import { REGIONS, prefectureToRegion } from "@/utils/regions";
+import { REGIONS, prefectureToRegion, prefectureEn } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
 type BroadcastRow = {
@@ -301,7 +301,7 @@ export default async function Home() {
                     titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
                     date={dateDisplay}
                     venue={(locale === "en" && ev.venue_name_en ? ev.venue_name_en : ev.venue_name) ?? "—"}
-                    prefecture={ev.prefecture ?? undefined}
+                    prefecture={(locale === "en" ? (prefectureEn(ev.prefecture) ?? ev.prefecture) : ev.prefecture) ?? undefined}
                     organizer={ev.organizers?.name}
                     genre={toGenre(ev.performance_type)}
                     imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}

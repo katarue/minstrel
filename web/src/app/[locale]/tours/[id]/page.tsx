@@ -7,6 +7,7 @@ import Badge from "@/components/ui/Badge";
 import { googleCalendarUrl } from "@/utils/ical";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
+import { prefectureEn } from "@/utils/regions";
 
 export const revalidate = 60;
 
@@ -170,7 +171,10 @@ export default async function TourPage({
                           <span className="hover:underline underline-offset-2">
                             {(() => {
                               const name = (locale === "en" && ev.venue_name_en) ? ev.venue_name_en : ev.venue_name;
-                              return name ? `${name}${ev.prefecture ? `（${ev.prefecture}）` : ""}` : ev.prefecture;
+                              const pref = locale === "en" ? (prefectureEn(ev.prefecture) ?? ev.prefecture) : ev.prefecture;
+                              const open = locale === "en" ? " (" : "（";
+                              const close = locale === "en" ? ")" : "）";
+                              return name ? `${name}${pref ? `${open}${pref}${close}` : ""}` : pref;
                             })()}
                           </span>
                         </a>

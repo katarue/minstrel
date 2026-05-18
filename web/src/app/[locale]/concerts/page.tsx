@@ -5,7 +5,7 @@ import { formatDateShort } from "@/utils/formatDate";
 import Card from "@/components/ui/Card";
 import FilterForm from "./FilterForm";
 import ConcertsTabs from "./ConcertsTabs";
-import { REGION_PREFECTURES } from "@/utils/regions";
+import { REGION_PREFECTURES, prefectureEn } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
 type Genre = "orchestra" | "wind" | "rock" | "acoustic" | "chamber" | "other";
@@ -279,7 +279,7 @@ export default async function ConcertsPage({
                       titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
                       date={dateDisplay}
                       venue={(locale === "en" && event.venue_name_en ? event.venue_name_en : event.venue_name) ?? "—"}
-                      prefecture={event.prefecture ?? undefined}
+                      prefecture={(locale === "en" ? (prefectureEn(event.prefecture) ?? event.prefecture) : event.prefecture) ?? undefined}
                       organizer={event.organizers?.name}
                       genre={toGenre(event.performance_type)}
                       imageUrl={event.flyer_image_url ?? event.key_visual_url ?? undefined}

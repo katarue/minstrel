@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { Link } from "@/i18n/navigation";
 import { formatDateFull } from "@/utils/formatDate";
 import { TitleCoverImage } from "../TitleCoverImage";
+import { prefectureEn } from "@/utils/regions";
 
 type GameTitleDetail = {
   id: string;
@@ -132,7 +133,10 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
                         onClick={(e) => e.stopPropagation()}
                         className="font-body text-ink-body/60 text-sm hover:text-bordeaux hover:underline underline-offset-2 transition-colors w-fit"
                       >
-                        {(locale === "en" && event.venue_name_en ? event.venue_name_en : event.venue_name)}（{event.prefecture}）
+                        {(locale === "en" && event.venue_name_en ? event.venue_name_en : event.venue_name)}
+                        {event.prefecture && (locale === "en"
+                          ? ` (${prefectureEn(event.prefecture) ?? event.prefecture})`
+                          : `（${event.prefecture}）`)}
                       </a>
                     </div>
                   </div>
