@@ -125,9 +125,15 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
                       <p className="font-body text-ink-body text-base font-medium">
                         {formatDateFull(event.start_datetime, locale)}
                       </p>
-                      <p className="font-body text-ink-body/60 text-sm">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.venue_name} ${event.prefecture}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-body text-ink-body/60 text-sm hover:text-bordeaux hover:underline underline-offset-2 transition-colors w-fit"
+                      >
                         {event.venue_name}（{event.prefecture}）
-                      </p>
+                      </a>
                     </div>
                   </div>
                 </Link>

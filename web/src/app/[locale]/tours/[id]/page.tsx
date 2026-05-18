@@ -159,12 +159,19 @@ export default async function TourPage({
                         <p className="font-body text-ink-body text-sm mt-1">{timeStr}</p>
                       )}
                       {(ev.venue_name || ev.prefecture) && (
-                        <p className="font-body text-ink-body/80 text-sm mt-0.5 flex items-center gap-1">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((ev.venue_name ?? "") + (ev.prefecture ? ` ${ev.prefecture}` : ""))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-body text-ink-body/80 text-sm mt-0.5 flex items-center gap-1 hover:text-bordeaux transition-colors w-fit"
+                        >
                           <MapPin size={12} strokeWidth={1.6} className="shrink-0" />
-                          {ev.venue_name
-                            ? `${ev.venue_name}${ev.prefecture ? `（${ev.prefecture}）` : ""}`
-                            : ev.prefecture}
-                        </p>
+                          <span className="hover:underline underline-offset-2">
+                            {ev.venue_name
+                              ? `${ev.venue_name}${ev.prefecture ? `（${ev.prefecture}）` : ""}`
+                              : ev.prefecture}
+                          </span>
+                        </a>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
