@@ -228,7 +228,7 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
                   <span className="text-xs text-ink-body/50">{t.english_name}</span>
                 )}
                 <a
-                  href={`https://www.amazon.co.jp/s?k=${encodeURIComponent((t.english_name || t.title_name) + " サウンドトラック")}&tag=k0642-22`}
+                  href={`https://www.amazon.co.jp/s?k=${encodeURIComponent(t.title_name + " サウンドトラック")}&tag=k0642-22`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 text-xs text-ink-body/30 hover:text-bordeaux border border-transparent hover:border-bordeaux/20 px-2 py-0.5 rounded transition-colors"
