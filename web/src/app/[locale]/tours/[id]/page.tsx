@@ -8,27 +8,12 @@ import { googleCalendarUrl } from "@/utils/ical";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { notFound } from "next/navigation";
 import { prefectureEn } from "@/utils/regions";
+import { formatDateFull } from "@/utils/formatDate";
 
 export const revalidate = 60;
 
-const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"] as const;
-
 function toJST(iso: string): Date {
   return new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000);
-}
-
-function formatPerformanceDate(iso: string, locale: string): string {
-  const jst = toJST(iso);
-  if (locale === "en") {
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric", month: "long", day: "numeric", weekday: "long", timeZone: "UTC",
-    }).format(jst);
-  }
-  const y = jst.getUTCFullYear();
-  const m = jst.getUTCMonth() + 1;
-  const d = jst.getUTCDate();
-  const w = WEEKDAYS_JA[jst.getUTCDay()];
-  return `${y}年${m}月${d}日（${w}）`;
 }
 
 function formatPerformanceTime(iso: string, locale: string): string | null {
@@ -150,7 +135,7 @@ export default async function TourPage({
           <p className="font-body text-ink-body/60 text-xs tracking-wide">{t("performanceList")}</p>
           <div className="flex flex-col gap-3">
             {events.map((ev) => {
-              const dateStr = formatPerformanceDate(ev.start_datetime, locale);
+              const dateStr = formatDateFull(ev.start_datetime, locale);
               const timeStr = formatPerformanceTime(ev.start_datetime, locale);
               return (
                 <div key={ev.id} className="border border-gold rounded-md p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
