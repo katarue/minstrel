@@ -749,6 +749,13 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       ? <span className="block text-sm text-ink-body/80 mt-0.5">{time}</span>
                       : <span className="block mt-0.5"><Empty label="時間なし" /></span>
                     }
+                    <div className="mt-2 pt-2 border-t border-gold/20">
+                      <span className="block text-[10px] text-ink-body/40 uppercase tracking-wide mb-0.5">発売</span>
+                      {ev.ticket_sale_start
+                        ? <span className="block text-xs text-bordeaux font-medium">{ev.ticket_sale_start}</span>
+                        : <span className="block text-xs text-ink-body/25">—</span>
+                      }
+                    </div>
                   </td>
 
                   {/* 場所 / 主催（都道府県 + 会場 + 主催者を縦並び） */}
