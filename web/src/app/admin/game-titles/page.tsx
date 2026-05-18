@@ -2,6 +2,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { GameTitleList, type GameTitle } from "./GameTitleList";
 import { IgdbFetchButton } from "./IgdbFetchButton";
+import { DeleteOrphanedButton } from "./DeleteOrphanedButton";
 
 export const revalidate = 0;
 
@@ -50,6 +51,7 @@ export default async function GameTitlesPage() {
             全 {titles.length} 件（画像あり {withCover} 件）
           </span>
           <IgdbFetchButton />
+          <DeleteOrphanedButton />
         </div>
       </div>
 

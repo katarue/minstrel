@@ -54,6 +54,26 @@ export async function saveAmazonItem(
   return { ok: true };
 }
 
+export async function deleteOrphanedGameTitles(): Promise<{ ok: boolean; deleted: number; message?: string }> {
+  const supabase = createAdminClient();
+
+  const [{ data: allTitles }, { data: linked }] = await Promise.all([
+    supabase.from("game_titles").select("id"),
+    supabase.from("event_game_titles").select("game_title_id"),
+  ]);
+
+  const linkedIds = new Set((linked ?? []).map((r) => r.game_title_id));
+  const orphanIds = (allTitles ?? []).filter((t) => !linkedIds.has(t.id)).map((t) => t.id);
+
+  if (orphanIds.length === 0) return { ok: true, deleted: 0 };
+
+  const { error } = await supabase.from("game_titles").delete().in("id", orphanIds);
+  if (error) return { ok: false, deleted: 0, message: error.message };
+
+  revalidatePath("/admin/game-titles");
+  return { ok: true, deleted: orphanIds.length };
+}
+
 export async function fetchIgdbCovers(): Promise<{ ok: boolean; updated: number; skipped: number; message?: string }> {
   const clientId = process.env.IGDB_CLIENT_ID;
   const clientSecret = process.env.IGDB_CLIENT_SECRET;
