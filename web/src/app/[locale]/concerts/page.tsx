@@ -18,6 +18,7 @@ type EventRow = {
   event_name_en: string | null;
   start_datetime: string;
   venue_name: string | null;
+  venue_name_en: string | null;
   prefecture: string | null;
   key_visual_url: string | null;
   flyer_image_url: string | null;
@@ -114,7 +115,7 @@ export default async function ConcertsPage({
       let query = supabase
         .from("events")
         .select(`
-          id, tour_id, event_name, event_name_en, start_datetime, venue_name, prefecture,
+          id, tour_id, event_name, event_name_en, start_datetime, venue_name, venue_name_en, prefecture,
           key_visual_url, flyer_image_url, performance_type,
           organizers ( name ),
           event_game_titles ( game_titles ( title_name, english_name ) )
@@ -277,7 +278,7 @@ export default async function ConcertsPage({
                       title={event.event_name}
                       titleEn={locale === "en" ? (event.event_name_en ?? undefined) : undefined}
                       date={dateDisplay}
-                      venue={event.venue_name ?? "—"}
+                      venue={(locale === "en" && event.venue_name_en ? event.venue_name_en : event.venue_name) ?? "—"}
                       prefecture={event.prefecture ?? undefined}
                       organizer={event.organizers?.name}
                       genre={toGenre(event.performance_type)}

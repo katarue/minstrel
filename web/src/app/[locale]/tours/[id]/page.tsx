@@ -46,6 +46,7 @@ type TourEvent = {
   event_name_en: string | null;
   start_datetime: string;
   venue_name: string | null;
+  venue_name_en: string | null;
   prefecture: string | null;
   flyer_image_url: string | null;
   key_visual_url: string | null;
@@ -70,7 +71,7 @@ export default async function TourPage({
 
   const SELECT_FIELDS = `
     id, event_name, event_name_en, start_datetime,
-    venue_name, prefecture, flyer_image_url, key_visual_url,
+    venue_name, venue_name_en, prefecture, flyer_image_url, key_visual_url,
     ticket_urls, source_url, official_url, description,
     organizers ( name, official_site_url ),
     event_game_titles ( game_titles ( title_name, english_name, amazon_asin, amazon_affiliate_url ) )
@@ -167,9 +168,10 @@ export default async function TourPage({
                         >
                           <MapPin size={12} strokeWidth={1.6} className="shrink-0" />
                           <span className="hover:underline underline-offset-2">
-                            {ev.venue_name
-                              ? `${ev.venue_name}${ev.prefecture ? `（${ev.prefecture}）` : ""}`
-                              : ev.prefecture}
+                            {(() => {
+                              const name = (locale === "en" && ev.venue_name_en) ? ev.venue_name_en : ev.venue_name;
+                              return name ? `${name}${ev.prefecture ? `（${ev.prefecture}）` : ""}` : ev.prefecture;
+                            })()}
                           </span>
                         </a>
                       )}

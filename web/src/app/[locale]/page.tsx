@@ -31,6 +31,7 @@ type CardEvent = {
   prefecture: string | null;
   flyer_image_url: string | null;
   key_visual_url: string | null;
+  venue_name_en: string | null;
   performance_type: string | null;
   organizers: { name: string } | null;
   event_game_titles: Array<{
@@ -87,7 +88,7 @@ export default async function Home() {
       supabase
         .from("events")
         .select(`
-          id, tour_id, event_name, event_name_en, start_datetime, venue_name, prefecture,
+          id, tour_id, event_name, event_name_en, start_datetime, venue_name, venue_name_en, prefecture,
           flyer_image_url, key_visual_url, performance_type,
           organizers ( name ),
           event_game_titles ( game_titles ( id, title_name, english_name ) )
@@ -299,7 +300,7 @@ export default async function Home() {
                     title={ev.event_name}
                     titleEn={locale === "en" ? (ev.event_name_en ?? undefined) : undefined}
                     date={dateDisplay}
-                    venue={ev.venue_name ?? "—"}
+                    venue={(locale === "en" && ev.venue_name_en ? ev.venue_name_en : ev.venue_name) ?? "—"}
                     prefecture={ev.prefecture ?? undefined}
                     organizer={ev.organizers?.name}
                     genre={toGenre(ev.performance_type)}

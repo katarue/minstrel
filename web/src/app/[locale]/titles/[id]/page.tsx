@@ -16,7 +16,7 @@ type GameTitleDetail = {
   igdb_cover_url: string | null;
   amazon_affiliate_url: string | null;
 };
-type EventRow = { id: string; tour_id: string | null; event_name: string; start_datetime: string; venue_name: string; prefecture: string; flyer_image_url: string | null; key_visual_url: string | null };
+type EventRow = { id: string; tour_id: string | null; event_name: string; start_datetime: string; venue_name: string; venue_name_en: string | null; prefecture: string; flyer_image_url: string | null; key_visual_url: string | null };
 
 export default async function TitleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,7 +39,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
 
   const { data: eventLinks } = await supabase
     .from("event_game_titles")
-    .select(`events ( id, tour_id, event_name, start_datetime, venue_name, prefecture, flyer_image_url, key_visual_url )`)
+    .select(`events ( id, tour_id, event_name, start_datetime, venue_name, venue_name_en, prefecture, flyer_image_url, key_visual_url )`)
     .eq("game_title_id", id)
     .eq("events.is_published", true)
     .order("created_at", { ascending: true });
@@ -132,7 +132,7 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
                         onClick={(e) => e.stopPropagation()}
                         className="font-body text-ink-body/60 text-sm hover:text-bordeaux hover:underline underline-offset-2 transition-colors w-fit"
                       >
-                        {event.venue_name}（{event.prefecture}）
+                        {(locale === "en" && event.venue_name_en ? event.venue_name_en : event.venue_name)}（{event.prefecture}）
                       </a>
                     </div>
                   </div>
