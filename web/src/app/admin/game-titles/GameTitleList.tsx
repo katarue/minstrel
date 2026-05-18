@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import { saveGameTitle } from "./actions";
+import { saveGameTitle, deleteGameTitle } from "./actions";
 
 export type GameTitle = {
   id: string;
@@ -26,6 +26,22 @@ function CoverImage({ url, alt }: { url: string | null; alt: string }) {
     <div className="w-16 h-20 relative shrink-0 rounded overflow-hidden border border-gold/20">
       <Image src={url} alt={alt} fill className="object-cover" unoptimized />
     </div>
+  );
+}
+
+function DeleteButton({ id, name }: { id: string; name: string }) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <button
+      disabled={pending}
+      onClick={() => {
+        if (!confirm(`「${name}」を削除しますか？`)) return;
+        startTransition(async () => { await deleteGameTitle(id); });
+      }}
+      className="shrink-0 text-xs text-ink-body/30 hover:text-red-500 border border-transparent hover:border-red-200 px-2 py-0.5 rounded transition-colors disabled:opacity-40"
+    >
+      削除
+    </button>
   );
 }
 
@@ -94,13 +110,14 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
           <CoverImage url={t.igdb_cover_url ?? t.key_visual_url} alt={t.title_name} />
 
           <div className="flex-1 min-w-0 space-y-1.5">
-            <div>
+            <div className="flex items-center gap-2">
               <span className="font-heading text-ink-heading text-sm font-semibold">
                 {t.title_name}
               </span>
               {t.english_name && t.english_name !== t.title_name && (
-                <span className="ml-2 text-xs text-ink-body/50">{t.english_name}</span>
+                <span className="text-xs text-ink-body/50">{t.english_name}</span>
               )}
+              <DeleteButton id={t.id} name={t.title_name} />
             </div>
 
             <EditableField

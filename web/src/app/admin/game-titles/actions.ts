@@ -3,6 +3,14 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
+export async function deleteGameTitle(id: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("game_titles").delete().eq("id", id);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/game-titles");
+  return { ok: true };
+}
+
 export async function saveGameTitle(
   id: string,
   fields: { key_visual_url?: string; publisher?: string; series_name?: string }
