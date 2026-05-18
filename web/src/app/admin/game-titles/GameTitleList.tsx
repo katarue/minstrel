@@ -104,48 +104,55 @@ function EditableField({
 }
 
 function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string | null }) {
-  const [asin, setAsin] = useState(existingAsin ?? "");
-  const [preview, setPreview] = useState<{ title: string; imageUrl: string | null; affiliateUrl: string } | null>(null);
+  const [input, setInput] = useState(existingAsin ?? "");
+  const [preview, setPreview] = useState<{ asin: string; imageUrl: string | null; affiliateUrl: string } | null>(null);
+  const [imgError, setImgError] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fetching, startFetch] = useTransition();
   const [saving, startSave] = useTransition();
 
-  function handleFetch() {
+  function handleConfirm() {
     setError(null);
     setPreview(null);
-    startFetch(async () => {
-      const res = await fetchAmazonByAsin(asin);
-      if (!res.ok) { setError(res.message ?? "エラー"); return; }
-      setPreview({ title: res.title ?? "", imageUrl: res.imageUrl ?? null, affiliateUrl: res.affiliateUrl ?? "" });
+    setImgError(false);
+    const res = { ok: false, asin: "", imageUrl: null as string | null, affiliateUrl: "" };
+    const trimmed = input.trim();
+    const asinMatch = trimmed.match(/\/dp\/([A-Z0-9]{10})/i) ?? (/^[A-Z0-9]{10}$/i.test(trimmed) ? [null, trimmed] : null);
+    if (!asinMatch) { setError("Amazon URL または ASIN（10文字）を入力してください"); return; }
+    const asin = asinMatch[1].toUpperCase();
+    setPreview({
+      asin,
+      imageUrl: `https://m.media-amazon.com/images/P/${asin}.09.LZZZZZZZ.jpg`,
+      affiliateUrl: `https://www.amazon.co.jp/dp/${asin}?tag=k0642-22`,
     });
+    void res;
   }
 
   function handleSave() {
     if (!preview) return;
-    const item: AmazonItem = { asin: asin.trim().toUpperCase(), title: preview.title, imageUrl: preview.imageUrl, affiliateUrl: preview.affiliateUrl };
+    const item: AmazonItem = { asin: preview.asin, title: "", imageUrl: imgError ? null : preview.imageUrl, affiliateUrl: preview.affiliateUrl };
     startSave(async () => {
       await saveAmazonItem(id, item);
       setPreview(null);
+      setInput(preview.asin);
     });
   }
 
   return (
     <div className="pt-1 space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-ink-body/40 shrink-0">ASIN:</span>
+        <span className="text-xs text-ink-body/40 shrink-0">Amazon:</span>
         <input
-          className="text-xs border border-gold/40 rounded px-2 py-0.5 bg-white w-32 focus:outline-none focus:border-bordeaux/60 font-mono uppercase"
-          value={asin}
-          onChange={(e) => { setAsin(e.target.value); setPreview(null); setError(null); }}
-          placeholder="B0XXXXXXXXX"
-          maxLength={10}
+          className="text-xs border border-gold/40 rounded px-2 py-0.5 bg-white flex-1 min-w-0 focus:outline-none focus:border-bordeaux/60"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setPreview(null); setError(null); }}
+          placeholder="SiteStripe の URL または ASIN を貼り付け"
         />
         <button
-          onClick={handleFetch}
-          disabled={fetching || asin.trim().length === 0}
-          className="text-xs text-bordeaux/70 hover:text-bordeaux underline underline-offset-2 disabled:opacity-40"
+          onClick={handleConfirm}
+          disabled={input.trim().length === 0}
+          className="shrink-0 text-xs text-bordeaux/70 hover:text-bordeaux underline underline-offset-2 disabled:opacity-40"
         >
-          {fetching ? "取得中…" : "確認"}
+          確認
         </button>
       </div>
 
@@ -153,13 +160,29 @@ function AsinInputPanel({ id, existingAsin }: { id: string; existingAsin: string
 
       {preview && (
         <div className="flex items-center gap-3 bg-white border border-gold/20 rounded px-3 py-2">
-          {preview.imageUrl && (
+          {!imgError ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview.imageUrl} alt={preview.title} className="w-10 h-14 object-cover rounded shrink-0" />
+            <img
+              src={preview.imageUrl ?? ""}
+              alt={preview.asin}
+              className="w-10 h-14 object-cover rounded shrink-0"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="w-10 h-14 bg-parchment-dark border border-gold/20 rounded flex items-center justify-center shrink-0">
+              <span className="text-ink-body/30 text-[10px]">No img</span>
+            </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-ink-heading line-clamp-2">{preview.title}</p>
-            <p className="text-xs text-ink-body/40 mt-0.5">ASIN: {asin.trim().toUpperCase()}</p>
+            <p className="text-xs text-ink-body/40">ASIN: {preview.asin}</p>
+            <a
+              href={preview.affiliateUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-bordeaux/60 hover:text-bordeaux underline underline-offset-2"
+            >
+              Amazon で確認 →
+            </a>
           </div>
           <button
             disabled={saving}

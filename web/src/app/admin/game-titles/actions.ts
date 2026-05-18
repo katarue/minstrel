@@ -12,56 +12,28 @@ export async function deleteGameTitle(id: string): Promise<{ ok: boolean; messag
   return { ok: true };
 }
 
-function extractOgMeta(html: string, property: string): string | null {
-  const patterns = [
-    new RegExp(`<meta[^>]+property="${property}"[^>]+content="([^"]+)"`, "i"),
-    new RegExp(`<meta[^>]+content="([^"]+)"[^>]+property="${property}"`, "i"),
-  ];
-  for (const re of patterns) {
-    const m = html.match(re);
-    if (m) return m[1];
-  }
-  return null;
+function extractAsin(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[A-Z0-9]{10}$/i.test(trimmed)) return trimmed.toUpperCase();
+  const match = trimmed.match(/\/dp\/([A-Z0-9]{10})/i);
+  return match ? match[1].toUpperCase() : null;
 }
 
 export async function fetchAmazonByAsin(
-  asin: string
-): Promise<{ ok: boolean; title?: string; imageUrl?: string | null; affiliateUrl?: string; message?: string }> {
+  input: string
+): Promise<{ ok: boolean; asin?: string; imageUrl?: string | null; affiliateUrl?: string; message?: string }> {
   const partnerTag = process.env.AMAZON_PARTNER_TAG;
   if (!partnerTag) return { ok: false, message: "AMAZON_PARTNER_TAG が未設定です" };
 
-  const trimmed = asin.trim().toUpperCase();
-  if (!/^[A-Z0-9]{10}$/.test(trimmed)) {
-    return { ok: false, message: "ASIN は 10 文字の英数字です" };
-  }
+  const asin = extractAsin(input);
+  if (!asin) return { ok: false, message: "Amazon URL または ASIN（10文字）を入力してください" };
 
-  try {
-    const res = await fetch(`https://www.amazon.co.jp/dp/${trimmed}`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept-Language": "ja-JP,ja;q=0.9",
-        "Accept": "text/html,application/xhtml+xml",
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) return { ok: false, message: `Amazon: HTTP ${res.status}` };
-
-    const html = await res.text();
-    const title = extractOgMeta(html, "og:title");
-    const imageUrl = extractOgMeta(html, "og:image");
-
-    if (!title) return { ok: false, message: "商品が見つかりません（ASIN を確認してください）" };
-
-    return {
-      ok: true,
-      title,
-      imageUrl,
-      affiliateUrl: `https://www.amazon.co.jp/dp/${trimmed}?tag=${partnerTag}`,
-    };
-  } catch (e) {
-    return { ok: false, message: String(e) };
-  }
+  return {
+    ok: true,
+    asin,
+    imageUrl: `https://m.media-amazon.com/images/P/${asin}.09.LZZZZZZZ.jpg`,
+    affiliateUrl: `https://www.amazon.co.jp/dp/${asin}?tag=${partnerTag}`,
+  };
 }
 
 export async function saveAmazonItem(
