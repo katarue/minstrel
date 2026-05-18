@@ -3,8 +3,8 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { formatDateShort } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
-import Image from "next/image";
 import Card from "@/components/ui/Card";
+import { TitleCoverImage } from "./titles/TitleCoverImage";
 import HeroSearch from "./HeroSearch";
 import JapanMapSection from "@/components/ui/JapanMapSection";
 import { REGIONS, prefectureToRegion } from "@/utils/regions";
@@ -43,7 +43,7 @@ type LightEvent = {
   start_datetime: string;
   prefecture: string | null;
   event_game_titles: Array<{
-    game_titles: { id: string; title_name: string; english_name: string | null; igdb_cover_url: string | null } | null;
+    game_titles: { id: string; title_name: string; english_name: string | null; igdb_cover_url: string | null; amazon_asin: string | null; key_visual_url: string | null } | null;
   }>;
 };
 
@@ -100,7 +100,7 @@ export default async function Home() {
         .from("events")
         .select(`
           id, start_datetime, prefecture,
-          event_game_titles ( game_titles ( id, title_name, english_name, igdb_cover_url ) )
+          event_game_titles ( game_titles ( id, title_name, english_name, igdb_cover_url, amazon_asin, key_visual_url ) )
         `)
         .eq("is_published", true)
         .gte("start_datetime", todayStart)
@@ -171,7 +171,7 @@ export default async function Home() {
   }
 
   // Section 2: count events per game title
-  type TitleInfo = { id: string; name: string; count: number; coverUrl: string | null };
+  type TitleInfo = { id: string; name: string; count: number; asin: string | null; keyVisualUrl: string | null; igdbUrl: string | null };
   const titleMap = new Map<string, TitleInfo>();
   for (const ev of allEvents) {
     for (const egt of ev.event_game_titles) {
@@ -185,7 +185,9 @@ export default async function Home() {
           id: gt.id,
           name: locale === "en" && gt.english_name ? gt.english_name : gt.title_name,
           count: 1,
-          coverUrl: gt.igdb_cover_url ?? null,
+          asin: gt.amazon_asin ?? null,
+          keyVisualUrl: gt.key_visual_url ?? null,
+          igdbUrl: gt.igdb_cover_url ?? null,
         });
       }
     }
@@ -340,19 +342,12 @@ export default async function Home() {
               >
                 <div className="relative aspect-[3/4] bg-parchment-dark rounded overflow-hidden"
                   style={{ boxShadow: "0 2px 6px rgba(59, 47, 29, 0.12)" }}>
-                  {title.coverUrl ? (
-                    <Image
-                      src={title.coverUrl}
-                      alt={title.name}
-                      fill
-                      className="object-cover transition-transform duration-200 group-hover:scale-105"
-                      sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-heading text-gold/40 text-3xl select-none" aria-hidden>♪</span>
-                    </div>
-                  )}
+                  <TitleCoverImage
+                    asin={title.asin}
+                    keyVisualUrl={title.keyVisualUrl}
+                    igdbUrl={title.igdbUrl}
+                    alt={title.name}
+                  />
                   <span className="absolute top-1.5 right-1.5 bg-bordeaux/90 text-white font-body text-xs font-medium px-1.5 py-0.5 rounded leading-none tabular-nums">
                     {title.count}
                   </span>
