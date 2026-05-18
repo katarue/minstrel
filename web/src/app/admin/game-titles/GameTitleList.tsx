@@ -18,8 +18,11 @@ export type GameTitle = {
   amazon_affiliate_url: string | null;
 };
 
-function CoverImage({ url, alt }: { url: string | null; alt: string }) {
-  if (!url) {
+function CoverImage({ url, fallbackUrl, alt }: { url: string | null; fallbackUrl?: string | null; alt: string }) {
+  const [errored, setErrored] = useState(false);
+  const effectiveUrl = errored ? (fallbackUrl ?? null) : url;
+
+  if (!effectiveUrl) {
     return (
       <div className="w-32 h-40 bg-parchment-dark border border-gold/20 rounded flex items-center justify-center shrink-0">
         <span className="text-ink-body/30 text-xs">No image</span>
@@ -28,7 +31,7 @@ function CoverImage({ url, alt }: { url: string | null; alt: string }) {
   }
   return (
     <div className="w-32 h-40 relative shrink-0 rounded overflow-hidden border border-gold/20">
-      <Image src={url} alt={alt} fill className="object-cover" unoptimized />
+      <Image src={effectiveUrl} alt={alt} fill className="object-cover" unoptimized onError={() => setErrored(true)} />
     </div>
   );
 }
@@ -207,12 +210,13 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
         const displayImage = t.amazon_asin
           ? `/api/amazon-image?asin=${t.amazon_asin}`
           : t.igdb_cover_url ?? t.key_visual_url;
+        const fallbackImage = t.amazon_asin ? (t.igdb_cover_url ?? t.key_visual_url) : null;
         return (
           <div
             key={t.id}
             className="flex items-start gap-4 bg-parchment rounded-md border border-gold/30 px-4 py-3"
           >
-            <CoverImage url={displayImage} alt={t.title_name} />
+            <CoverImage url={displayImage} fallbackUrl={fallbackImage} alt={t.title_name} />
 
             <div className="flex-1 min-w-0 space-y-1.5">
               <div className="flex items-center gap-2">
