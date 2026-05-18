@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { saveGameTitle, deleteGameTitle, fetchAmazonByAsin, saveAmazonItem } from "./actions";
 import type { AmazonItem } from "@/lib/amazon-pa";
 
@@ -21,6 +21,7 @@ export type GameTitle = {
 
 function CoverImage({ url, fallbackUrl, alt }: { url: string | null; fallbackUrl?: string | null; alt: string }) {
   const [errored, setErrored] = useState(false);
+  useEffect(() => { setErrored(false); }, [url]);
   const effectiveUrl = errored ? (fallbackUrl ?? null) : url;
 
   if (!effectiveUrl) {
@@ -245,8 +246,8 @@ export function GameTitleList({ titles }: { titles: GameTitle[] }) {
       {titles.map((t) => {
         const displayImage = t.amazon_asin
           ? `/api/amazon-image?asin=${t.amazon_asin}`
-          : t.igdb_cover_url ?? t.key_visual_url;
-        const fallbackImage = t.amazon_asin ? (t.igdb_cover_url ?? t.key_visual_url) : null;
+          : t.key_visual_url ?? t.igdb_cover_url;
+        const fallbackImage = t.amazon_asin ? (t.key_visual_url ?? t.igdb_cover_url) : null;
         return (
           <div
             key={t.id}

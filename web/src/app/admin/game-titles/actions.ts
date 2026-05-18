@@ -104,6 +104,7 @@ export async function fetchIgdbCovers(): Promise<{ ok: boolean; updated: number;
     let url: string | null = null;
 
     for (const query of candidates) {
+      await new Promise((r) => setTimeout(r, 250));
       const res = await fetch("https://api.igdb.com/v4/games", {
         method: "POST",
         headers: { "Client-ID": clientId, Authorization: `Bearer ${token}` },
@@ -117,7 +118,6 @@ export async function fetchIgdbCovers(): Promise<{ ok: boolean; updated: number;
         if (url.startsWith("//")) url = "https:" + url;
         break;
       }
-      await new Promise((r) => setTimeout(r, 250));
     }
 
     if (url) {
