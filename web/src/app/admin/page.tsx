@@ -27,6 +27,11 @@ export default async function AdminPage() {
             title="ゲームタイトル管理"
             description="ゲームタイトルのビジュアル・メタ情報を管理する"
           />
+          <NavCard
+            href="/admin/schedule"
+            title="X予約投稿"
+            description="X（旧Twitter）への投稿を事前予約・スケジュール管理する"
+          />
         </div>
       </div>
     </div>
