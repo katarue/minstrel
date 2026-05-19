@@ -75,7 +75,7 @@ function getMissingFields(ev: EventRecord): string[] {
 }
 
 function Empty({ label }: { label: string }) {
-  return <span className="text-red-600 text-sm font-bold">✗ {label}</span>;
+  return <span className="text-red-500 text-sm font-bold">✗ {label}</span>;
 }
 
 function ImageCell({ ev, onOpenModal }: { ev: EventRecord; onOpenModal: (url: string) => void }) {
@@ -182,7 +182,7 @@ function TicketSaleDateField({ eventId, initialDate }: { eventId: string; initia
           type="date"
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false); }}
-          className={`flex-1 min-w-0 text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 ${value ? "text-ink-body border-gold/40" : "text-error border-error/40"}`}
+          className={`flex-1 min-w-0 text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 ${value ? "text-ink-body border-gold/40" : "text-red-500 border-red-500/40"}`}
         />
         {dirty && !saved && (
           <button

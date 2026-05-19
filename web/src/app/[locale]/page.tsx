@@ -440,7 +440,7 @@ export default async function Home() {
                 return (
                   <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
                     className="flex items-center gap-4 bg-parchment-dark hover:bg-gold/10 border border-gold/20 rounded-md px-4 py-3 transition-colors group">
-                    <span className="font-body text-sm text-ink-body/60 shrink-0 w-28">{dateStr} {timeStr}</span>
+                    <span className="font-body text-sm text-ink-body/60 shrink-0 w-28 whitespace-nowrap">{dateStr} {timeStr}</span>
                     <span className="font-heading text-ink-heading text-sm font-semibold flex-1 group-hover:text-bordeaux transition-colors">{displayName}</span>
                     {ev.prefecture && (
                       <span className="font-body text-xs text-ink-body/50 shrink-0">{ev.prefecture}</span>
