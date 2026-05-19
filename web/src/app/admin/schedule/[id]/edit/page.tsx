@@ -94,7 +94,7 @@ export default async function EditSchedulePage({
       <div className="bg-parchment rounded-md border border-gold/30 px-5 py-6">
         <PostForm
           initialValues={post}
-          onSubmit={(values) => updateScheduledPost(id, values)}
+          onSubmit={updateScheduledPost.bind(null, id)}
           submitLabel="保存する"
         />
       </div>
