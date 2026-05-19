@@ -13,7 +13,6 @@ from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from prefect import flow, task, get_run_logger
-from prefect.schedules import CronSchedule
 
 load_dotenv()
 
