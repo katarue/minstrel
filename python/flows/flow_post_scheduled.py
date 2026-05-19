@@ -22,7 +22,7 @@ from utils.x_poster import post_tweet_v2  # noqa: E402
 JST = timezone(timedelta(hours=9))
 MAX_PER_RUN = 10
 POST_INTERVAL_SEC = 60
-RETRY_LIMIT = 3
+RETRY_LIMIT = 8
 STALE_HOURS = 24
 
 # 月曜=0, 金曜=4（flow_post_weekly.py の実行日）
