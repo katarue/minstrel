@@ -735,7 +735,6 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       onValueChange={url => setUrlOverrides(prev => ({ ...prev, [ev.id]: url }))}
                     />
                     <OfficialUrlField eventId={ev.id} initialUrl={ev.official_url} />
-                    <ReferenceUrlField eventId={ev.id} initialUrl={ev.reference_url} />
                     <ManualImageUrlField eventId={ev.id} initialUrl={ev.flyer_image_url} />
                   </td>
 
