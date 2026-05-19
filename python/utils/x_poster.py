@@ -54,12 +54,14 @@ def post_tweet_v2(text: str, image_urls: list[str] | None = None) -> PostResult:
                     ext = "png" if "png" in ct else "gif" if "gif" in ct else "jpg"
                     media = api.media_upload(filename=f"image.{ext}", file=io.BytesIO(resp.content))
                     media_ids.append(media.media_id)
+                    print(f"[x] image uploaded: media_id={media.media_id} url={url[:60]}")
                 except Exception as e:
                     print(f"[x] image upload skipped ({url[:60]}): {e}")
 
         kwargs: dict = {"text": text}
         if media_ids:
             kwargs["media_ids"] = media_ids
+        print(f"[x] create_tweet: {len(text)} chars, media_ids={media_ids}")
 
         response = _client().create_tweet(**kwargs)
         tweet_id = str(response.data["id"])
@@ -75,6 +77,13 @@ def post_tweet_v2(text: str, image_urls: list[str] | None = None) -> PostResult:
             detail += f" [codes={codes}]"
         if msgs:
             detail += f" [api_msgs={msgs}]"
+        # X API のフルレスポンスボディを取得
+        resp_obj = getattr(e, "response", None)
+        if resp_obj is not None:
+            try:
+                detail += f" [resp={resp_obj.json()}]"
+            except Exception:
+                detail += f" [resp_text={resp_obj.text[:200]}]"
         print(f"[x] failed: {detail}")
         return PostResult(success=False, error=detail)
     except Exception as e:
