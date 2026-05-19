@@ -257,9 +257,9 @@ export default async function Home() {
       {ticketSaleUpcoming.length > 0 && (
         <section className="py-8 border-b border-gold/30">
           <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-5">
-            🎫 {locale === "ja" ? "チケット発売情報" : "Ticket Sales"}
+            {locale === "ja" ? "チケット発売情報" : "Ticket Sales"}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-3">
             {ticketSaleUpcoming.map((ev) => {
               const isToday = ev.ticket_sale_start === todayJst;
               const saleDateLabel = ev.ticket_sale_start
@@ -276,9 +276,14 @@ export default async function Home() {
                   href={ev.source_url ?? `/tours/${ev.tour_id ?? ev.id}`}
                   target={ev.source_url ? "_blank" : undefined}
                   rel={ev.source_url ? "noopener noreferrer" : undefined}
-                  className="group flex flex-col bg-parchment-dark border border-gold/20 rounded-lg overflow-hidden hover:border-bordeaux/40 transition-colors"
+                  className="relative group flex flex-col bg-parchment-dark border border-gold/20 rounded-lg hover:border-bordeaux/40 transition-colors"
                 >
-                  <div className="relative aspect-video bg-gold/10">
+                  <div className="absolute -top-3 left-3 z-10">
+                    <span className={`inline-block font-body text-xs font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap text-white ${isToday ? "bg-red-500" : "bg-bordeaux"}`}>
+                      {isToday ? (locale === "ja" ? "本日発売" : "On Sale Today") : saleDateLabel}
+                    </span>
+                  </div>
+                  <div className="relative aspect-video bg-gold/10 overflow-hidden rounded-t-lg">
                     {imageUrl ? (
                       <Image src={imageUrl} alt={displayName} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
                     ) : (
@@ -286,9 +291,6 @@ export default async function Home() {
                         <span className="text-gold/30 text-3xl">♪</span>
                       </div>
                     )}
-                    <span className={`absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded ${isToday ? "bg-red-500 text-white" : "bg-bordeaux/80 text-parchment"}`}>
-                      {isToday ? (locale === "ja" ? "本日発売" : "On Sale Today") : saleDateLabel}
-                    </span>
                   </div>
                   <div className="p-2.5 flex flex-col gap-1">
                     <p className="font-heading text-xs text-ink-heading font-semibold leading-snug line-clamp-2 group-hover:text-bordeaux transition-colors">
@@ -313,7 +315,7 @@ export default async function Home() {
 
       {/* Section 1: 直近6件 */}
       <section className="py-12 border-b border-gold/30">
-        <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
+        <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-8">
           {t("upcomingTitle")}
         </h2>
         {displayEvents.length === 0 ? (
@@ -363,7 +365,7 @@ export default async function Home() {
 
       {/* Section 2: ゲームタイトルで探す */}
       <section className="py-12 border-b border-gold/30">
-        <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
+        <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-8">
           {t("gameTitlesTitle")}
         </h2>
         {topTitles.length === 0 ? (
@@ -409,7 +411,7 @@ export default async function Home() {
 
       {/* Section 3: 地域で探す */}
       <section className="py-12 border-b border-gold/30">
-        <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
+        <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-8">
           {t("regionTitle")}
         </h2>
         <JapanMapSection regionCounts={regionCounts} locale={locale} />
@@ -417,7 +419,7 @@ export default async function Home() {
 
       {/* Section 4: カレンダー */}
       <section id="calendar" className="py-12 border-b border-gold/30">
-        <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
+        <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-8">
           {t("calendarTitle")}
         </h2>
 
