@@ -48,7 +48,7 @@ type LightEvent = {
   }>;
 };
 
-type CalendarEvent = { id: string; tour_id: string | null; event_name: string; event_name_en: string | null; start_datetime: string };
+type CalendarEvent = { id: string; tour_id: string | null; event_name: string; event_name_en: string | null; start_datetime: string; venue_name: string | null; prefecture: string | null };
 type TicketSaleEvent = { id: string; tour_id: string | null; event_name: string; source_url: string | null };
 
 function toGenre(val: string | null | undefined): Genre | undefined {
@@ -116,7 +116,7 @@ export default async function Home() {
         .limit(3),
       supabase
         .from("events")
-        .select("id, tour_id, event_name, event_name_en, start_datetime")
+        .select("id, tour_id, event_name, event_name_en, start_datetime, venue_name, prefecture")
         .eq("is_published", true)
         .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
         .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
@@ -379,7 +379,7 @@ export default async function Home() {
       </section>
 
       {/* Section 4: カレンダー */}
-      <section className="py-12 border-b border-gold/30">
+      <section id="calendar" className="py-12 border-b border-gold/30">
         <h2 className="font-heading text-ink-heading text-2xl md:text-3xl font-semibold mb-8">
           {t("calendarTitle")}
         </h2>
@@ -422,14 +422,35 @@ export default async function Home() {
             ))}
           </div>
         </div>
-        <div className="mt-8 flex justify-end">
-          <Link
-            href="/calendar"
-            className="font-body text-bordeaux border border-bordeaux rounded px-8 py-2.5 text-sm font-medium hover:bg-bordeaux hover:text-parchment transition-colors"
-          >
-            {t("viewCalendar")}
-          </Link>
-        </div>
+        {calendarEvents.length > 0 && (
+          <div className="mt-10">
+            <h3 className="font-heading text-ink-heading text-lg font-semibold mb-4">
+              {locale === "ja"
+                ? `${calYear}年${calMonth + 1}月のコンサート一覧`
+                : `${new Date(Date.UTC(calYear, calMonth, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })} Concert List`}
+            </h3>
+            <div className="flex flex-col gap-2">
+              {calendarEvents.map((ev) => {
+                const jst = new Date(new Date(ev.start_datetime).getTime() + 9 * 3600 * 1000);
+                const dateStr = locale === "ja"
+                  ? `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}（${"日月火水木金土"[jst.getUTCDay()]}）`
+                  : `${jst.getUTCMonth() + 1}/${jst.getUTCDate()} (${"SMTWTFS"[jst.getUTCDay()]})`;
+                const timeStr = `${String(jst.getUTCHours()).padStart(2, "0")}:${String(jst.getUTCMinutes()).padStart(2, "0")}`;
+                const displayName = locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name;
+                return (
+                  <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
+                    className="flex items-center gap-4 bg-parchment-dark hover:bg-gold/10 border border-gold/20 rounded-md px-4 py-3 transition-colors group">
+                    <span className="font-body text-sm text-ink-body/60 shrink-0 w-28">{dateStr} {timeStr}</span>
+                    <span className="font-heading text-ink-heading text-sm font-semibold flex-1 group-hover:text-bordeaux transition-colors">{displayName}</span>
+                    {ev.prefecture && (
+                      <span className="font-body text-xs text-ink-body/50 shrink-0">{ev.prefecture}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Section 5: 放送・配信情報 */}
