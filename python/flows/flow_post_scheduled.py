@@ -92,7 +92,7 @@ def post_and_update(post: dict) -> None:
         logger.info(f"[scheduled] 投稿完了 tweet_id={result.tweet_id}")
     else:
         new_retry = post["retry_count"] + 1
-        new_status = "cancelled" if new_retry >= RETRY_LIMIT else "failed"
+        new_status = "failed" if new_retry >= RETRY_LIMIT else "pending"
         db.from_("scheduled_posts").update({
             "status": new_status,
             "retry_count": new_retry,
