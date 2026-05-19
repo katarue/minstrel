@@ -208,7 +208,7 @@ function TicketSaleDateField({ eventId, initialDate, initialTime }: { eventId: s
           type="time"
           value={timeVal}
           onChange={e => { setTimeVal(e.target.value); setTimeSaved(false); }}
-          className={`text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 w-24 ${timeVal ? "text-ink-body border-gold/40" : "text-ink-body/40 border-gold/20"}`}
+          className={`text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 w-24 ${timeVal ? "text-ink-body border-gold/40" : "text-red-500 border-red-500/40"}`}
           placeholder="--:--"
         />
         {timeDirty && !timeSaved && (
