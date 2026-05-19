@@ -116,14 +116,21 @@
       "Bash(Select-String -Pattern \".\")",
       "WebFetch(domain:www.humanlayer.dev)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:arxiv.org)"
+      "WebFetch(domain:arxiv.org)",
+      "Bash(mkdir -p /c/Users/katar/.claude/hooks)",
+      "Read(//mnt/c/Users/katar/repos/active/minstrel/python/processor/**)",
+      "Read(//mnt/c/Users/katar/repos/active/minstrel/web/src/app/admin/game-titles/**)",
+      "Read(//mnt/c/Users/katar/repos/active/minstrel/python/utils/**)",
+      "WebFetch(domain:x.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\katar\\repos\\active\\minstrel\\supabase",
       "C:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\scripts",
       "C:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\tools",
       "C:\\Users\\katar\\.claude",
-      "c:\\Users\\katar\\repos\\active\\claude-hq\\dashboard"
+      "c:\\Users\\katar\\repos\\active\\claude-hq\\dashboard",
+      "c:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\.githooks",
+      "c:\\Users\\katar\\repos\\active\\claude-hq\\.githooks"
     ]
   }
 }

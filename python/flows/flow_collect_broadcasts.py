@@ -46,7 +46,7 @@ def upsert_broadcasts(broadcasts: list[dict]) -> int:
             "vod_url": bc.get("vod_url"),
             "description": bc.get("description"),
             "source_url": source_url,
-            "is_published": True,
+            "is_published": False,
         }
 
         result = (

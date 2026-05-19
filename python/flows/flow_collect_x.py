@@ -92,7 +92,7 @@ def collect_x_flow(since_days: int = 1):
     inserted_count = 0
     try:
         sync_following_if_stale(max_age_days=0)
-        sync_x_lists_if_stale()
+        sync_x_lists_if_stale(max_age_days=0)
         raw_x = scrape_x(since_days=since_days)
         scraped_count = len(raw_x)
         print(f"scraped: x={scraped_count}")

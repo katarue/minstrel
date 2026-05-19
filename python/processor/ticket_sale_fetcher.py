@@ -31,6 +31,9 @@ _HEADERS = {
 
 # 一般発売日を示すパターン（優先度順）
 _DATE_PATTERNS = [
+    # e+ 専用: "一般発売 受付期間:2026/5/16(土)10:00～"
+    r'一般発売\s*受付期間[：:]\s*(\d{4})/(\d{1,2})/(\d{1,2})',
+    # 汎用年月日
     r'一般発売[：:\s]*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日',
     r'発売日[：:\s]*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日',
     r'販売開始[：:\s]*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日',
@@ -264,20 +267,24 @@ def fetch_ticket_sale_dates_from_x() -> int:
         for handle, oid in organizers.items()
     }
 
-    # X 検索（監視アカウントの発売キーワード投稿）
+    # X 検索（監視アカウントの発売キーワード投稿）—20件ずつバッチ処理
     handles = list(organizers.keys())
-    from_clause = " OR ".join(f"from:{h}" for h in handles[:20])
-    query = f"({from_clause}) {_SALE_KEYWORDS_QUERY} -is:retweet"
-    print(f"[ticket_sale_x] searching X: {len(handles)} accounts")
+    BATCH = 20
+    print(f"[ticket_sale_x] searching X: {len(handles)} accounts ({-(-len(handles) // BATCH)} batches)")
 
-    try:
-        tweets = search_tweets(query, since_days=7)
-    except Exception as e:
-        print(f"[ticket_sale_x] X search error: {e}")
-        return 0
+    all_tweets: list[dict] = []
+    for i in range(0, len(handles), BATCH):
+        batch = handles[i : i + BATCH]
+        from_clause = " OR ".join(f"from:{h}" for h in batch)
+        query = f"({from_clause}) {_SALE_KEYWORDS_QUERY} -is:retweet"
+        try:
+            batch_tweets = search_tweets(query, since_days=7)
+            all_tweets.extend(batch_tweets)
+        except Exception as e:
+            print(f"[ticket_sale_x] X search error (batch {i // BATCH + 1}): {e}")
 
     updated = 0
-    for tweet in tweets:
+    for tweet in all_tweets:
         author = tweet.get("_author_handle", "").lower()
         candidate_events = handle_to_events.get(author, [])
         if not candidate_events:

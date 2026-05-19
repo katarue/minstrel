@@ -108,9 +108,11 @@ def _enrich_tweet(tweet: dict) -> dict | None:
         page_text = _fetch_page_text(url)
         if page_text:
             print(f"[x_search] Pattern1: fetched {url[:60]}")
+            # X/Twitter の投稿URLはチケットURLとして使わない（SNS投稿 ≠ チケットサイト）
+            is_social_url = bool(re.search(r'https?://(x|twitter)\.com/', url))
             return {
                 "raw_text": page_text,
-                "ticket_url": url,
+                "ticket_url": None if is_social_url else url,
                 "_tweet_text": tweet_text,
                 "_flyer_image_url": photo_urls[0] if photo_urls else None,
                 "_has_page_content": True,
@@ -270,10 +272,12 @@ def scrape_x_search(since_days: int = 3) -> list[dict]:
             print(f"[x_search] error for query '{query[:35]}': {e}")
         time.sleep(3)
 
-    # ── 2. 監視アカウント（from: 指定）────────────────────────────
+    # ── 2. 監視アカウント（from: 指定、バッチ処理）────────────────────────
     handles = _load_monitored_handles()
-    if handles:
-        from_query = _build_from_query(handles, since_days)
+    BATCH_SIZE = 20
+    for i in range(0, len(handles), BATCH_SIZE):
+        batch = handles[i:i + BATCH_SIZE]
+        from_query = _build_from_query(batch, since_days)
         if from_query:
             try:
                 tweets = search_tweets(from_query, since_days=since_days)
@@ -285,9 +289,11 @@ def scrape_x_search(since_days: int = 3) -> list[dict]:
                         tweet["source_name"] = "x_monitored"
                         all_results.append(tweet)
                         new_count += 1
-                print(f"[x_search] monitored accounts ({len(handles)}) => {new_count} new tweets")
+                print(f"[x_search] monitored batch {i // BATCH_SIZE + 1} ({len(batch)} accounts) => {new_count} new tweets")
             except Exception as e:
-                print(f"[x_search] error for monitored accounts: {e}")
+                print(f"[x_search] error for monitored batch {i // BATCH_SIZE + 1}: {e}")
+            if i + BATCH_SIZE < len(handles):
+                time.sleep(3)
 
     # ── 3. フォローリスト（バッチ from: 指定）────────────────────────
     following_handles = _load_following_handles()

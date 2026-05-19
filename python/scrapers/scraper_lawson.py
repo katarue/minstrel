@@ -25,6 +25,12 @@ def _q(kw: str) -> str:
     from urllib.parse import quote
     return f"{BASE_URL}/search/?keyword={quote(kw)}&genre=1"
 
+# カテゴリ特集ページ（ゲーム音楽・映画音楽・アニメ音楽コンサート特集）
+# キーワード検索より精度が高い。イベント名に「ゲーム音楽」を含まない演目も収録される。
+CATEGORY_PAGES = [
+    "https://l-tike.com/classic/mevent/?mid=420175",
+]
+
 SEARCH_QUERIES = [
     _q("ゲーム音楽"),
     _q("ゲームミュージック"),
@@ -121,7 +127,11 @@ class ScraperLawson(BaseScraper):
         seen: set[str] = set()
         detail_urls: list[str] = []
 
-        for search_url in SEARCH_QUERIES:
+        # カテゴリ特集ページ → キーワード検索の順で収集
+        all_list_urls = CATEGORY_PAGES + SEARCH_QUERIES
+        category_mids = {p.split("mid=")[-1] for p in CATEGORY_PAGES if "mid=" in p}
+
+        for search_url in all_list_urls:
             try:
                 r = cffi_requests.get(search_url, impersonate="chrome", timeout=15)
                 r.raise_for_status()
@@ -135,14 +145,16 @@ class ScraperLawson(BaseScraper):
                 if "mevent" not in href:
                     continue
                 full = href if href.startswith("http") else urljoin(BASE_URL, href)
-                # mid パラメータでユニーク判定
+                # mid パラメータでユニーク判定。カテゴリページ自体は除外。
                 mid = ""
                 if "mid=" in full:
                     for param in full.split("?")[-1].split("&"):
                         if param.startswith("mid="):
-                            mid = param
+                            mid = param[4:]  # "mid=" を除いた値
                             break
-                key = mid or full
+                if mid in category_mids:
+                    continue
+                key = f"mid={mid}" if mid else full
                 if key not in seen:
                     seen.add(key)
                     detail_urls.append(full)

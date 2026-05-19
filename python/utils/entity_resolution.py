@@ -138,6 +138,12 @@ def find_existing_event_by_name_date(
 
     organizer_id が渡された場合はオーガナイザーも一致条件に加える（誤マージ防止）。
     正規化: NFKC（全角→半角）+ 空白除去 + 小文字化。
+
+    マッチ条件:
+      1. 完全一致
+      2. 前方一致（一方が他方の prefix）かつ共通部分が8文字以上
+         例: 「STEINS;GATE「因果旋律のシンフォニー」」 ⊂ 「STEINS;GATE「因果旋律のシンフォニー」松戸公演」
+         ※ X ツイートが会場サフィックスを省略するケースを吸収する
     """
     if not event_name or not start_datetime:
         return None
@@ -156,7 +162,18 @@ def find_existing_event_by_name_date(
 
     result = query.execute()
     for row in result.data or []:
-        if _normalize_title(row["event_name"]) == normalized_query:
+        normalized_existing = _normalize_title(row["event_name"])
+        if normalized_existing == normalized_query:
+            return row["id"]
+        # 前方一致: 一方が他方の真の prefix（長さが異なること必須）かつ共通部分が8文字以上
+        # 同じ文字数で末尾だけ違う場合（東京公演 vs 大阪公演）は除外
+        if (len(normalized_query) < len(normalized_existing)
+                and len(normalized_query) >= 8
+                and normalized_existing.startswith(normalized_query)):
+            return row["id"]
+        if (len(normalized_existing) < len(normalized_query)
+                and len(normalized_existing) >= 8
+                and normalized_query.startswith(normalized_existing)):
             return row["id"]
     return None
 

@@ -114,9 +114,12 @@ def sync(dry_run: bool = False) -> None:
         if new_tier == "unknown":
             not_found_in_list += 1
 
-        print(f"  {'[DRY]' if dry_run else '[UPDATE]'} @{x_handle} ({org['name']}): {current_tier} → {new_tier}")
+        update_data: dict = {"trust_tier": new_tier}
+        if new_tier in ("exclusive", "partial"):
+            update_data["x_monitoring"] = True
+        print(f"  {'[DRY]' if dry_run else '[UPDATE]'} @{x_handle} ({org['name']}): {current_tier} → {new_tier}" + (" + x_monitoring=True" if "x_monitoring" in update_data else ""))
         if not dry_run:
-            db.table("organizers").update({"trust_tier": new_tier}).eq("id", org["id"]).execute()
+            db.table("organizers").update(update_data).eq("id", org["id"]).execute()
         updated += 1
 
     # ── 3. リストにあるが DB に存在しないハンドル ──────────────────────
@@ -127,10 +130,20 @@ def sync(dry_run: bool = False) -> None:
     }
     missing = [h for h in tier_by_handle if h not in db_handles]
     if missing:
-        print(f"\n[sync] DB に未登録のリストメンバー ({len(missing)} 件):")
+        print(f"\n[sync] DB に未登録のリストメンバー ({len(missing)} 件) を自動登録します:")
         for h in missing:
-            print(f"  @{h} ({tier_by_handle[h]})")
-        print("  ※ これらはイベント登録時に自動追加されます")
+            tier = tier_by_handle[h]
+            print(f"  {'[DRY]' if dry_run else '[CREATE]'} @{h} ({tier}) → x_monitoring=True")
+            if not dry_run:
+                try:
+                    db.table("organizers").insert({
+                        "name": f"@{h}",
+                        "x_handle": h,
+                        "x_monitoring": True,
+                        "trust_tier": tier,
+                    }).execute()
+                except Exception as e:
+                    print(f"    [ERROR] @{h}: {e}")
 
     print(f"\n[sync] 完了: 更新={updated} / 変更なし={skipped_no_change} / handle未設定={skipped_no_handle} / リスト外リセット={not_found_in_list}")
 

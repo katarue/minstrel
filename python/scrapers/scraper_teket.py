@@ -19,17 +19,18 @@ from processor.structured_parser import build_iso8601, region_to_prefecture, gam
 REQUEST_TIMEOUT = (5, 15)
 
 BASE_URL = "https://teket.jp"
-API_URL = f"{BASE_URL}/api/events"
+# /api/events はイベント名・説明文のみ検索。/api/events.json はUIタグも含めて検索する。
+API_URL = f"{BASE_URL}/api/events.json"
 
 # 検索キーワード × カテゴリの組み合わせ
 # 注意: teket API は1セッションで複数クエリを連続実行するとレートリミットし
 # 応答をドリップ配信して無限待ちになる。1クエリのみ使用し、
-# MAX_PAGES_PER_QUERY × 10件 = 最大50件を取得する。
+# MAX_PAGES_PER_QUERY × 10件 = 最大300件を取得する。
 SEARCH_CONFIGS = [
-    {"word": "ゲーム音楽", "category": "3"},   # 音楽カテゴリ（主要クエリ）
+    {"word": "ゲーム音楽"},   # カテゴリ制限なし: 主催者がどのカテゴリに登録してもヒットさせる
 ]
 
-MAX_PAGES_PER_QUERY = 5
+MAX_PAGES_PER_QUERY = 10  # 毎日実行前提: 新着は数十件。ページあたり10件 = 最大100件
 
 
 class ScraperTeket(BaseScraper):
@@ -41,7 +42,7 @@ class ScraperTeket(BaseScraper):
         results: list[dict] = []
 
         for cfg in SEARCH_CONFIGS:
-            events = self._fetch_events(cfg["word"], cfg["category"], seen_urls)
+            events = self._fetch_events(cfg["word"], cfg.get("category"), seen_urls)
             results.extend(events)
             time.sleep(SCRAPE_RATE_LIMIT_SEC)
 
@@ -49,16 +50,19 @@ class ScraperTeket(BaseScraper):
         return results
 
     def _fetch_events(
-        self, word: str, category: str, seen: set[str]
+        self, word: str, category: str | None, seen: set[str]
     ) -> list[dict]:
         results = []
         page = 1
 
         while page <= MAX_PAGES_PER_QUERY:
             try:
+                params: dict = {"word": word, "p": page}
+                if category:
+                    params["category"] = category
                 resp = self.session.get(
                     API_URL,
-                    params={"word": word, "category": category, "p": page},
+                    params=params,
                     timeout=REQUEST_TIMEOUT,
                 )
                 resp.raise_for_status()

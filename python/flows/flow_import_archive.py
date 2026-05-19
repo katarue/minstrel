@@ -90,7 +90,7 @@ def upsert_to_db(events: list[dict]) -> int:
             "confidence_score": int(event["confidence_score"] * 100) if event.get("confidence_score") is not None else None,
             "auto_publish_eligible": event.get("auto_publish_eligible", False),
             "is_canceled": event.get("is_cancelled", False),
-            "is_published": event.get("auto_publish_eligible", False),
+            "is_published": False,
             "flyer_image_url": event.get("flyer_image_url"),
         }
         if ticket_url:

@@ -109,7 +109,7 @@ export default async function ConcertsPage({
       query = query.eq("prefecture", prefecture);
     } else if (region && region in REGION_PREFECTURES) {
       const keywords = REGION_PREFECTURES[region as Region];
-      const orFilter = keywords.map((k) => `prefecture.ilike.%${k}%`).join(",");
+      const orFilter = keywords.map((k) => `prefecture.ilike.${k}%`).join(",");
       query = query.or(orFilter);
     }
     if (genre) query = query.eq("performance_type", genre);

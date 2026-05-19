@@ -27,6 +27,13 @@ def _q(kw: str) -> str:
     from urllib.parse import quote
     return f"https://t.pia.jp/pia/search_all.do?kw={quote(kw)}&ct_l1=1"
 
+# カテゴリタグページ（ゲームチケットまとめ）
+# キーワード検索より精度が高い。イベント名に「ゲーム音楽」を含まない演目も収録される。
+# タグページはレンダリングに networkidle が必要。
+TAG_URLS = [
+    "https://t.pia.jp/pia/tag/tag.do?tagCd=0000061",
+]
+
 SEARCH_URLS = [
     _q("ゲーム音楽"),
     _q("ゲームミュージック"),
@@ -143,13 +150,32 @@ class ScraperPia(BaseScraper):
         return results
 
     def _fetch_search_links(self) -> list[str]:
-        """Playwright でゲーム音楽コンサートの検索結果ページからイベントリンクを収集する。"""
+        """Playwright でタグページ・検索結果ページからイベントリンクを収集する。
+        タグページ（CSR）は networkidle、検索ページは domcontentloaded を使用。
+        """
         seen: set[str] = set()
         urls: list[str] = []
 
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
+
+                # タグページ: CSR のため networkidle 待機が必要
+                for tag_url in TAG_URLS:
+                    page = browser.new_page(user_agent=USER_AGENT)
+                    try:
+                        page.goto(tag_url, timeout=45000)
+                        page.wait_for_load_state("networkidle", timeout=20000)
+                        content = page.content()
+                    except Exception as e:
+                        print(f"[pia] playwright error {tag_url}: {e}")
+                        continue
+                    finally:
+                        page.close()
+                    self._extract_links(content, seen, urls)
+                    time.sleep(SCRAPE_RATE_LIMIT_SEC)
+
+                # キーワード検索ページ: domcontentloaded で十分
                 for search_url in SEARCH_URLS:
                     page = browser.new_page(user_agent=USER_AGENT)
                     try:
@@ -163,6 +189,7 @@ class ScraperPia(BaseScraper):
                         page.close()
                     self._extract_links(content, seen, urls)
                     time.sleep(SCRAPE_RATE_LIMIT_SEC)
+
                 browser.close()
         except Exception as e:
             print(f"[pia] playwright error: {e}")
@@ -173,15 +200,15 @@ class ScraperPia(BaseScraper):
         soup = BeautifulSoup(content, "lxml")
         for a in soup.find_all("a", href=True):
             href: str = a["href"]
-            if "ticketInformation" not in href and "eventCd=" not in href:
+            if not any(p in href for p in ("ticketInformation", "eventCd=", "eventBundleCd=")):
                 continue
             if not href.startswith("http"):
                 href = DETAIL_BASE + href
-            # クエリパラメータから eventCd のみで正規化
+            # クエリパラメータから eventCd または eventBundleCd のみで正規化
             base = href.split("?")[0]
             event_cd = ""
             for param in href.split("?")[-1].split("&"):
-                if param.startswith("eventCd="):
+                if param.startswith("eventCd=") or param.startswith("eventBundleCd="):
                     event_cd = param
                     break
             key = f"{base}?{event_cd}" if event_cd else base
