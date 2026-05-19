@@ -67,8 +67,18 @@ def post_tweet_v2(text: str, image_urls: list[str] | None = None) -> PostResult:
         print(f"[x] posted ({len(text)} chars): {text[:60]}...")
         return PostResult(success=True, tweet_id=tweet_id, tweet_url=tweet_url)
 
+    except tweepy.errors.TweepyException as e:
+        codes = getattr(e, "api_codes", None)
+        msgs = getattr(e, "api_messages", None)
+        detail = f"{e}"
+        if codes:
+            detail += f" [codes={codes}]"
+        if msgs:
+            detail += f" [api_msgs={msgs}]"
+        print(f"[x] failed: {detail}")
+        return PostResult(success=False, error=detail)
     except Exception as e:
-        print(f"[x] failed: {e}")
+        print(f"[x] failed (unexpected): {e}")
         return PostResult(success=False, error=str(e))
 
 
