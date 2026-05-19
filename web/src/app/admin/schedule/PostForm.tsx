@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ScheduledPostCategory } from "./types";
 import { CATEGORY_LABELS } from "./types";
 import type { PostFormValues } from "./actions";
+import { uploadScheduledPostImage } from "./actions";
 
 const CATEGORIES: ScheduledPostCategory[] = [
   "release",
@@ -43,6 +44,7 @@ export function PostForm({ initialValues, onSubmit, submitLabel }: Props) {
     const base = initialValues?.image_urls ?? [];
     return [...base, "", "", "", ""].slice(0, 4);
   });
+  const [imageUploading, setImageUploading] = useState<boolean[]>([false, false, false, false]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -64,9 +66,22 @@ export function PostForm({ initialValues, onSubmit, submitLabel }: Props) {
     });
   };
 
-  const updateImageUrl = (i: number, val: string) => {
+  const handleImageFile = async (i: number, file: File | null) => {
+    if (!file) return;
+    setImageUploading((prev) => { const n = [...prev]; n[i] = true; return n; });
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await uploadScheduledPostImage(fd);
+    setImageUploading((prev) => { const n = [...prev]; n[i] = false; return n; });
+    if (!res.ok) { setError(res.message ?? "アップロードに失敗しました"); return; }
     const next = [...imageUrls];
-    next[i] = val;
+    next[i] = res.url!;
+    setImageUrls(next);
+  };
+
+  const removeImage = (i: number) => {
+    const next = [...imageUrls];
+    next[i] = "";
     setImageUrls(next);
   };
 
@@ -137,21 +152,46 @@ export function PostForm({ initialValues, onSubmit, submitLabel }: Props) {
         />
       </div>
 
-      {/* 画像URL */}
+      {/* 画像アップロード */}
       <div>
         <label className="block text-xs text-ink-body/70 uppercase tracking-wide mb-1.5">
-          画像URL（任意、最大4件）
+          画像（任意、最大4件・JPEG/PNG/WebP/GIF・5MB以内）
         </label>
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           {imageUrls.map((url, i) => (
-            <input
-              key={i}
-              type="url"
-              value={url}
-              onChange={(e) => updateImageUrl(i, e.target.value)}
-              placeholder={`画像URL ${i + 1}（https://...）`}
-              className="w-full text-sm bg-parchment border border-gold/40 rounded px-3 py-1.5 text-ink-body focus:border-bordeaux outline-none"
-            />
+            <div key={i} className="relative">
+              {url ? (
+                <div className="relative aspect-video rounded overflow-hidden border border-gold/30 bg-gray-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs flex items-center justify-center hover:bg-black/80"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <label className={`flex flex-col items-center justify-center aspect-video rounded border-2 border-dashed cursor-pointer transition-colors ${imageUploading[i] ? "border-gold/30 bg-gold/5" : "border-gold/30 hover:border-bordeaux/50 hover:bg-bordeaux/5"}`}>
+                  {imageUploading[i] ? (
+                    <span className="text-xs text-ink-body/50">アップロード中...</span>
+                  ) : (
+                    <>
+                      <span className="text-lg text-ink-body/30">+</span>
+                      <span className="text-xs text-ink-body/50 mt-0.5">画像 {i + 1}</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={imageUploading[i]}
+                    onChange={(e) => handleImageFile(i, e.target.files?.[0] ?? null)}
+                  />
+                </label>
+              )}
+            </div>
           ))}
         </div>
       </div>

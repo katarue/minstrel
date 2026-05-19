@@ -120,3 +120,27 @@ export async function retryScheduledPost(
 export async function duplicateScheduledPost(id: string): Promise<never> {
   redirect(`/admin/schedule/new?copy=${id}`);
 }
+
+export async function uploadScheduledPostImage(
+  formData: FormData
+): Promise<{ ok: boolean; url?: string; message?: string }> {
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return { ok: false, message: "ファイルが見つかりません" };
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!allowed.includes(file.type)) return { ok: false, message: "対応形式: JPEG / PNG / WebP / GIF" };
+  if (file.size > 5 * 1024 * 1024) return { ok: false, message: "ファイルサイズは5MB以内にしてください" };
+
+  const ext = file.type.split("/")[1].replace("jpeg", "jpg");
+  const path = `scheduled-posts/${crypto.randomUUID()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage
+    .from("event-images")
+    .upload(path, buffer, { contentType: file.type });
+  if (error) return { ok: false, message: error.message };
+
+  const url = supabase.storage.from("event-images").getPublicUrl(path).data.publicUrl;
+  return { ok: true, url };
+}
