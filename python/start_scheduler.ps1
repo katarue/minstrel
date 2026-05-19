@@ -30,10 +30,12 @@ Set-Location $Root
 
 # collect_flow と collect_x_flow（いずれも毎日 01:00 JST）を別プロセスで起動
 # PS 5.1 では stdout と stderr に同一ファイルを指定できないため別ファイルに分ける
-$logCollectOut = Join-Path $LogDir ("collect_" + (Get-Date -Format "yyyyMMdd") + ".log")
-$logCollectErr = Join-Path $LogDir ("collect_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
-$logXOut       = Join-Path $LogDir ("collect_x_" + (Get-Date -Format "yyyyMMdd") + ".log")
-$logXErr       = Join-Path $LogDir ("collect_x_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logCollectOut   = Join-Path $LogDir ("collect_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logCollectErr   = Join-Path $LogDir ("collect_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logXOut         = Join-Path $LogDir ("collect_x_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logXErr         = Join-Path $LogDir ("collect_x_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logPostSchedOut = Join-Path $LogDir ("post_scheduled_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logPostSchedErr = Join-Path $LogDir ("post_scheduled_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
 
 Start-Process -FilePath $Python `
     -ArgumentList "$Script --serve-scheduled" `
@@ -49,4 +51,11 @@ Start-Process -FilePath $Python `
     -RedirectStandardOutput $logXOut `
     -RedirectStandardError  $logXErr
 
-"[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Both serve processes launched." | Add-Content $LogFile
+Start-Process -FilePath $Python `
+    -ArgumentList "$Script --serve-post-scheduled" `
+    -WorkingDirectory $Root `
+    -WindowStyle Hidden `
+    -RedirectStandardOutput $logPostSchedOut `
+    -RedirectStandardError  $logPostSchedErr
+
+"[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] All serve processes launched." | Add-Content $LogFile

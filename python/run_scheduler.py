@@ -11,6 +11,9 @@ Minstrel スケジューラー
   # 投稿フロー: 月・金 09:00 JST
   cd python && .venv/Scripts/python run_scheduler.py --serve-post
 
+  # X予約投稿フロー: 5分ごと
+  cd python && .venv/Scripts/python run_scheduler.py --serve-post-scheduled
+
   # 全フロー同時常駐
   cd python && .venv/Scripts/python run_scheduler.py --serve-all
 
@@ -18,6 +21,7 @@ Minstrel スケジューラー
   cd python && .venv/Scripts/python run_scheduler.py --run-now
   cd python && .venv/Scripts/python run_scheduler.py --run-post-monday
   cd python && .venv/Scripts/python run_scheduler.py --run-post-friday
+  cd python && .venv/Scripts/python run_scheduler.py --run-post-scheduled
   cd python && .venv/Scripts/python run_scheduler.py --run-sync-following
   cd python && .venv/Scripts/python run_scheduler.py --run-sync-lists
 """
@@ -35,6 +39,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from flows.flow_collect import collect_flow
 from flows.flow_collect_x import collect_x_flow
+from flows.flow_post_scheduled import post_scheduled_flow
 from flows.flow_post_weekly import post_friday_flow, post_monday_flow
 
 if __name__ == "__main__":
@@ -45,15 +50,19 @@ if __name__ == "__main__":
     parser.add_argument("--run-post-friday", action="store_true", help="金曜投稿フロー即時実行")
     parser.add_argument("--run-sync-following", action="store_true", help="@minstrel_live フォローリスト同期")
     parser.add_argument("--run-sync-lists", action="store_true", help="X リスト → trust_tier 同期（即時）")
+    parser.add_argument("--run-post-scheduled", action="store_true", help="X予約投稿フロー即時実行")
     parser.add_argument("--serve-scheduled", action="store_true", help="チケット収集フロー: 毎日01:00 JST")
     parser.add_argument("--serve-x", action="store_true", help="X 収集フロー: 毎日01:00 JST")
     parser.add_argument("--serve-post", action="store_true", help="投稿フロー: 月・金 09:00 JST")
+    parser.add_argument("--serve-post-scheduled", action="store_true", help="X予約投稿フロー: 5分ごと")
     parser.add_argument("--serve-all", action="store_true", help="全フロー常駐")
     args = parser.parse_args()
 
     from prefect.client.schemas.schedules import CronSchedule
 
-    if args.run_sync_following:
+    if args.run_post_scheduled:
+        post_scheduled_flow()
+    elif args.run_sync_following:
         from scripts.sync_x_following import run as sync_run
         sync_run()
     elif args.run_sync_lists:
@@ -76,6 +85,11 @@ if __name__ == "__main__":
         collect_x_flow.serve(
             name="minstrel-collect-x-scheduled",
             schedules=[CronSchedule(cron="0 1 * * *", timezone="Asia/Tokyo")],
+        )
+    elif args.serve_post_scheduled:
+        post_scheduled_flow.serve(
+            name="minstrel-post-scheduled",
+            schedules=[CronSchedule(cron="*/5 * * * *", timezone="Asia/Tokyo")],
         )
     elif args.serve_post:
         from prefect.runner import Runner
@@ -113,6 +127,11 @@ if __name__ == "__main__":
             post_friday_flow,
             name="minstrel-post-friday",
             schedules=[CronSchedule(cron="0 9 * * 5", timezone="Asia/Tokyo")],
+        )
+        runner.add_flow(
+            post_scheduled_flow,
+            name="minstrel-post-scheduled",
+            schedules=[CronSchedule(cron="*/5 * * * *", timezone="Asia/Tokyo")],
         )
         runner.start()
     else:
