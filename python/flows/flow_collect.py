@@ -8,6 +8,7 @@ from scrapers.scraper_pia import ScraperPia
 from scrapers.scraper_lawson import ScraperLawson
 from scrapers.scraper_peatix import ScraperPeatix
 from scrapers.scraper_livepocket import ScraperLivepocket
+from scrapers.scraper_sugimania import ScraperSugimania
 from processor.claude_extractor import extract_event, extract_event_from_image, extract_game_titles, translate_event_names_en, translate_event_descriptions_en
 from processor.web_enricher import enrich_event_fields
 from validator.machine_validator import validate
@@ -58,6 +59,10 @@ def scrape_peatix() -> list[dict]:
 def scrape_livepocket() -> list[dict]:
     return ScraperLivepocket().scrape()
 
+
+@task
+def scrape_sugimania() -> list[dict]:
+    return ScraperSugimania().scrape()
 
 
 @task
@@ -553,12 +558,14 @@ def collect_flow():
         raw_lawson = scrape_lawson()
         raw_peatix = scrape_peatix()
         raw_livepocket = scrape_livepocket()
-        raw = raw_teket + raw_eplus + raw_pia + raw_lawson + raw_peatix + raw_livepocket
+        raw_sugimania = scrape_sugimania()
+        raw = raw_teket + raw_eplus + raw_pia + raw_lawson + raw_peatix + raw_livepocket + raw_sugimania
         scraped_count = len(raw)
         print(
             f"scraped: teket={len(raw_teket)}, "
             f"eplus={len(raw_eplus)}, pia={len(raw_pia)}, lawson={len(raw_lawson)}, "
-            f"peatix={len(raw_peatix)}, livepocket={len(raw_livepocket)}, total={scraped_count}"
+            f"peatix={len(raw_peatix)}, livepocket={len(raw_livepocket)}, "
+            f"sugimania={len(raw_sugimania)}, total={scraped_count}"
         )
 
         extracted = extract_events(raw)
