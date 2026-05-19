@@ -19,6 +19,7 @@ FLOW_META = {
     "collect_organizer_x_flow": ("flow_collect_organizer_x.py", "演奏団体Xプロフ画像"),
     "post_monday_flow":         ("flow_post_weekly.py",       "X自動投稿（月）"),
     "post_friday_flow":         ("flow_post_weekly.py",       "X自動投稿（金）"),
+    "post_scheduled_flow":      ("flow_post_scheduled.py",    "X予約投稿"),
 }
 
 DOW_JP = {"0": "日", "1": "月", "2": "火", "3": "水", "4": "木", "5": "金", "6": "土"}
@@ -30,6 +31,11 @@ def cron_to_japanese(cron: str) -> tuple[str, str]:
     if len(parts) != 5:
         return cron, ""
     minute, hour, dom, _, dow = parts
+
+    # */N 形式（分単位インターバル）
+    if minute.startswith("*/") and hour == "*":
+        return f"{minute[2:]}分ごと", ""
+
     time_str = f"{int(hour):02d}:{int(minute):02d}"
 
     if dow != "*":

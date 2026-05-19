@@ -100,6 +100,7 @@ Prefect で定期実行（デスクトップ常時稼働）。起動コマンド
 | `flow_collect_x.py` | X検索・フォローリスト | 毎日 | 01:00 |
 | `flow_post_weekly.py` | X自動投稿（月） | 月曜 | 09:00 |
 | `flow_post_weekly.py` | X自動投稿（金） | 金曜 | 09:00 |
+| `flow_post_scheduled.py` | X予約投稿 | 5分ごと |  |
 <!-- SCHEDULE_TABLE_END -->
 
 ### パイプライン構成図
@@ -116,6 +117,8 @@ flowchart LR
 月曜 09:00"]
     DB --> postfridayflow["X自動投稿（金）
 金曜 09:00"]
+    DB --> postscheduledflow["X予約投稿
+5分ごと "]
 ```
 <!-- PIPELINE_DIAGRAM_END -->
 
