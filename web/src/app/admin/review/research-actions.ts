@@ -943,7 +943,11 @@ async function extractFromScreenshot(
   base64: string,
   mediaType: string,
 ): Promise<ScreenshotExtraction | null> {
+  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Tokyo" });
   const prompt = `このスクリーンショットからコンサート情報を抽出してください。JSONのみ返してください。
+
+今日の日付: ${today}（JST）
+年が明示されていない日付（例: 12.27、5/24）は、今日より将来の直近の日付として年を補完してください。
 
 ルール:
 - event_name: イベント全体のタイトル
