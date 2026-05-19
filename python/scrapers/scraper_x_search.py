@@ -17,11 +17,11 @@ API_URL = "https://api.twitterapi.io/twitter/tweet/advanced_search"
 
 # ── キーワード検索クエリ（ハッシュタグ含む） ──────────────────────
 SEARCH_QUERIES = [
-    "#ゲーム音楽演奏会情報 -is:retweet lang:ja",
-    "#ゲーム音楽コンサート -is:retweet lang:ja",
-    "ゲーム音楽 コンサート -is:retweet lang:ja",
-    "ゲームミュージック 演奏会 -is:retweet lang:ja",
-    "ゲーム音楽 演奏会 -is:retweet lang:ja",
+    "#ゲーム音楽演奏会情報 -is:reply lang:ja",
+    "#ゲーム音楽コンサート -is:reply lang:ja",
+    "ゲーム音楽 コンサート -is:reply lang:ja",
+    "ゲームミュージック 演奏会 -is:reply lang:ja",
+    "ゲーム音楽 演奏会 -is:reply lang:ja",
 ]
 
 # 1リクエストあたりの最大ページ数（コスト制御）
@@ -228,7 +228,7 @@ def _build_from_query(handles: list[str], since_days: int) -> str | None:
     if not handles:
         return None
     from_parts = " OR ".join(f"from:{h}" for h in handles[:20])
-    return f"({from_parts}) -is:retweet"
+    return f"({from_parts}) -is:reply"
 
 
 def _load_following_handles() -> list[str]:
