@@ -878,9 +878,8 @@ export async function ingestFromUrl(
   // ── 単一イベントモード ───────────────────────────────────────────────────
   const extracted = await extractFullEvent(pageData.text, trimmedUrl);
 
-  if (!extracted.event_name) {
-    return { ok: false, message: "イベント名を抽出できませんでした" };
-  }
+  const eventName = extracted.event_name || "（イベント名未取得 — 手動入力が必要です）";
+  const nameWarning = !extracted.event_name ? " ⚠️ イベント名を取得できませんでした。登録後に手動で修正してください。" : "";
 
   const organizerId = extracted.organizer_name
     ? await upsertOrganizer(supabase, extracted.organizer_name, extracted.organizer_official_url)
@@ -889,7 +888,7 @@ export async function ingestFromUrl(
   const { data: newEvent, error: insertError } = await supabase
     .from("events")
     .insert({
-      event_name: extracted.event_name,
+      event_name: eventName,
       start_datetime: extracted.start_datetime ?? null,
       venue_name: extracted.venue_name ?? null,
       prefecture: extracted.prefecture ?? null,
@@ -920,7 +919,7 @@ export async function ingestFromUrl(
   await insertGameTitlesForEvent(supabase, newEvent.id, extracted.game_titles ?? []);
 
   revalidatePath("/admin/review");
-  return { ok: true, message: `「${extracted.event_name}」を登録しました`, eventId: newEvent.id };
+  return { ok: true, message: `「${eventName}」を登録しました${nameWarning}`, eventId: newEvent.id };
 }
 
 // ── スクリーンショット取込 ────────────────────────────────────────────────────
