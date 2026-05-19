@@ -879,7 +879,14 @@ export async function ingestFromUrl(
   const extracted = await extractFullEvent(pageData.text, trimmedUrl);
 
   const eventName = extracted.event_name || "（イベント名未取得 — 手動入力が必要です）";
-  const nameWarning = !extracted.event_name ? " ⚠️ イベント名を取得できませんでした。登録後に手動で修正してください。" : "";
+  const startDatetime = extracted.start_datetime || "1900-01-01T00:00:00+09:00";
+  const missingFields = [
+    !extracted.event_name && "イベント名",
+    !extracted.start_datetime && "日時",
+  ].filter(Boolean);
+  const nameWarning = missingFields.length > 0
+    ? ` ⚠️ ${missingFields.join("・")}を取得できませんでした。登録後に手動で修正してください。`
+    : "";
 
   const organizerId = extracted.organizer_name
     ? await upsertOrganizer(supabase, extracted.organizer_name, extracted.organizer_official_url)
@@ -889,7 +896,7 @@ export async function ingestFromUrl(
     .from("events")
     .insert({
       event_name: eventName,
-      start_datetime: extracted.start_datetime ?? null,
+      start_datetime: startDatetime,
       venue_name: extracted.venue_name ?? null,
       prefecture: extracted.prefecture ?? null,
       organizer_id: organizerId,
