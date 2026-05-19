@@ -36,8 +36,10 @@ $logXOut         = Join-Path $LogDir ("collect_x_" + (Get-Date -Format "yyyyMMdd
 $logXErr         = Join-Path $LogDir ("collect_x_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logPostSchedOut = Join-Path $LogDir ("post_scheduled_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logPostSchedErr = Join-Path $LogDir ("post_scheduled_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
-$logPostWeeklyOut = Join-Path $LogDir ("post_weekly_" + (Get-Date -Format "yyyyMMdd") + ".log")
-$logPostWeeklyErr = Join-Path $LogDir ("post_weekly_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logPostMondayOut = Join-Path $LogDir ("post_monday_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logPostMondayErr = Join-Path $LogDir ("post_monday_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logPostFridayOut = Join-Path $LogDir ("post_friday_" + (Get-Date -Format "yyyyMMdd") + ".log")
+$logPostFridayErr = Join-Path $LogDir ("post_friday_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
 
 function Start-ServeIfNotRunning {
     param($Arg, $OutLog, $ErrLog)
@@ -60,6 +62,7 @@ function Start-ServeIfNotRunning {
 Start-ServeIfNotRunning "--serve-scheduled"       $logCollectOut    $logCollectErr
 Start-ServeIfNotRunning "--serve-x"               $logXOut          $logXErr
 Start-ServeIfNotRunning "--serve-post-scheduled"  $logPostSchedOut  $logPostSchedErr
-Start-ServeIfNotRunning "--serve-post"            $logPostWeeklyOut $logPostWeeklyErr
+Start-ServeIfNotRunning "--serve-post-monday"     $logPostMondayOut $logPostMondayErr
+Start-ServeIfNotRunning "--serve-post-friday"     $logPostFridayOut $logPostFridayErr
 
 "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] All serve processes checked." | Add-Content $LogFile

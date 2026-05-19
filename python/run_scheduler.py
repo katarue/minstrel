@@ -26,6 +26,7 @@ Minstrel スケジューラー
   cd python && .venv/Scripts/python run_scheduler.py --run-sync-lists
 """
 import argparse
+import asyncio
 import os
 import sys
 
@@ -53,7 +54,9 @@ if __name__ == "__main__":
     parser.add_argument("--run-post-scheduled", action="store_true", help="X予約投稿フロー即時実行")
     parser.add_argument("--serve-scheduled", action="store_true", help="チケット収集フロー: 毎日01:00 JST")
     parser.add_argument("--serve-x", action="store_true", help="X 収集フロー: 毎日01:00 JST")
-    parser.add_argument("--serve-post", action="store_true", help="投稿フロー: 月・金 09:00 JST")
+    parser.add_argument("--serve-post-monday", action="store_true", help="月曜投稿フロー常駐")
+    parser.add_argument("--serve-post-friday", action="store_true", help="金曜投稿フロー常駐")
+    parser.add_argument("--serve-post", action="store_true", help="投稿フロー: 月・金 09:00 JST（非推奨: serve-post-monday/friday を使う）")
     parser.add_argument("--serve-post-scheduled", action="store_true", help="X予約投稿フロー: 5分ごと")
     parser.add_argument("--serve-all", action="store_true", help="全フロー常駐")
     args = parser.parse_args()
@@ -91,6 +94,16 @@ if __name__ == "__main__":
             name="minstrel-post-scheduled",
             schedules=[CronSchedule(cron="*/5 * * * *", timezone="Asia/Tokyo")],
         )
+    elif args.serve_post_monday:
+        post_monday_flow.serve(
+            name="minstrel-post-monday",
+            schedules=[CronSchedule(cron="0 9 * * 1", timezone="Asia/Tokyo")],
+        )
+    elif args.serve_post_friday:
+        post_friday_flow.serve(
+            name="minstrel-post-friday",
+            schedules=[CronSchedule(cron="0 9 * * 5", timezone="Asia/Tokyo")],
+        )
     elif args.serve_post:
         from prefect.runner import Runner
         runner = Runner(name="minstrel-post-runner")
@@ -104,7 +117,7 @@ if __name__ == "__main__":
             name="minstrel-post-friday",
             schedules=[CronSchedule(cron="0 9 * * 5", timezone="Asia/Tokyo")],
         )
-        runner.start()
+        asyncio.run(runner.start())
     elif args.serve_all:
         from prefect.runner import Runner
         runner = Runner(name="minstrel-runner")
@@ -133,6 +146,6 @@ if __name__ == "__main__":
             name="minstrel-post-scheduled",
             schedules=[CronSchedule(cron="*/5 * * * *", timezone="Asia/Tokyo")],
         )
-        runner.start()
+        asyncio.run(runner.start())
     else:
         collect_flow.serve(name="minstrel-collect")
