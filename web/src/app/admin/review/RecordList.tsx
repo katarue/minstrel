@@ -738,16 +738,20 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     <ManualImageUrlField eventId={ev.id} initialUrl={ev.flyer_image_url} />
                   </td>
 
-                  {/* 日時（日付 + 時間を縦並び） */}
+                  {/* 日時（日付 + 時間を区切り線で分離） */}
                   <td className="py-2.5 pr-2 whitespace-nowrap align-top">
-                    {date
-                      ? <span className="block text-sm text-ink-body">{date}</span>
-                      : <Empty label="日付なし" />
-                    }
-                    {time
-                      ? <span className="block text-sm text-ink-body/80 mt-0.5">{time}</span>
-                      : <span className="block mt-0.5"><Empty label="時間なし" /></span>
-                    }
+                    <div>
+                      {date
+                        ? <span className="block text-sm text-ink-body">{date}</span>
+                        : <Empty label="日付なし" />
+                      }
+                    </div>
+                    <div className="mt-1 pt-1 border-t border-gold/20">
+                      {time
+                        ? <span className="block text-sm text-ink-body/80">{time}</span>
+                        : <Empty label="時間なし" />
+                      }
+                    </div>
                   </td>
 
                   {/* 場所 / 主催（都道府県 + 会場 + 主催者を縦並び） */}
