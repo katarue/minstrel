@@ -37,25 +37,26 @@ $logXErr         = Join-Path $LogDir ("collect_x_err_" + (Get-Date -Format "yyyy
 $logPostSchedOut = Join-Path $LogDir ("post_scheduled_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logPostSchedErr = Join-Path $LogDir ("post_scheduled_err_" + (Get-Date -Format "yyyyMMdd") + ".log")
 
-Start-Process -FilePath $Python `
-    -ArgumentList "$Script --serve-scheduled" `
-    -WorkingDirectory $Root `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $logCollectOut `
-    -RedirectStandardError  $logCollectErr
+function Start-ServeIfNotRunning {
+    param($Arg, $OutLog, $ErrLog)
+    $running = Get-WmiObject Win32_Process | Where-Object {
+        $_.CommandLine -like "*run_scheduler*" -and $_.CommandLine -like "*$Arg*" -and $_.CommandLine -like "*.venv*"
+    }
+    if ($running) {
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] SKIP: $Arg already running (PID $($running.ProcessId))" | Add-Content $LogFile
+    } else {
+        Start-Process -FilePath $Python `
+            -ArgumentList "$Script $Arg" `
+            -WorkingDirectory $Root `
+            -WindowStyle Hidden `
+            -RedirectStandardOutput $OutLog `
+            -RedirectStandardError  $ErrLog
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] STARTED: $Arg" | Add-Content $LogFile
+    }
+}
 
-Start-Process -FilePath $Python `
-    -ArgumentList "$Script --serve-x" `
-    -WorkingDirectory $Root `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $logXOut `
-    -RedirectStandardError  $logXErr
+Start-ServeIfNotRunning "--serve-scheduled"       $logCollectOut   $logCollectErr
+Start-ServeIfNotRunning "--serve-x"               $logXOut         $logXErr
+Start-ServeIfNotRunning "--serve-post-scheduled"  $logPostSchedOut $logPostSchedErr
 
-Start-Process -FilePath $Python `
-    -ArgumentList "$Script --serve-post-scheduled" `
-    -WorkingDirectory $Root `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $logPostSchedOut `
-    -RedirectStandardError  $logPostSchedErr
-
-"[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] All serve processes launched." | Add-Content $LogFile
+"[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] All serve processes checked." | Add-Content $LogFile
