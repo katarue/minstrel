@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName, saveTicketSaleStart } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName, saveTicketSaleStart, saveTicketSaleStartTime } from "./publish-actions";
 import { reresearchEvent, generateDescription } from "./research-actions";
 
 export type EventRecord = {
@@ -14,6 +14,7 @@ export type EventRecord = {
   prefecture: string | null;
   description: string | null;
   ticket_sale_start: string | null;
+  ticket_sale_start_time: string | null;
   source_url: string | null;
   official_url: string | null;
   reference_url: string | null;
@@ -162,38 +163,61 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
   );
 }
 
-function TicketSaleDateField({ eventId, initialDate }: { eventId: string; initialDate: string | null }) {
-  const [value, setValue] = useState(initialDate ?? "");
-  const [saved, setSaved] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const dirty = value !== (initialDate ?? "");
+function TicketSaleDateField({ eventId, initialDate, initialTime }: { eventId: string; initialDate: string | null; initialTime: string | null }) {
+  const [dateVal, setDateVal] = useState(initialDate ?? "");
+  const [timeVal, setTimeVal] = useState(initialTime ?? "");
+  const [dateSaved, setDateSaved] = useState(false);
+  const [timeSaved, setTimeSaved] = useState(false);
+  const [isPendingDate, startDateTransition] = useTransition();
+  const [isPendingTime, startTimeTransition] = useTransition();
+  const dateDirty = dateVal !== (initialDate ?? "");
+  const timeDirty = timeVal !== (initialTime ?? "");
 
-  const handleSave = () =>
-    startTransition(async () => {
-      const res = await saveTicketSaleStart(eventId, value);
-      if (res.ok) setSaved(true);
+  const handleSaveDate = () =>
+    startDateTransition(async () => {
+      const res = await saveTicketSaleStart(eventId, dateVal);
+      if (res.ok) setDateSaved(true);
+    });
+
+  const handleSaveTime = () =>
+    startTimeTransition(async () => {
+      const res = await saveTicketSaleStartTime(eventId, timeVal);
+      if (res.ok) setTimeSaved(true);
     });
 
   return (
     <div className="mt-1">
-      <span className="text-xs text-ink-body/70 uppercase tracking-wide">発売開始日</span>
-      <div className="flex items-center gap-1">
+      <span className="text-xs text-ink-body/70 uppercase tracking-wide">発売開始日時</span>
+      <div className="flex items-center gap-1 mt-0.5">
         <input
           type="date"
-          value={value}
-          onChange={e => { setValue(e.target.value); setSaved(false); }}
-          className={`flex-1 min-w-0 text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 ${value ? "text-ink-body border-gold/40" : "text-red-500 border-red-500/40"}`}
+          value={dateVal}
+          onChange={e => { setDateVal(e.target.value); setDateSaved(false); }}
+          className={`text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 ${dateVal ? "text-ink-body border-gold/40" : "text-red-500 border-red-500/40"}`}
         />
-        {dirty && !saved && (
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
-          >
-            {isPending ? "…" : "保存"}
+        {dateDirty && !dateSaved && (
+          <button onClick={handleSaveDate} disabled={isPendingDate}
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0">
+            {isPendingDate ? "…" : "保存"}
           </button>
         )}
-        {saved && <span className="text-xs text-success shrink-0">✓</span>}
+        {dateSaved && <span className="text-xs text-success shrink-0">✓</span>}
+      </div>
+      <div className="flex items-center gap-1 mt-0.5">
+        <input
+          type="time"
+          value={timeVal}
+          onChange={e => { setTimeVal(e.target.value); setTimeSaved(false); }}
+          className={`text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 w-24 ${timeVal ? "text-ink-body border-gold/40" : "text-ink-body/40 border-gold/20"}`}
+          placeholder="--:--"
+        />
+        {timeDirty && !timeSaved && (
+          <button onClick={handleSaveTime} disabled={isPendingTime}
+            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0">
+            {isPendingTime ? "…" : "保存"}
+          </button>
+        )}
+        {timeSaved && <span className="text-xs text-success shrink-0">✓</span>}
       </div>
     </div>
   );
@@ -728,7 +752,7 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       )}
                     </div>
                     <SeriesNameField eventId={ev.id} initialName={ev.series_name} />
-                    <TicketSaleDateField eventId={ev.id} initialDate={ev.ticket_sale_start} />
+                    <TicketSaleDateField eventId={ev.id} initialDate={ev.ticket_sale_start} initialTime={ev.ticket_sale_start_time} />
                     <SourceUrlField
                       eventId={ev.id}
                       initialUrl={ev.source_url}

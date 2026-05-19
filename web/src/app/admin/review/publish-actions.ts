@@ -199,6 +199,18 @@ export async function saveTicketSaleStart(id: string, date: string): Promise<{ o
   return { ok: true };
 }
 
+export async function saveTicketSaleStartTime(id: string, time: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("events")
+    .update({ ticket_sale_start_time: time || null })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  return { ok: true };
+}
+
 export async function saveSeriesName(id: string, name: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
   const trimmed = name.trim() || null;
