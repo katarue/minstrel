@@ -2,6 +2,7 @@
 
 方針: 緩め判定。取りこぼしを減らし母数を確保。最終判断はユーザーの試聴。
 電子ピアノは生演奏に含める。チップチューンのみ除外。
+シードアーティストはチップチューン系タグが付いていない限り無条件で候補に残す。
 """
 
 # 加点タグ（このいずれかがあれば生演奏候補）
@@ -11,13 +12,21 @@ LIVE_TAGS = {
     "cover", "live", "piano cover", "arrangement", "acoustic guitar",
     "fingerpicking", "fingerstyle", "solo piano", "harp", "flute",
     "chamber music", "string quartet", "baroque", "new age",
+    "pianist",        # ピアニスト（PurpleSchala等）
+    "piano music",    # ピアノ音楽
+    "ambient",        # ambient piano は生演奏に含める
 }
 
-# 減点タグ（これのみで加点タグが皆無の場合に除外）
-NON_LIVE_TAGS = {
-    "chiptune", "8bit", "8-bit", "16bit", "16-bit", "electronic",
-    "edm", "synth", "lo-fi", "lofi", "vaporwave", "synthwave",
+# チップチューン系タグ（シードアーティスト除外の唯一の基準）
+CHIPTUNE_TAGS = {
+    "chiptune", "8bit", "8-bit", "16bit", "16-bit",
     "chip music", "game boy", "famicom",
+}
+
+# 非シードアーティストへの減点タグ（電子系を含む）
+NON_LIVE_TAGS = CHIPTUNE_TAGS | {
+    "electronic", "edm", "synth", "lo-fi", "lofi",
+    "vaporwave", "synthwave",
 }
 
 
@@ -28,27 +37,28 @@ def judge_live_performance(
 ) -> tuple[bool, float]:
     """タグベースで生演奏を判定し (is_live, confidence) を返す。
 
-    緩め判定: 加点タグが1つでもあれば is_live=True。
-    加点タグ皆無かつ減点タグのみの場合のみ除外。
-    シードアーティスト由来は常に is_live=True（候補として残す）。
+    シードアーティストはチップチューン系タグのみで除外。
+    非シードは加点タグ1つでも生演奏候補、減点タグのみで除外。
     """
     all_tags = set(track_tags) | set(artist_tags)
 
-    has_live_tag = bool(all_tags & LIVE_TAGS)
+    has_live_tag     = bool(all_tags & LIVE_TAGS)
+    has_chiptune_tag = bool(all_tags & CHIPTUNE_TAGS)
     has_non_live_tag = bool(all_tags & NON_LIVE_TAGS)
 
-    # シードアーティスト由来は無条件で残す
+    # シードアーティストはチップチューン系タグが付いていない限り無条件で残す
     if is_seed_artist:
-        if has_non_live_tag and not has_live_tag:
-            return False, 0.2  # チップチューンのみは除外
-        return True, 0.8 if has_live_tag else 0.6
+        if has_chiptune_tag and not has_live_tag:
+            return False, 0.2
+        confidence = 0.8 if has_live_tag else 0.6
+        return True, confidence
 
-    # 加点タグあり → 生演奏候補
+    # 非シード: 加点タグあり → 生演奏候補
     if has_live_tag:
         confidence = 0.7 if not has_non_live_tag else 0.5
         return True, confidence
 
-    # 加点タグなし・減点タグのみ → 除外
+    # 非シード: 加点タグなし・減点タグのみ → 除外
     if has_non_live_tag:
         return False, 0.1
 
