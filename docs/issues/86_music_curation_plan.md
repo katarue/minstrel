@@ -2,9 +2,13 @@
 
 GitHub Issue: https://github.com/katarue/minstrel/issues/86
 
+> **⚠️ API変更（2026-05-20）**: データ収集は Spotify API → **Last.fm API** に変更済み。
+> Spotify API は 2024年末の規約変更でアプリ作成者の Premium 契約が必須となり利用不可になったため。
+> 詳細は [Issue #86 コメント](https://github.com/katarue/minstrel/issues/86#issuecomment-4497847539) 参照。
+
 ## プロジェクト概要
 
-Spotify Web API でゲーム音楽の生演奏カバーを自動収集し、管理画面でキュレーションして週1で X 自動投稿するシステム。
+Last.fm API でゲーム音楽の生演奏カバーを自動収集し、管理画面でキュレーションして週1で X 自動投稿するシステム。
 
 ### フロー全体像
 

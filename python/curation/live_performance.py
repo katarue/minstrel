@@ -1,73 +1,56 @@
-"""生演奏判定ロジック。
+"""生演奏判定ロジック（タグベース、Last.fm版）。
 
-判定精度目標: 9割。完璧でなくてよい。
-電子ピアノは「生演奏に含める」方針。チップチューンは除外。
+方針: 緩め判定。取りこぼしを減らし母数を確保。最終判断はユーザーの試聴。
+電子ピアノは生演奏に含める。チップチューンのみ除外。
 """
-import re
 
-# acousticness 閾値（0〜1）— 0.3 以上を生演奏候補とする（緩め）
-ACOUSTICNESS_THRESHOLD = 0.3
+# 加点タグ（このいずれかがあれば生演奏候補）
+LIVE_TAGS = {
+    "piano", "acoustic", "instrumental", "orchestral", "orchestra",
+    "strings", "guitar", "violin", "cello", "jazz", "classical",
+    "cover", "live", "piano cover", "arrangement", "acoustic guitar",
+    "fingerpicking", "fingerstyle", "solo piano", "harp", "flute",
+    "chamber music", "string quartet", "baroque", "new age",
+}
 
-# 加点キーワード（楽曲名・アルバム名）
-_LIVE_KEYWORDS = re.compile(
-    r"\b(piano|orchestra|symphonic|acoustic|live|strings|guitar|jazz|"
-    r"violin|cello|quartet|trio|duo|harp|flute|brass|ensemble|"
-    r"ピアノ|オーケストラ|弦楽|ヴァイオリン|チェロ|アコースティック)\b",
-    re.IGNORECASE,
-)
-
-# 減点キーワード（チップチューン・電子音楽は除外）
-_NON_LIVE_KEYWORDS = re.compile(
-    r"\b(chiptune|8.bit|16.bit|synth|electronic|edm|remix|lo.fi|lofi|"
-    r"chip|8bit|16bit|vgm chip|chiptune)\b",
-    re.IGNORECASE,
-)
+# 減点タグ（これのみで加点タグが皆無の場合に除外）
+NON_LIVE_TAGS = {
+    "chiptune", "8bit", "8-bit", "16bit", "16-bit", "electronic",
+    "edm", "synth", "lo-fi", "lofi", "vaporwave", "synthwave",
+    "chip music", "game boy", "famicom",
+}
 
 
 def judge_live_performance(
-    track: dict,
-    audio_features: dict | None,
+    track_tags: list[str],
+    artist_tags: list[str],
     is_seed_artist: bool = False,
 ) -> tuple[bool, float]:
-    """生演奏かどうかを判定し、(is_live, confidence_0_to_1) を返す。
+    """タグベースで生演奏を判定し (is_live, confidence) を返す。
 
-    confidence は scoring.py でエモーションスコアに反映される。
+    緩め判定: 加点タグが1つでもあれば is_live=True。
+    加点タグ皆無かつ減点タグのみの場合のみ除外。
+    シードアーティスト由来は常に is_live=True（候補として残す）。
     """
-    name = track.get("name", "")
-    album_name = track.get("album", {}).get("name", "") if track.get("album") else ""
-    combined = f"{name} {album_name}"
+    all_tags = set(track_tags) | set(artist_tags)
 
-    score = 0.0
+    has_live_tag = bool(all_tags & LIVE_TAGS)
+    has_non_live_tag = bool(all_tags & NON_LIVE_TAGS)
 
-    # Audio Features による判定（最も信頼性が高い）
-    if audio_features is not None:
-        acousticness = audio_features.get("acousticness", 0) or 0
-        instrumentalness = audio_features.get("instrumentalness", 0) or 0
-        if acousticness >= ACOUSTICNESS_THRESHOLD:
-            score += 0.4
-        if instrumentalness >= 0.5:
-            score += 0.2  # インスト寄り → 生演奏の可能性UP
-
-    # キーワード判定
-    if _LIVE_KEYWORDS.search(combined):
-        score += 0.3
-    if _NON_LIVE_KEYWORDS.search(combined):
-        score -= 0.5  # チップチューン・電子音は強く減点
-
-    # シードアーティスト由来は優先
+    # シードアーティスト由来は無条件で残す
     if is_seed_artist:
-        score += 0.2
+        if has_non_live_tag and not has_live_tag:
+            return False, 0.2  # チップチューンのみは除外
+        return True, 0.8 if has_live_tag else 0.6
 
-    # Audio Features が取れなかった場合はキーワードのみ（閾値を低めに）
-    if audio_features is None:
-        # キーワードがあれば生演奏とみなす
-        is_live = _LIVE_KEYWORDS.search(combined) is not None and not _NON_LIVE_KEYWORDS.search(combined)
-        confidence = 0.5 if is_live else 0.3
-        if is_seed_artist:
-            confidence = min(confidence + 0.2, 1.0)
-        return is_live, confidence
+    # 加点タグあり → 生演奏候補
+    if has_live_tag:
+        confidence = 0.7 if not has_non_live_tag else 0.5
+        return True, confidence
 
-    confidence = max(0.0, min(1.0, score))
-    is_live = confidence >= 0.4
+    # 加点タグなし・減点タグのみ → 除外
+    if has_non_live_tag:
+        return False, 0.1
 
-    return is_live, confidence
+    # タグ情報なし → 候補として残す（緩め）
+    return True, 0.4

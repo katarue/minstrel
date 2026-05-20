@@ -13,6 +13,8 @@ IGDB_CLIENT_SECRET = os.environ.get("IGDB_CLIENT_SECRET", "")
 GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "")
 SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", "")
+LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY", "")
+LASTFM_SHARED_SECRET = os.environ.get("LASTFM_SHARED_SECRET", "")
 
 # スクレイピング共通設定（D-009）
 SCRAPE_RATE_LIMIT_SEC = 5
