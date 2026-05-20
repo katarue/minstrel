@@ -92,7 +92,10 @@ if __name__ == "__main__":
     elif args.serve_post_scheduled:
         post_scheduled_flow.serve(
             name="minstrel-post-scheduled",
-            schedules=[CronSchedule(cron="*/5 * * * *", timezone="Asia/Tokyo")],
+            schedules=[
+                CronSchedule(cron="0 8 * * *", timezone="Asia/Tokyo"),
+                CronSchedule(cron="0 20 * * *", timezone="Asia/Tokyo"),
+            ],
         )
     elif args.serve_post_monday:
         post_monday_flow.serve(
