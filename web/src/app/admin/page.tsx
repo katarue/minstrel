@@ -32,6 +32,11 @@ export default async function AdminPage() {
             title="X予約投稿"
             description="X（旧Twitter）への投稿を事前予約・スケジュール管理する"
           />
+          <NavCard
+            href="/admin/music_curation"
+            title="楽曲キュレーション"
+            description="ゲーム音楽カバーの採用・却下・スケジュール管理"
+          />
         </div>
       </div>
     </div>
