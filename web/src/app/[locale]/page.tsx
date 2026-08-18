@@ -57,6 +57,10 @@ function toGenre(val: string | null | undefined): Genre | undefined {
   return undefined;
 }
 
+// 2026-08-18: ホームの「ゲームタイトルで探す」セクションを非表示化
+// （カバー画像が安定せず利用も少ないため）。復活させる場合は true に戻す。
+const SHOW_GAME_TITLES = false;
+
 
 export default async function Home() {
   const locale = await getLocale();
@@ -364,6 +368,7 @@ export default async function Home() {
       </section>
 
       {/* Section 2: ゲームタイトルで探す */}
+      {SHOW_GAME_TITLES && (
       <section className="py-12 border-b border-gold/30">
         <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-8">
           {t("gameTitlesTitle")}
@@ -408,6 +413,7 @@ export default async function Home() {
           </>
         )}
       </section>
+      )}
 
       {/* Section 3: 地域で探す */}
       <section className="py-12 border-b border-gold/30">
