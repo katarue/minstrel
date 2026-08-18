@@ -14,7 +14,8 @@ export default function Header() {
   const navLinks = [
     { label: t("calendar"), href: "/#calendar" },
     { label: t("concerts"), href: "/concerts" },
-    { label: t("titles"), href: "/titles" },
+    // 2026-08-18 非表示化（ホームのセクション非表示に合わせる）
+    // { label: t("titles"), href: "/titles" },
   ];
 
   const otherLocale = locale === "ja" ? "en" : "ja";
