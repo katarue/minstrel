@@ -662,7 +662,7 @@ export async function reresearchEvent(
 
 // ── 共通ヘルパー ─────────────────────────────────────────────────────────────
 
-async function upsertOrganizer(
+export async function upsertOrganizer(
   supabase: ReturnType<typeof createAdminClient>,
   name: string,
   officialUrl?: string | null,

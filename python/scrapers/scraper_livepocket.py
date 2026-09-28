@@ -53,6 +53,17 @@ SEARCH_URLS = [
 ]
 
 
+_VENUE_BOILERPLATE_RE = re.compile(r"(会場)?マップ[・･]?アクセス方法はこちら")
+
+
+def _clean_venue(venue: str | None) -> str | None:
+    """LivePocket の会場欄に混入する定型文（「会場マップ・アクセス方法はこちら」等）を除去する。"""
+    if not venue:
+        return venue
+    cleaned = _VENUE_BOILERPLATE_RE.sub("", venue).strip()
+    return cleaned or None
+
+
 def _parse_livepocket_structured(soup: BeautifulSoup, url: str) -> dict | None:
     """LivePocket 詳細ページから構造化データを抽出する。title + start_datetime が取れない場合は None。"""
     # タイトル
@@ -95,6 +106,7 @@ def _parse_livepocket_structured(soup: BeautifulSoup, url: str) -> dict | None:
                 venue = el.get_text(strip=True)[:100] or None
                 if venue:
                     break
+    venue = _clean_venue(venue)
 
     # 都道府県
     prefecture = extract_prefecture(venue or soup.get_text()[:2000])

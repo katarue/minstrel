@@ -48,33 +48,34 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
       className="block group relative cursor-pointer"
     >
       <article
-        className="bg-parchment rounded-md overflow-hidden transition-all duration-200 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
+        className="bg-parchment rounded-md overflow-hidden flex transition-all duration-200 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_4px_16px_rgba(59,47,29,0.18)]"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
       >
-        {/* 画像エリア（16:9）*/}
-        <div className="relative w-full aspect-video bg-parchment-dark">
+        {/* 画像エリア（縦長チラシ全体を表示、切り取らない） */}
+        <div className="relative w-24 sm:w-32 shrink-0 aspect-[210/297] bg-parchment-dark">
           {imageUrl ? (
             <Image
               src={imageUrl}
               alt={title}
               fill
-              className={`object-cover${isPast ? " grayscale opacity-70" : ""}`}
+              sizes="(max-width: 640px) 96px, 128px"
+              className={`object-contain${isPast ? " grayscale opacity-70" : ""}`}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="font-heading text-gold/40 text-5xl select-none" aria-hidden>
+              <span className="font-heading text-gold/40 text-3xl select-none" aria-hidden>
                 ♪
               </span>
             </div>
           )}
           {genre && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-1 right-1">
               <Badge variant={genre}>{genreLabels[genre]}</Badge>
             </div>
           )}
           {isPast && (
-            <div className="absolute bottom-2 right-2">
-              <span className="font-body text-xs font-medium px-2 py-0.5 rounded bg-black/50 text-white/80">
+            <div className="absolute bottom-1 right-1">
+              <span className="font-body text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/50 text-white/80">
                 終了
               </span>
             </div>
@@ -82,7 +83,7 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
         </div>
 
         {/* 情報エリア */}
-        <div className="p-4 flex flex-col gap-2">
+        <div className="p-3 sm:p-4 flex flex-col gap-1.5 min-w-0 flex-1">
           {gameTitles && gameTitles.length > 0 && (
             <span className="inline-flex items-center gap-1 self-start bg-white border border-bordeaux text-bordeaux font-body text-sm font-medium px-2 py-0.5 rounded max-w-full">
               <span className="truncate">{gameTitles[0]}</span>
@@ -91,11 +92,11 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
               )}
             </span>
           )}
-          <h3 className="font-heading text-ink-heading text-base font-semibold leading-snug line-clamp-2">
+          <h3 className="font-heading text-ink-heading text-sm sm:text-base font-semibold leading-snug line-clamp-2">
             {title}
           </h3>
           {titleEn && (
-            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-2 -mt-1">
+            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-1">
               {titleEn}
             </p>
           )}

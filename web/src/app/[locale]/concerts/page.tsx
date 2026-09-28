@@ -144,7 +144,7 @@ export default async function ConcertsPage({
           <p className="font-body text-ink-body/50 text-base">{t("empty")}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {(() => {
             const tourCounts = new Map<string, number>();
             const tourRanges = new Map<string, { first: string; last: string }>();

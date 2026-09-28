@@ -2,6 +2,18 @@
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { upsertOrganizer } from "./research-actions";
+
+async function addManuallyEditedField(
+  supabase: ReturnType<typeof createAdminClient>,
+  id: string,
+  field: string,
+): Promise<string[]> {
+  const { data } = await supabase.from("events").select("manually_edited_fields").eq("id", id).single();
+  const fields = new Set<string>((data?.manually_edited_fields as string[] | null) ?? []);
+  fields.add(field);
+  return [...fields];
+}
 
 export async function publishEvent(id: string): Promise<{ ok: boolean; message?: string }> {
   const supabase = createAdminClient();
@@ -315,5 +327,75 @@ export async function updateGameTitles(id: string, titles: string[]): Promise<{ 
   }
 
   revalidatePath("/admin/review");
+  return { ok: true };
+}
+
+export async function saveVenueName(id: string, name: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const trimmed = name.trim() || null;
+  const manually_edited_fields = await addManuallyEditedField(supabase, id, "venue_name");
+
+  const { error } = await supabase
+    .from("events")
+    .update({ venue_name: trimmed, manually_edited_fields })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function savePrefecture(id: string, prefecture: string): Promise<{ ok: boolean; message?: string }> {
+  const supabase = createAdminClient();
+  const trimmed = prefecture.trim() || null;
+  const manually_edited_fields = await addManuallyEditedField(supabase, id, "prefecture");
+
+  const { error } = await supabase
+    .from("events")
+    .update({ prefecture: trimmed, manually_edited_fields })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function saveStartDatetime(id: string, date: string, time: string): Promise<{ ok: boolean; message?: string }> {
+  if (!date) return { ok: false, message: "日付を入力してください" };
+  const supabase = createAdminClient();
+  const timeStr = time || "00:00";
+  const isoDatetime = `${date}T${timeStr}:00+09:00`;
+  const manually_edited_fields = await addManuallyEditedField(supabase, id, "start_datetime");
+
+  const { error } = await supabase
+    .from("events")
+    .update({ start_datetime: isoDatetime, manually_edited_fields })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function saveOrganizerName(id: string, name: string): Promise<{ ok: boolean; message?: string }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, message: "主催者名を入力してください" };
+  const supabase = createAdminClient();
+
+  const organizerId = await upsertOrganizer(supabase, trimmed);
+  if (!organizerId) return { ok: false, message: "主催者の登録に失敗しました" };
+  const manually_edited_fields = await addManuallyEditedField(supabase, id, "organizer_id");
+
+  const { error } = await supabase
+    .from("events")
+    .update({ organizer_id: organizerId, manually_edited_fields })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin/review");
+  revalidatePath("/");
   return { ok: true };
 }

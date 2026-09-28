@@ -354,7 +354,7 @@ def upsert_to_db(events: list[dict]) -> int:
             # 既存イベントに補完マージ
             existing = (
                 db.table("events")
-                .select("id, flyer_image_url, ticket_urls, confidence_score")
+                .select("id, flyer_image_url, ticket_urls, confidence_score, manually_edited_fields")
                 .eq("id", existing_event_id)
                 .single()
                 .execute()
@@ -463,7 +463,7 @@ def auto_enrich() -> int:
     db = get_client()
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     result = db.table("events").select(
-        "id, event_name, event_name_en, venue_name, prefecture, venue_name_en, description, description_en, organizers(name)"
+        "id, event_name, event_name_en, venue_name, prefecture, venue_name_en, description, description_en, manually_edited_fields, organizers(name)"
     ).eq("is_published", False).gte("created_at", cutoff).execute()
 
     events = result.data or []
@@ -493,8 +493,9 @@ def auto_enrich() -> int:
         desc_en_map = {}
 
     for event in events:
-        needs_venue = not event.get("venue_name")
-        needs_pref  = not event.get("prefecture")
+        locked_fields = set(event.get("manually_edited_fields") or [])
+        needs_venue = not event.get("venue_name") and "venue_name" not in locked_fields
+        needs_pref  = not event.get("prefecture") and "prefecture" not in locked_fields
 
         updates = {}
 

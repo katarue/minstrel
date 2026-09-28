@@ -2,8 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName, saveVenueName, savePrefecture, saveStartDatetime, saveOrganizerName } from "./publish-actions";
 import { reresearchEvent, generateDescription } from "./research-actions";
+import { PREFECTURE_EN } from "@/utils/regions";
+
+const PREFECTURES = Object.keys(PREFECTURE_EN);
 
 export type EventRecord = {
   id: string;
@@ -20,6 +23,7 @@ export type EventRecord = {
   key_visual_url: string | null;
   is_published: boolean;
   organizers: { name: string } | null;
+  manually_edited_fields: string[] | null;
   event_game_titles: Array<{ game_titles: { title_name: string } | null }>;
   event_sources: Array<{ source_name: string; raw_data: { game_music_reason?: string; [key: string]: unknown } }> | null;
 };
@@ -42,6 +46,28 @@ function formatTime(dt: string | null): string {
   const h = jst.getUTCHours();
   const m = jst.getUTCMinutes();
   if (h === 0 && m === 0) return "";
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function toDateInputValue(dt: string | null): string {
+  if (!dt) return "";
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return "";
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const y = jst.getUTCFullYear();
+  const m = String(jst.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(jst.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function toTimeInputValue(dt: string | null): string {
+  if (!dt) return "";
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return "";
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const h = jst.getUTCHours();
+  const m = jst.getUTCMinutes();
+  if (h === 0 && m === 0) return ""; // 「時間なし」扱い（formatTime と同じ規約）
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
@@ -389,6 +415,185 @@ function ManualImageUrlField({ eventId, initialUrl }: { eventId: string; initial
   );
 }
 
+function DateTimeEditField({ eventId, initialDatetime }: { eventId: string; initialDatetime: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [dateVal, setDateVal] = useState(() => toDateInputValue(initialDatetime));
+  const [timeVal, setTimeVal] = useState(() => toTimeInputValue(initialDatetime));
+  const [isPending, startTransition] = useTransition();
+
+  const displayDate = formatDate(initialDatetime);
+  const displayTime = formatTime(initialDatetime);
+
+  const startEdit = () => {
+    setDateVal(toDateInputValue(initialDatetime));
+    setTimeVal(toTimeInputValue(initialDatetime));
+    setEditing(true);
+  };
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveStartDatetime(eventId, dateVal, timeVal);
+      if (res.ok) setEditing(false);
+    });
+
+  if (!editing) {
+    return (
+      <div className="cursor-pointer" onClick={startEdit} title="クリックして編集">
+        <div>{displayDate ? <span className="block text-sm text-ink-body">{displayDate}</span> : <Empty label="日付なし" />}</div>
+        <div className="mt-1 pt-1 border-t border-gold/20">
+          {displayTime ? <span className="block text-sm text-ink-body/80">{displayTime}</span> : <Empty label="時間なし" />}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <input
+        type="date"
+        value={dateVal}
+        onChange={e => setDateVal(e.target.value)}
+        autoFocus
+        className="text-xs text-ink-body bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 w-full"
+      />
+      <input
+        type="time"
+        value={timeVal}
+        onChange={e => setTimeVal(e.target.value)}
+        className="text-xs text-ink-body bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5 w-full"
+      />
+      <div className="flex items-center gap-1">
+        <button
+          onClick={handleSave}
+          disabled={isPending || !dateVal}
+          className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0"
+        >
+          {isPending ? "…" : "保存"}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          disabled={isPending}
+          className="text-xs text-ink-body/50 hover:text-ink-body"
+        >
+          取消
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PrefectureEditField({ eventId, initialValue }: { eventId: string; initialValue: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(initialValue ?? "");
+  const [isPending, startTransition] = useTransition();
+
+  const handleChange = (newVal: string) => {
+    setValue(newVal);
+    startTransition(async () => {
+      await savePrefecture(eventId, newVal);
+      setEditing(false);
+    });
+  };
+
+  if (!editing) {
+    return (
+      <span className="block cursor-pointer" onClick={() => setEditing(true)} title="クリックして編集">
+        {initialValue ? <span className="text-xs text-ink-body/80">{initialValue}</span> : <Empty label="都道府県なし" />}
+      </span>
+    );
+  }
+
+  return (
+    <select
+      autoFocus
+      value={value}
+      onChange={e => handleChange(e.target.value)}
+      onBlur={() => setEditing(false)}
+      disabled={isPending}
+      className="text-xs text-ink-body bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+    >
+      <option value="">未選択</option>
+      {PREFECTURES.map(p => (
+        <option key={p} value={p}>{p}</option>
+      ))}
+    </select>
+  );
+}
+
+function VenueNameEditField({ eventId, initialValue }: { eventId: string; initialValue: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(initialValue ?? "");
+  const [isPending, startTransition] = useTransition();
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveVenueName(eventId, value);
+      if (res.ok) setEditing(false);
+    });
+
+  if (!editing) {
+    return (
+      <span className="block mt-0.5 cursor-pointer" onClick={() => setEditing(true)} title="クリックして編集">
+        {initialValue
+          ? <span className="text-sm text-ink-body leading-snug">{initialValue}</span>
+          : <Empty label="会場なし" />}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 mt-0.5">
+      <input
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && handleSave()}
+        onBlur={handleSave}
+        autoFocus
+        disabled={isPending}
+        className="flex-1 min-w-0 text-sm text-ink-body bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+      />
+    </div>
+  );
+}
+
+function OrganizerNameEditField({ eventId, initialValue }: { eventId: string; initialValue: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(initialValue ?? "");
+  const [isPending, startTransition] = useTransition();
+
+  const handleSave = () =>
+    startTransition(async () => {
+      const res = await saveOrganizerName(eventId, value);
+      if (res.ok) setEditing(false);
+    });
+
+  if (!editing) {
+    return (
+      <span className="block mt-1 cursor-pointer" onClick={() => setEditing(true)} title="クリックして編集">
+        {initialValue
+          ? <span className="text-xs text-ink-body/70 leading-snug">{initialValue}</span>
+          : <Empty label="主催者なし" />}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <input
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && handleSave()}
+        onBlur={handleSave}
+        autoFocus
+        disabled={isPending}
+        className="flex-1 min-w-0 text-xs text-ink-body/70 bg-transparent border-b border-gold/40 focus:border-bordeaux outline-none py-0.5"
+      />
+    </div>
+  );
+}
+
 function DescriptionCell({ eventId, initialDescription }: { eventId: string; initialDescription: string | null }) {
   const [value, setValue] = useState(initialDescription ?? "");
   const [saved, setSaved] = useState(false);
@@ -652,8 +857,6 @@ export function RecordList({ events }: { events: EventRecord[] }) {
             {filtered.map(ev => {
               const missing = getMissingFields(ev);
               const isDuplicate = duplicateIds.has(ev.id);
-              const date    = formatDate(ev.start_datetime);
-              const time       = formatTime(ev.start_datetime);
               const gameTitles = ev.event_game_titles
                 .map(e => e.game_titles?.title_name)
                 .filter((t): t is string => !!t);
@@ -699,35 +902,16 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                     <ManualImageUrlField eventId={ev.id} initialUrl={ev.flyer_image_url} />
                   </td>
 
-                  {/* 日時（日付 + 時間を区切り線で分離） */}
+                  {/* 日時（クリックで編集） */}
                   <td className="py-2.5 pr-2 whitespace-nowrap align-top">
-                    <div>
-                      {date
-                        ? <span className="block text-sm text-ink-body">{date}</span>
-                        : <Empty label="日付なし" />
-                      }
-                    </div>
-                    <div className="mt-1 pt-1 border-t border-gold/20">
-                      {time
-                        ? <span className="block text-sm text-ink-body/80">{time}</span>
-                        : <Empty label="時間なし" />
-                      }
-                    </div>
+                    <DateTimeEditField eventId={ev.id} initialDatetime={ev.start_datetime} />
                   </td>
 
-                  {/* 場所 / 主催（都道府県 + 会場 + 主催者を縦並び） */}
+                  {/* 場所 / 主催（都道府県 + 会場 + 主催者、クリックで編集） */}
                   <td className="py-2.5 pr-2 align-top">
-                    {ev.prefecture
-                      ? <span className="block text-xs text-ink-body/80">{ev.prefecture}</span>
-                      : <span className="block"><Empty label="都道府県なし" /></span>
-                    }
-                    {ev.venue_name
-                      ? <span className="block text-sm text-ink-body leading-snug mt-0.5">{ev.venue_name}</span>
-                      : <span className="block mt-0.5"><Empty label="会場なし" /></span>
-                    }
-                    {ev.organizers?.name && (
-                      <span className="block text-xs text-ink-body/70 mt-1 leading-snug">{ev.organizers.name}</span>
-                    )}
+                    <PrefectureEditField eventId={ev.id} initialValue={ev.prefecture} />
+                    <VenueNameEditField eventId={ev.id} initialValue={ev.venue_name} />
+                    <OrganizerNameEditField eventId={ev.id} initialValue={ev.organizers?.name ?? null} />
                   </td>
 
                   {/* ゲームタイトル */}

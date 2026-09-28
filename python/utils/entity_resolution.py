@@ -344,23 +344,33 @@ def merge_fields(existing: dict, new_event: dict, source_name: str) -> dict:
     """
     既存イベントに新しいソースのデータを補完マージする。
     ルール:
-      - 日時・会場・タイトル: 既存値がある場合は上書きしない（高ランクソース優先）
+      - 日時・会場・タイトル: 既存値がある場合は上書きしない（高ランクソース優先）。
+        現状このパイプラインはこれらのフィールドを一切上書きしない。
       - 画像 URL: 既存が空の場合のみ補完（X からの画像を埋める）
       - ticket_urls: 既存の JSONB にキーを追加（上書きしない）
+      - manually_edited_fields: 管理画面のその場編集で手動修正済みのフィールドは、
+        上記のいずれの補完ルールに該当していても上書きしない（将来この関数が
+        venue_name 等を扱うよう変更されても手動修正が保護されるようにするための保険）。
     """
     updates: dict = {}
+    locked_fields = set(existing.get("manually_edited_fields") or [])
 
     # 画像補完（teket は画像を持たないことが多い）
-    if not existing.get("flyer_image_url") and new_event.get("flyer_image_url"):
+    if (
+        "flyer_image_url" not in locked_fields
+        and not existing.get("flyer_image_url")
+        and new_event.get("flyer_image_url")
+    ):
         updates["flyer_image_url"] = new_event["flyer_image_url"]
 
     # チケットURL補完
-    existing_tickets: dict = existing.get("ticket_urls") or {}
-    new_ticket = new_event.get("ticket_url") or ""
-    if new_ticket and "primary" not in existing_tickets:
-        updates["ticket_urls"] = {"primary": new_ticket, **existing_tickets}
+    if "ticket_urls" not in locked_fields:
+        existing_tickets: dict = existing.get("ticket_urls") or {}
+        new_ticket = new_event.get("ticket_url") or ""
+        if new_ticket and "primary" not in existing_tickets:
+            updates["ticket_urls"] = {"primary": new_ticket, **existing_tickets}
 
-    # confidence_score: 高い方を採用
+    # confidence_score: 高い方を採用（自動判定値のため manually_edited_fields の対象外）
     new_score = new_event.get("confidence_score")
     if new_score is not None:
         new_score_int = int(new_score * 100) if isinstance(new_score, float) else int(new_score)

@@ -4,8 +4,11 @@ import { createClient } from "@/utils/supabase/server";
 import { formatDateShort } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
 import Card from "@/components/ui/Card";
+import PosterCard from "@/components/ui/PosterCard";
 import HeroSearch from "./HeroSearch";
 import JapanMapSection from "@/components/ui/JapanMapSection";
+import CalendarSection from "@/components/calendar/CalendarSection";
+import { getCalendarMonth, type CalendarEvent } from "./calendarActions";
 import { REGIONS, prefectureToRegion, prefectureEn } from "@/utils/regions";
 import type { Region } from "@/utils/regions";
 
@@ -47,8 +50,6 @@ type LightEvent = {
   }>;
 };
 
-type CalendarEvent = { id: string; tour_id: string | null; event_name: string; event_name_en: string | null; start_datetime: string; venue_name: string | null; prefecture: string | null };
-
 function toGenre(val: string | null | undefined): Genre | undefined {
   if (val && (VALID_GENRES as readonly string[]).includes(val)) return val as Genre;
   return undefined;
@@ -58,20 +59,23 @@ function toGenre(val: string | null | undefined): Genre | undefined {
 // （カバー画像が安定せず利用も少ないため）。復活させる場合は true に戻す。
 const SHOW_GAME_TITLES = false;
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const locale = await getLocale();
   const t = await getTranslations("home");
   const tb = await getTranslations("broadcasts");
+  const sp = await searchParams;
 
   const nowUtc = new Date();
   const jstNow = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
   const todayJst = jstNow.toISOString().substring(0, 10);
   const todayStart = `${todayJst}T00:00:00+09:00`;
 
-  const calYear = jstNow.getUTCFullYear();
-  const calMonth = jstNow.getUTCMonth(); // 0-indexed
-  const daysInMonth = new Date(Date.UTC(calYear, calMonth + 1, 0)).getUTCDate();
-  const firstDow = new Date(Date.UTC(calYear, calMonth, 1)).getUTCDay(); // 0=Sun
+  const defaultMonth = `${jstNow.getUTCFullYear()}-${String(jstNow.getUTCMonth() + 1).padStart(2, "0")}`;
+  const initialMonth = sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : defaultMonth;
 
   let topEvents: CardEvent[] = [];
   let allEvents: LightEvent[] = [];
@@ -84,7 +88,7 @@ export default async function Home() {
 
     const broadcastEnd = new Date(nowUtc.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [topResult, allResult, broadcastResult, calendarResult] = await Promise.all([
+    const [topResult, allResult, broadcastResult, monthEvents] = await Promise.all([
       supabase
         .from("events")
         .select(`
@@ -114,13 +118,7 @@ export default async function Home() {
         .lte("broadcast_datetime", broadcastEnd)
         .order("broadcast_datetime", { ascending: true })
         .limit(3),
-      supabase
-        .from("events")
-        .select("id, tour_id, event_name, event_name_en, start_datetime, venue_name, prefecture")
-        .eq("is_published", true)
-        .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
-        .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
-        .order("start_datetime", { ascending: true }),
+      getCalendarMonth(initialMonth),
     ]);
 
     if (topResult.error) console.error("Failed to fetch top events:", topResult.error);
@@ -132,8 +130,7 @@ export default async function Home() {
     if (!broadcastResult.error)
       upcomingBroadcasts = (broadcastResult.data ?? []) as unknown as BroadcastRow[];
 
-    if (!calendarResult.error)
-      calendarEvents = (calendarResult.data ?? []) as unknown as CalendarEvent[];
+    calendarEvents = monthEvents;
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
@@ -159,8 +156,10 @@ export default async function Home() {
       seenTourIds.add(ev.tour_id);
     }
     displayEvents.push(ev);
-    if (displayEvents.length >= 6) break;
+    if (displayEvents.length >= 9) break;
   }
+  const posterEvents = displayEvents.slice(0, 3);
+  const sideEvents = displayEvents.slice(3, 9);
 
   // Section 2: count events per game title
   type TitleInfo = { id: string; name: string; count: number };
@@ -193,32 +192,6 @@ export default async function Home() {
   }
 
   // Section 4: events per day for full calendar grid
-  const eventsByDay: Record<number, { id: string; tour_id: string | null; event_name: string; event_name_en: string | null }[]> = {};
-  for (const ev of calendarEvents) {
-    const evJst = new Date(new Date(ev.start_datetime).getTime() + 9 * 60 * 60 * 1000);
-    const day = evJst.getUTCDate();
-    (eventsByDay[day] ??= []).push(ev);
-  }
-
-  const calendarDays: (number | null)[] = [
-    ...Array<null>(firstDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (calendarDays.length % 7 !== 0) calendarDays.push(null);
-
-  const todayDay = jstNow.getUTCDate();
-  const DAY_LABELS_JA = ["日", "月", "火", "水", "木", "金", "土"];
-  const DAY_LABELS_EN = ["S", "M", "T", "W", "T", "F", "S"];
-  const dayLabels = locale === "ja" ? DAY_LABELS_JA : DAY_LABELS_EN;
-  const monthLabel =
-    locale === "ja"
-      ? `${calYear}年${calMonth + 1}月`
-      : new Date(Date.UTC(calYear, calMonth, 1)).toLocaleString("en-US", {
-          month: "long",
-          year: "numeric",
-          timeZone: "UTC",
-        });
-
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-20 min-h-screen">
       {/* Hero */}
@@ -247,35 +220,56 @@ export default async function Home() {
           <p className="font-body text-ink-body/70 text-base py-12 text-center">{t("empty")}</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {displayEvents.map((ev) => {
-                const gameTitles = ev.event_game_titles
-                  .map((egt) => {
-                    const gt = egt.game_titles;
-                    if (!gt) return null;
-                    return locale === "en" && gt.english_name ? gt.english_name : gt.title_name;
-                  })
-                  .filter((item): item is string => item != null);
+            {/* 直近3件: 縦長ポスター型（スマホは横スワイプ） */}
+            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:grid md:grid-cols-3 md:gap-8">
+              {posterEvents.map((ev) => {
                 const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
                 const dateDisplay = `${formatDateShort(ev.start_datetime, locale)}${(tourCount ?? 1) > 1 ? "　他" : ""}`;
                 return (
-                  <Card
+                  <PosterCard
                     key={ev.id}
                     title={locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}
                     date={dateDisplay}
-                    venue={(locale === "en" && ev.venue_name_en ? ev.venue_name_en : ev.venue_name) ?? "—"}
-                    prefecture={(locale === "en" ? (prefectureEn(ev.prefecture) ?? ev.prefecture) : ev.prefecture) ?? undefined}
-                    organizer={ev.organizers?.name}
-                    genre={toGenre(ev.performance_type)}
                     imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
                     href={`/tours/${ev.tour_id ?? ev.id}`}
-                    gameTitles={gameTitles}
-                    tourCount={tourCount}
-                    tourId={ev.tour_id ?? undefined}
                   />
                 );
               })}
             </div>
+
+            {/* 続く6件: 横並びカード（PC 2列 / スマホ 1列） */}
+            {sideEvents.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-8">
+                {sideEvents.map((ev) => {
+                  const gameTitles = ev.event_game_titles
+                    .map((egt) => {
+                      const gt = egt.game_titles;
+                      if (!gt) return null;
+                      return locale === "en" && gt.english_name ? gt.english_name : gt.title_name;
+                    })
+                    .filter((item): item is string => item != null);
+                  const tourCount = ev.tour_id ? (tourCounts.get(ev.tour_id) ?? 1) : undefined;
+                  const dateDisplay = `${formatDateShort(ev.start_datetime, locale)}${(tourCount ?? 1) > 1 ? "　他" : ""}`;
+                  return (
+                    <Card
+                      key={ev.id}
+                      title={locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}
+                      date={dateDisplay}
+                      venue={(locale === "en" && ev.venue_name_en ? ev.venue_name_en : ev.venue_name) ?? "—"}
+                      prefecture={(locale === "en" ? (prefectureEn(ev.prefecture) ?? ev.prefecture) : ev.prefecture) ?? undefined}
+                      organizer={ev.organizers?.name}
+                      genre={toGenre(ev.performance_type)}
+                      imageUrl={ev.flyer_image_url ?? ev.key_visual_url ?? undefined}
+                      href={`/tours/${ev.tour_id ?? ev.id}`}
+                      gameTitles={gameTitles}
+                      tourCount={tourCount}
+                      tourId={ev.tour_id ?? undefined}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
             <div className="mt-10 flex justify-end">
               <Link
                 href="/concerts"
@@ -340,79 +334,7 @@ export default async function Home() {
       </section>
 
       {/* Section 4: カレンダー */}
-      <section id="calendar" className="py-12 border-b border-gold/30">
-        <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-8">
-          {t("calendarTitle")}
-        </h2>
-
-        <p className="font-heading text-ink-heading text-base font-semibold mb-4">{monthLabel}</p>
-
-        <div className="border border-gold/30 rounded-lg overflow-hidden">
-          <div className="grid grid-cols-7 bg-parchment-dark border-b border-gold/30">
-            {dayLabels.map((d, i) => (
-              <div key={i} className={`py-3 text-center text-sm font-heading font-semibold ${i === 0 ? "text-error" : i === 6 ? "text-info" : "text-ink-heading"}`}>
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(8rem, auto)" }}>
-            {calendarDays.map((day, idx) => (
-              <div key={idx}
-                className={`p-2 border-b border-r border-gold/20 ${!day ? "bg-parchment-dark/30" : "bg-parchment"} ${idx % 7 === 6 ? "border-r-0" : ""}`}>
-                {day && (
-                  <>
-                    <span className={`text-sm font-body font-medium ${
-                      day === todayDay
-                        ? "inline-flex items-center justify-center w-6 h-6 rounded-full bg-bordeaux text-parchment"
-                        : idx % 7 === 0 ? "text-error" : idx % 7 === 6 ? "text-info" : "text-ink-heading"
-                    }`}>
-                      {day}
-                    </span>
-                    <div className="mt-1 flex flex-col gap-1">
-                      {(eventsByDay[day] ?? []).map((ev) => (
-                        <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
-                          className="block text-xs font-body text-parchment bg-bordeaux/80 hover:bg-bordeaux rounded px-1.5 py-0.5 leading-snug truncate transition-colors"
-                          title={locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}>
-                          {locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name}
-                        </Link>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-        {calendarEvents.length > 0 && (
-          <div className="mt-10">
-            <h3 className="font-heading text-ink-heading text-lg font-semibold mb-4">
-              {locale === "ja"
-                ? `${calYear}年${calMonth + 1}月のコンサート一覧`
-                : `${new Date(Date.UTC(calYear, calMonth, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })} Concert List`}
-            </h3>
-            <div className="flex flex-col gap-2">
-              {calendarEvents.map((ev) => {
-                const jst = new Date(new Date(ev.start_datetime).getTime() + 9 * 3600 * 1000);
-                const dateStr = locale === "ja"
-                  ? `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}（${"日月火水木金土"[jst.getUTCDay()]}）`
-                  : `${jst.getUTCMonth() + 1}/${jst.getUTCDate()} (${"SMTWTFS"[jst.getUTCDay()]})`;
-                const timeStr = `${String(jst.getUTCHours()).padStart(2, "0")}:${String(jst.getUTCMinutes()).padStart(2, "0")}`;
-                const displayName = locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name;
-                return (
-                  <Link key={ev.id} href={`/tours/${ev.tour_id ?? ev.id}`}
-                    className="flex items-center gap-4 bg-parchment-dark hover:bg-gold/10 border border-gold/20 rounded-md px-4 py-3 transition-colors group">
-                    <span className="font-body text-sm text-ink-body/60 shrink-0 w-28 whitespace-nowrap">{dateStr} {timeStr}</span>
-                    <span className="font-heading text-ink-heading text-sm font-semibold flex-1 group-hover:text-bordeaux transition-colors">{displayName}</span>
-                    {ev.prefecture && (
-                      <span className="font-body text-xs text-ink-body/50 shrink-0">{ev.prefecture}</span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </section>
+      <CalendarSection initialMonth={initialMonth} initialEvents={calendarEvents} />
 
       {/* Section 5: 放送・配信情報 */}
       {upcomingBroadcasts.length > 0 && (
