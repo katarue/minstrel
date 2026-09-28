@@ -9,30 +9,33 @@
 ## 現在地(2026-09-28 時点)
 
 ### 完了
-- 管理画面ログインを Basic 認証からクッキー方式に変更(1回ログインで約1年保持)。Vercel に ADMIN_SESSION_SECRET を登録済み(a8712f4)
-- URL取得の不具合2件を修正: AI呼び出し失敗時に空データを登録しない/削除済みイベントのURLを再取得できる(5f99f95)
-- コスト削減改修 完了・push済み(6ccc681): 既知URL(matched/rejected)をAI呼び出し前に除外(既存イベント更新は継続)/非ゲーム判定は match_status='rejected_not_game' で記録/収集を週1回(月曜01:00)に変更/AIFatalErrorで認証・クレジットエラー時に即停止/実行ごとのコストログ/手動「URLから取得」の画像保存/start_scheduler.ps1 にPrefectフォールバック起動を追加
-- 進捗記録の一元化: STATE.md をこのリポジトリ唯一の正本にし、SessionStart/Stop フック(`.claude/hooks/`)で自動読込・更新強制を実装。Notion開発日誌は廃止。CLAUDE.md/session_workflow.md/closing_ritual.md を合わせて改訂
-- `.gitattributes` 追加(改行コードを明示: `*.ps1`=CRLF、それ以外=LF)。core.autocrlf 依存による見かけ上の変更警告を解消
-- Stop フックの不具合2件を修正・実機確認済み: (1) セッション開始前から存在した未コミット変更を「今回の変更」と誤判定して質問のみのセッションでも発動する問題 → SessionStart 時に未コミット変更の内容ハッシュをベースラインとして記録し、Stop 側はそこからの差分のみで判定するよう変更 (2) `exit 2` が実際にはブロックせず「Failed with non-blocking status code」と表示される問題 → `.claude/settings.json` の Stop フック起動コマンド末尾に `; exit $LASTEXITCODE` を追加(Windows PowerShell 5.1 で `powershell -Command "& script.ps1"` 経由だと子スクリプトの exit code がプロセス終了コードに伝播しない癖が原因と実機検証で特定)
-- `python/.gitignore` に `_test_*.py` を追加(既存の `_tmp_/_debug_/_check_` と同様、一時スクリプトはコミット対象外に統一)
-- CLAUDE.md の claude-hq 旧パス参照を確認 → 該当なし(既に現行パスを使用済み)
+- 管理画面ログインのクッキー化(a8712f4)、URL取得不具合2件修正(5f99f95)、コスト削減改修(6ccc681)
+- 進捗記録の一元化: STATE.md を唯一の正本にし、SessionStart/Stop フック(`.claude/hooks/`)で自動読込・更新強制を実装。Notion開発日誌は廃止
+- Stop フックの不具合2件を修正・実機確認済み: (1) セッション開始前からの未コミット変更を「今回の変更」と誤判定する問題 → SessionStart で未コミット変更の内容ハッシュをベースライン記録し、Stop 側は差分のみ判定 (2) `exit 2` が実際にはブロックしない問題 → Windows PowerShell 5.1 で `powershell -Command "& script.ps1"` 経由だと子スクリプトの exit code が伝播しない癖が原因と特定、settings.json のコマンド末尾に `; exit $LASTEXITCODE` を追加
+- **ドキュメント一斉整理(STATE.md への正本一本化に伴う矛盾解消)**:
+  - `docs/project_plan.md` `docs/implementation_schedule.md` を `docs/archive/` へ移動(現状と乖離した初期計画書のため。有効な方針は CLAUDE.md「設計原則」に集約済み)
+  - `docs/.claude/settings.json`(入れ子の古い設定ファイル)を削除
+  - `docs/folder_structure.md` を現在の実際の構造に合わせて全面書き直し(memory_bank を Source of Truth とする旧記述・実在しないファイル参照を削除)
+  - `session_start_for_claude.md` を STATE.md + CLAUDE.md を案内するだけの短い内容に書き直し(旧 memory_bank 読み込み手順を削除)
+  - CLAUDE.md・`session_workflow.md`・`environment.md` から `docs/implementation_schedule.md` への「整合確認」指示を削除(→ `docs/operations.md` に統一)。矛盾(session_workflow.mdは参照指示、environment.mdは参照不要、と食い違っていた)を解消
+  - `docs/archive/README.md` を新規作成、`docs/archive/memory_bank/README.md` 冒頭に「過去資料・参照しない」の警告を追記
+  - `.claude/settings.json`: `additionalDirectories` の旧 claude-hq パス3件を削除。`permissions.allow` から一度きりのコマンド(特定PID操作、旧ポート3000決め打ち、特定タスクID一時ファイル読み取り等、計約20件)を削除
+  - `python/.gitignore` に `_test_*.py` を追加
 
 ### 判明した事実
-- Prefectサーバー起動不具合の真因は「バッテリー設定」ではなく、共有DB(`~/.prefect/prefect.db`)のAlembicリビジョンがai-news-video-pipeline側の古いprefectパッケージ(3.6.29)で解決できないこと(ミンストレル側の3.7.0が先に進めていた)。別プロジェクトの設定は変更していないため、対応方針は要判断
-- PowerShellの実運用ハマりポイント3件: (1) `.ps1`に日本語を含む場合UTF-8 BOMが無いとこの環境のパーサーが誤読する (2) `@(cmd) | Where-Object` は結果1件でスカラー文字列に潰れる(`@(cmd | Where-Object {...})`のように全体を括ること) (3) `powershell -Command "& script.ps1"` 形式だと子スクリプトの `exit N` がホストプロセスの終了コードに伝播しない(`-File` 起動や末尾に `; exit $LASTEXITCODE` を足せば伝播する)
+- Prefectサーバー起動不具合の真因は共有DB(`~/.prefect/prefect.db`)のAlembicリビジョンが ai-news-video-pipeline側の古いprefectパッケージ(3.6.29)で解決できないこと(ミンストレル側の3.7.0が先行)。対応方針は要判断
+- PowerShellの実運用ハマりポイント3件: (1) `.ps1`に日本語を含む場合UTF-8 BOM必須 (2) `@(cmd) | Where-Object` は結果1件でスカラー文字列に潰れる(`@(cmd | Where-Object {...})`と括ること) (3) `powershell -Command "& script.ps1"` だと子スクリプトの `exit N` が伝播しない(`-File` 起動か `; exit $LASTEXITCODE` で対処)
 - コストの主因は「登録済みイベントも毎日 AI(Haiku)で読み直していた」ことだった(改修済み)
-- `.claude/settings.json` の `additionalDirectories` に旧パス `repos\active\claude-hq\*` が3件残存(CLAUDE.md本体は既に現行パス。settings.json側は今回のタスク範囲外のため未修正、要ムーチョ判断)
+- `.claude/settings.json` に `Bash(*)` `PowerShell(*)` の全許可が既に存在し、個別の Bash/PowerShell 許可エントリは実質無効化されていた(今回は明らかに一度きりのものだけ削除。WebFetch/Read 等の個別許可は別名前空間のため引き続き有効)
 
 ### 進行中
-- なし(Stop フック修正・実機テスト済み。コミット待ち)
+- なし(本セッションの変更はすべて実機確認・grep確認済み。コミット待ち)
 
 ### 次のステップ
 1. 本セッションの変更をコミット・push(ムーチョの指示待ち)
-2. `.claude/settings.json` の `additionalDirectories` 内、旧 claude-hq パス3件の要否を判断
-3. Prefectバージョン不整合への対応方針を決める((a)video-pipeline側prefect更新 (b)両プロジェクトのPREFECT_HOME分離、のいずれか)
-4. 自動収集の再開判断(スケジューラ・コスト削減とも準備完了)
-5. ローカルLLM(自宅GPU RTX 5070 Ti)の精度検証: DBの正解付きイベント約30件で Haiku と比較(費用ゼロで実施)
+2. Prefectバージョン不整合への対応方針を決める((a)video-pipeline側prefect更新 (b)両プロジェクトのPREFECT_HOME分離、のいずれか)
+3. 自動収集の再開判断(スケジューラ・コスト削減とも準備完了)
+4. ローカルLLM(自宅GPU RTX 5070 Ti)の精度検証: DBの正解付きイベント約30件で Haiku と比較(費用ゼロで実施)
 - 方針: AIの費用見積もりは信用しない。実測ログと Anthropic Console の月額上限で管理する
 
 ## 現在のタスク
@@ -85,7 +88,7 @@ DNS 接続・ヘッダーリンク修正などの軽微なタスクから処理�
 
 ## 旧メモリーバンクからの引き継ぎ
 
-旧 docs/memory_bank/ システム(D-001〜D-028)は参照のみ・更新停止。
+旧 docs/archive/memory_bank/ システム(D-001〜D-028)は参照のみ・更新停止。
 P-001〜P-008 → GitHub Issues #4〜#11 として移行済み(G1-2 完了)。
 D-020〜D-028 → GitHub Issues #12〜#20 として移行済み(G2-1 完了)。
 D-001〜D-019 は設計書・コードに内容が埋め込まれているため Issue 化不要と判断。

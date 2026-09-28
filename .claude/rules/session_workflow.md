@@ -14,7 +14,7 @@ CLAUDE.md 本体「セッション運用」の詳細版。
 ## アーキテクチャ・実装を提案する前に
 
 1. GitHub Issues で `label:decision/adopted` を検索し、同じ判断が既にないか確認
-2. 実装方針が `docs/implementation_schedule.md` のフェーズ・タスク番号と整合しているか
+2. 現行の運用実態（`docs/operations.md`）と矛盾しないか確認
 3. 変更箇所が 4 原則（Surgical Changes）に従っているか
 
 ## 進捗・決定の記録

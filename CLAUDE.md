@@ -34,7 +34,7 @@
 
 **開始時:** Pre-Flight Check → `git branch --show-current`（main なら feature/* または chore/* へ誘導）。SessionStart フックが STATE.md の「現在地」を自動でコンテキストに読み込む（`.claude/hooks/session_start.ps1`）。
 
-**アーキ・実装を提案する前:** GitHub Issues で `label:decision/adopted` を検索し過去判断を確認。`docs/implementation_schedule.md` のフェーズと整合を確認。
+**アーキ・実装を提案する前:** GitHub Issues で `label:decision/adopted` を検索し過去判断を確認。現行の運用実態は `docs/operations.md` を参照。
 
 **進捗の記録（最重要・作業を1つ終えるたび）:** STATE.md の「現在地」（完了／判明した事実／進行中／次のステップ）を更新し、同じコミットに含める。STATE.md は「今の状態」を書く場所であり、古くなった記述は消すか書き換える。追記を積み上げるだけにせず、全体で約150行以内を目安に保つ。
 Stop フックが、STATE.md 以外の変更（未コミット含む）や新しいコミットがあるのに STATE.md が未更新のまま終了しようとした場合を検知し、更新を促す（`.claude/hooks/stop_check.ps1`）。このため次項のクロージングは任意の確認手順であり、実行しなくても記録は残る。
