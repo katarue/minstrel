@@ -110,11 +110,11 @@ export default async function TourPage({
       </Link>
 
       <div
-        className="relative w-full aspect-video bg-parchment-dark rounded-md overflow-hidden mb-8"
+        className="relative w-full max-w-[420px] mx-auto aspect-[210/297] bg-parchment-dark rounded-md overflow-hidden mb-8"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
       >
         {imageUrl ? (
-          <Image src={imageUrl} alt={tourName} fill className="object-cover" priority />
+          <Image src={imageUrl} alt={tourName} fill className="object-contain" priority />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="font-heading text-gold/40 text-8xl select-none" aria-hidden>♪</span>
@@ -126,7 +126,7 @@ export default async function TourPage({
         className="bg-parchment-dark rounded-md p-6 md:p-8 flex flex-col gap-6"
         style={{ boxShadow: "0 2px 8px rgba(59, 47, 29, 0.12)" }}
       >
-        <h1 className="font-heading text-ink-heading text-2xl md:text-3xl font-bold leading-snug">
+        <h1 className="font-heading text-ink-heading text-2xl md:text-3xl font-bold leading-snug break-words">
           {tourName}
         </h1>
 

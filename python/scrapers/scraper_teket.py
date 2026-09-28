@@ -12,7 +12,7 @@ robots.txt 確認済み: イベント一覧・詳細ページはスクレイピ�
 import time
 from scrapers.base import BaseScraper
 from utils.config import SCRAPE_RATE_LIMIT_SEC
-from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text
+from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text, clean_text
 
 # teket API の実測: 正常レスポンスは 1〜3 秒。
 # (connect_timeout, read_timeout) 形式で設定。
@@ -106,7 +106,7 @@ class ScraperTeket(BaseScraper):
         image_url = (BASE_URL + flyer) if flyer else None
 
         # ── 構造化パース（Claude extraction をスキップするための _pre_parsed） ──
-        event_name = item.get("event_name") or ""
+        event_name = clean_text(item.get("event_name") or "") or ""
         theater = item.get("theater") or ""
         region = item.get("region") or ""
         summary = item.get("summary_program") or ""

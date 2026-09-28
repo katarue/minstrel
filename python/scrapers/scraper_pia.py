@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 from scrapers.base import BaseScraper
 from scrapers.url_utils import is_placeholder_image
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
-from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text
+from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text, clean_text
 
 DETAIL_BASE = "https://ticket.pia.jp"
 
@@ -58,6 +58,7 @@ def _parse_pia_structured(soup: BeautifulSoup, url: str) -> dict | None:
         h1 = soup.find("h1")
         if h1:
             title = h1.get_text(strip=True) or None
+    title = clean_text(title)
 
     # ── dl > dt/dd 構造から日時・会場・主催を取得 ─────────────────────
     date_str = None

@@ -57,11 +57,11 @@ export default function PosterCard({ imageUrl, title, titleEn, date, href, isPas
         {/* 情報エリア */}
         <div className="p-4 flex flex-col gap-1">
           <p className="font-body text-ink-body text-sm">{date}</p>
-          <h3 className="font-heading text-ink-heading text-base font-semibold leading-snug line-clamp-2">
+          <h3 className="font-heading text-ink-heading text-base font-semibold leading-snug line-clamp-2 break-words">
             {title}
           </h3>
           {titleEn && (
-            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-1">
+            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-1 break-words">
               {titleEn}
             </p>
           )}

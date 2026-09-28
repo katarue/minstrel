@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from scrapers.base import BaseScraper
 from scrapers.url_utils import collect_x_url, collect_candidate_official_urls, is_placeholder_image
 from utils.config import SCRAPE_RATE_LIMIT_SEC
-from processor.structured_parser import build_iso8601, game_titles_from_text
+from processor.structured_parser import build_iso8601, game_titles_from_text, clean_text
 
 BASE_URL = "https://eplus.jp"
 LIST_URL = f"{BASE_URL}/sf/live/game-music"
@@ -37,6 +37,7 @@ def _parse_eplus_structured(soup: BeautifulSoup, url: str) -> list[dict] | None:
         if og_title:
             raw_title = og_title.get("content", "")
             title = re.sub(r'のチケット情報.*$', '', raw_title).strip()
+    title = clean_text(title)
 
     if not title:
         return None

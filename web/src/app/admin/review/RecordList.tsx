@@ -594,6 +594,27 @@ function OrganizerNameEditField({ eventId, initialValue }: { eventId: string; in
   );
 }
 
+function GameMusicReasonNote({ reason }: { reason?: string }) {
+  const [open, setOpen] = useState(false);
+  if (!reason) return null;
+  return (
+    <div className="mt-1.5 pt-1 border-t border-gold/15">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="text-[11px] text-ink-body/40 hover:text-ink-body/60 underline decoration-dotted underline-offset-2"
+      >
+        {open ? "AI判定理由を隠す" : "AI判定理由を見る"}
+      </button>
+      {open && (
+        <p className="text-xs text-ink-body/60 mt-1 leading-snug max-w-[160px]">
+          {reason}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function DescriptionCell({ eventId, initialDescription }: { eventId: string; initialDescription: string | null }) {
   const [value, setValue] = useState(initialDescription ?? "");
   const [saved, setSaved] = useState(false);
@@ -917,14 +938,11 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                   {/* ゲームタイトル */}
                   <td className="py-2.5 pr-2">
                     <GameTitleField eventId={ev.id} initialTitles={gameTitles} />
-                    {gameTitles.length === 0 && (() => {
-                      const reason = ev.event_sources?.[0]?.raw_data?.game_music_reason;
-                      return reason ? (
-                        <p className="text-xs text-ink-body/70 mt-1 leading-snug max-w-[160px]" title={reason}>
-                          理由: {reason}
-                        </p>
-                      ) : null;
-                    })()}
+                    {gameTitles.length === 0 && (
+                      <GameMusicReasonNote
+                        reason={ev.event_sources?.map(s => s.raw_data?.game_music_reason).find(r => r)}
+                      />
+                    )}
                   </td>
 
                   {/* 説明 */}

@@ -9,6 +9,18 @@ from datetime import datetime, timezone, timedelta
 
 JST = timezone(timedelta(hours=9))
 
+
+def clean_text(text: str | None) -> str | None:
+    """スクレイピングしたテキストの表記ゆれを正規化する。
+    &nbsp; 由来の U+00A0（改行不可スペース）を通常スペースに変換しないと、
+    ブラウザがタイトル等を折り返せず画面からはみ出す不具合につながる。
+    """
+    if not text:
+        return text
+    cleaned = text.replace("\xa0", " ")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned or None
+
 # ── 地域名 → 都道府県 変換テーブル ──────────────────────────────────────
 _REGION_MAP: dict[str, str] = {
     # 都道府県名（「都・道・府・県」なし）

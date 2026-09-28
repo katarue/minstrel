@@ -12,7 +12,7 @@ import re
 from bs4 import BeautifulSoup
 
 from scrapers.base import BaseScraper
-from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text
+from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text, clean_text
 
 BASE_URL = "https://sugimania.com"
 CONCERT_URL = f"{BASE_URL}/concert.html"
@@ -45,7 +45,7 @@ class ScraperSugimania(BaseScraper):
 
         # タイトル
         title_el = table.select_one("td.concertTitle p")
-        title = title_el.get_text(" ", strip=True) if title_el else None
+        title = clean_text(title_el.get_text(" ", strip=True)) if title_el else None
         if not title:
             return None
 

@@ -92,11 +92,11 @@ export default function Card({ imageUrl, title, titleEn, date, prefecture, venue
               )}
             </span>
           )}
-          <h3 className="font-heading text-ink-heading text-sm sm:text-base font-semibold leading-snug line-clamp-2">
+          <h3 className="font-heading text-ink-heading text-sm sm:text-base font-semibold leading-snug line-clamp-2 break-words">
             {title}
           </h3>
           {titleEn && (
-            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-1">
+            <p className="font-body text-ink-body/80 text-sm italic leading-snug line-clamp-1 break-words">
               {titleEn}
             </p>
           )}

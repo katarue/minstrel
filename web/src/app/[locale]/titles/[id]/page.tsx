@@ -106,8 +106,8 @@ export default async function TitleDetailPage({ params }: { params: Promise<{ id
                         </div>
                       )}
                     </div>
-                    <div className="px-4 py-4 md:px-5 flex flex-col justify-center gap-1">
-                      <p className="font-heading text-ink-heading text-lg font-semibold leading-snug">
+                    <div className="px-4 py-4 md:px-5 flex flex-col justify-center gap-1 min-w-0 flex-1">
+                      <p className="font-heading text-ink-heading text-lg font-semibold leading-snug break-words">
                         {event.event_name}
                       </p>
                       <p className="font-body text-ink-body text-base font-medium">

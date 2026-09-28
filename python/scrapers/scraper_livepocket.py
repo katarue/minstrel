@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 from scrapers.base import BaseScraper
 from scrapers.url_utils import collect_x_url, collect_candidate_official_urls, is_placeholder_image
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
-from processor.structured_parser import build_iso8601, extract_date_time, extract_prefecture
+from processor.structured_parser import build_iso8601, extract_date_time, extract_prefecture, clean_text
 
 BASE_URL = "https://livepocket.jp"
 
@@ -75,6 +75,7 @@ def _parse_livepocket_structured(soup: BeautifulSoup, url: str) -> dict | None:
         h1 = soup.find("h1")
         if h1:
             title = h1.get_text(strip=True)
+    title = clean_text(title)
 
     # 日付・時刻: <time datetime> → テキスト regex
     date_str, time_str = None, None
