@@ -13,3 +13,4 @@ curation/_cache_scored_records.json
 _check_*.py
 _debug_*.py
 _tmp_*.py
+_test_*.py

@@ -154,7 +154,7 @@
           {
             "type": "command",
             "shell": "powershell",
-            "command": "& \"$env:CLAUDE_PROJECT_DIR\\.claude\\hooks\\stop_check.ps1\""
+            "command": "& \"$env:CLAUDE_PROJECT_DIR\\.claude\\hooks\\stop_check.ps1\"; exit $LASTEXITCODE"
           }
         ]
       }

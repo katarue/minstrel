@@ -1,12 +1,36 @@
 ﻿# Minstrel: Stop フック
-# 「STATE.md 以外の変更（未コミット含む）または新しいコミットがある」のに
-# 「STATE.md がセッション開始以降に更新されていない」場合、終了をブロックして
-# STATE.md の「現在地」更新を促す。
+# 「セッション開始時点からの差分として、STATE.md 以外の変更（未コミット含む）または
+# 新しいコミットがある」のに「STATE.md がセッション開始以降に更新されていない」場合、
+# 終了をブロックして STATE.md の「現在地」更新を促す。
+# セッション開始前から存在した未コミット変更（今回触っていないもの）はカウントしない
+# （session_start.ps1 が記録したベースラインとの差分でのみ判定する）。
 # 無限ループ防止: stop_hook_active が true のときは何もしない。
 # 判定に必要な情報が無い/エラーが起きた場合は、常に通す（fail-open）。
 
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Console]::InputEncoding  = New-Object System.Text.UTF8Encoding($false)
+
+function Get-UncommittedSignatureLines {
+    # 現在の未コミット変更（tracked の変更 + untracked）を
+    # "ステータスコード|内容ハッシュ|パス" の行の配列として返す。
+    # リポジトリルートで実行されること前提（呼び出し側で Push-Location 済み）。
+    $lines = @()
+    $statusLines = @(git status --porcelain=v1 --untracked-files=all 2>$null | Where-Object { $_ })
+    foreach ($line in $statusLines) {
+        $code = $line.Substring(0, 2)
+        $path = $line.Substring(3)
+        if ($path -match ' -> ') {
+            $path = ($path -split ' -> ')[-1]
+        }
+        $hash = "DELETED"
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            $h = git hash-object -- "$path" 2>$null
+            if ($h) { $hash = $h.Trim() }
+        }
+        $lines += "$code|$hash|$path"
+    }
+    return $lines
+}
 
 try {
     $stdin = [Console]::In.ReadToEnd()
@@ -27,7 +51,8 @@ try {
     }
     $markerDir = Join-Path $env:TEMP "claude_minstrel_session_heads"
     $markerFile = Join-Path $markerDir ("$($inputJson.session_id).txt")
-    if (-not (Test-Path $markerFile)) {
+    $baselineFile = Join-Path $markerDir ("$($inputJson.session_id).uncommitted.txt")
+    if (-not (Test-Path $markerFile) -or -not (Test-Path $baselineFile)) {
         # このセッション開始時点の記録が無い（機能導入前に始まったセッション等）→ 判定できないので通す
         exit 0
     }
@@ -43,12 +68,26 @@ try {
 
         $currentHead = (git rev-parse HEAD 2>$null).Trim()
 
-        $workingTreeChanges = @(git diff --name-only HEAD 2>$null | Where-Object { $_ })
-        $untracked          = @(git ls-files --others --exclude-standard 2>$null | Where-Object { $_ })
-        $uncommitted = @($workingTreeChanges + $untracked | Select-Object -Unique)
+        # セッション開始時点のベースラインと現在の未コミット変更を比較し、
+        # 「セッション中に新たに変化した／新規に発生した」ものだけを抽出する。
+        $baselineLines = @(Get-Content -Path $baselineFile -Encoding UTF8 -ErrorAction SilentlyContinue | Where-Object { $_ })
+        $baselineSet = New-Object 'System.Collections.Generic.HashSet[string]'
+        foreach ($l in $baselineLines) { [void]$baselineSet.Add($l) }
 
-        $otherUncommittedCount = @($uncommitted | Where-Object { $_ -ne "STATE.md" }).Count
-        $stateMdUncommitted    = $uncommitted -contains "STATE.md"
+        $currentLines = Get-UncommittedSignatureLines
+        $currentPaths = @()
+        $sessionChangedPaths = @()
+        foreach ($l in $currentLines) {
+            $path = ($l -split '\|', 3)[2]
+            $currentPaths += $path
+            if (-not $baselineSet.Contains($l)) {
+                $sessionChangedPaths += $path
+            }
+        }
+        $sessionChangedPaths = @($sessionChangedPaths | Select-Object -Unique)
+
+        $otherUncommittedCount = @($sessionChangedPaths | Where-Object { $_ -ne "STATE.md" }).Count
+        $stateMdUncommitted    = $currentPaths -contains "STATE.md"
 
         $newCommitCount = 0
         $stateMdInNewCommits = $false
