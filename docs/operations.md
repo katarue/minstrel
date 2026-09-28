@@ -1,6 +1,6 @@
 # Minstrel 運用状況（現行）
 
-**最終更新: 2026-05-17**
+**最終更新: 2026-09-28**
 
 このドキュメントは「現在実際にどう動いているか」を記録する。
 計画書（implementation_schedule.md）は初期アイデアであり、現状と乖離しているため参照しないこと。
@@ -23,6 +23,7 @@
 | `scraper_eplus.py` | イープラス |
 | `scraper_livepocket.py` | LivePocket |
 | `scraper_peatix.py` | Peatix |
+| `scraper_sugimania.py` | sugimania.com（すぎやまこういちの世界、公式） |
 
 ### ステージ2: X（旧Twitter）検索
 

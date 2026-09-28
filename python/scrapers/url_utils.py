@@ -11,6 +11,27 @@ official_url の判定は Claude AI に委ねる設計（link-scanning では精
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
+# サイト共通のロゴ・プレースホルダー画像（og:image がこれを指す場合、画像なし扱いにする）
+# 2026-09-28: eplus の webclip.png が全イベントの画像として保存されていた問題への対応。
+# 確認済みのURLに加え、ファイル名パターンによる汎用ヒューリスティックも併用する。
+_PLACEHOLDER_IMAGE_URLS = {
+    "https://eplus.jp/s/eplus/img/webclip.png",
+    "https://image.pia.jp/common2/images/facebook_noimage.jpg",
+    "http://image.pia.jp/common2/images/facebook_noimage.jpg",
+}
+_PLACEHOLDER_FILENAME_KEYWORDS = ("noimage", "no_image", "no-image", "webclip")
+
+
+def is_placeholder_image(url: str | None) -> bool:
+    """og:image がサイト共通のロゴ・プレースホルダー画像かどうかを判定する。"""
+    if not url:
+        return False
+    if url in _PLACEHOLDER_IMAGE_URLS:
+        return True
+    lowered = url.lower()
+    return any(kw in lowered for kw in _PLACEHOLDER_FILENAME_KEYWORDS)
+
+
 # チケット販売・SNS・地図・ユーティリティ系（公式サイトではありえないドメイン）
 _NON_OFFICIAL_DOMAINS = {
     # チケットサイト

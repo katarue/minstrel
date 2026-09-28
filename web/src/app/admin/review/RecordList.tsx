@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName, saveTicketSaleStart, saveTicketSaleStartTime, saveTicketSaleConfirmed } from "./publish-actions";
+import { publishEvent, unpublishEvent, deleteEvent, clearEventImage, saveOfficialUrl, saveReferenceUrl, saveSourceUrl, updateGameTitles, saveImageFromUrl, saveDescription, saveSeriesName } from "./publish-actions";
 import { reresearchEvent, generateDescription } from "./research-actions";
 
 export type EventRecord = {
@@ -13,9 +13,6 @@ export type EventRecord = {
   venue_name: string | null;
   prefecture: string | null;
   description: string | null;
-  ticket_sale_start: string | null;
-  ticket_sale_start_time: string | null;
-  ticket_sale_confirmed: boolean;
   source_url: string | null;
   official_url: string | null;
   reference_url: string | null;
@@ -159,85 +156,6 @@ function GameTitleField({ eventId, initialTitles }: { eventId: string; initialTi
           </button>
         )}
         {saved && <span className="text-xs text-success shrink-0">✓</span>}
-      </div>
-    </div>
-  );
-}
-
-function TicketSaleDateField({ eventId, initialDate, initialTime, initialConfirmed }: { eventId: string; initialDate: string | null; initialTime: string | null; initialConfirmed: boolean }) {
-  const [dateVal, setDateVal] = useState(initialDate ?? "");
-  const [timeVal, setTimeVal] = useState(initialTime ?? "");
-  const [confirmed, setConfirmed] = useState(initialConfirmed);
-  const [dateSaved, setDateSaved] = useState(false);
-  const [timeSaved, setTimeSaved] = useState(false);
-  const [isPendingDate, startDateTransition] = useTransition();
-  const [isPendingTime, startTimeTransition] = useTransition();
-  const [isPendingConfirm, startConfirmTransition] = useTransition();
-  const dateDirty = dateVal !== (initialDate ?? "");
-  const timeDirty = timeVal !== (initialTime ?? "");
-
-  const handleSaveDate = () =>
-    startDateTransition(async () => {
-      const res = await saveTicketSaleStart(eventId, dateVal);
-      if (res.ok) setDateSaved(true);
-    });
-
-  const handleSaveTime = () =>
-    startTimeTransition(async () => {
-      const res = await saveTicketSaleStartTime(eventId, timeVal);
-      if (res.ok) setTimeSaved(true);
-    });
-
-  const handleConfirm = (checked: boolean) => {
-    setConfirmed(checked);
-    startConfirmTransition(async () => {
-      await saveTicketSaleConfirmed(eventId, checked);
-    });
-  };
-
-  const alertDate = !confirmed && !dateVal;
-  const alertTime = !confirmed && !timeVal;
-
-  return (
-    <div className="mt-1">
-      <span className="text-xs text-ink-body/70 uppercase tracking-wide">発売開始日時</span>
-      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-        <input
-          type="date"
-          value={dateVal}
-          onChange={e => { setDateVal(e.target.value); setDateSaved(false); }}
-          className={`text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 ${alertDate ? "text-red-500 border-red-500/40" : "text-ink-body border-gold/40"}`}
-        />
-        {dateDirty && !dateSaved && (
-          <button onClick={handleSaveDate} disabled={isPendingDate}
-            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0">
-            {isPendingDate ? "…" : "保存"}
-          </button>
-        )}
-        {dateSaved && <span className="text-xs text-success shrink-0">✓</span>}
-        <input
-          type="time"
-          value={timeVal}
-          onChange={e => { setTimeVal(e.target.value); setTimeSaved(false); }}
-          className={`text-sm bg-transparent border-b focus:border-bordeaux outline-none py-0.5 w-24 ${alertTime ? "text-red-500 border-red-500/40" : "text-ink-body border-gold/40"}`}
-        />
-        {timeDirty && !timeSaved && (
-          <button onClick={handleSaveTime} disabled={isPendingTime}
-            className="text-xs px-1.5 py-0.5 bg-gold/20 text-ink-body/70 rounded hover:bg-gold/30 disabled:opacity-40 whitespace-nowrap shrink-0">
-            {isPendingTime ? "…" : "保存"}
-          </button>
-        )}
-        {timeSaved && <span className="text-xs text-success shrink-0">✓</span>}
-        <label className={`flex items-center gap-1 cursor-pointer shrink-0 ml-1 ${isPendingConfirm ? "opacity-40" : ""}`}>
-          <input
-            type="checkbox"
-            checked={confirmed}
-            onChange={e => handleConfirm(e.target.checked)}
-            disabled={isPendingConfirm}
-            className="accent-bordeaux"
-          />
-          <span className="text-xs text-ink-body/70">発売中</span>
-        </label>
       </div>
     </div>
   );
@@ -772,7 +690,6 @@ export function RecordList({ events }: { events: EventRecord[] }) {
                       )}
                     </div>
                     <SeriesNameField eventId={ev.id} initialName={ev.series_name} />
-                    <TicketSaleDateField eventId={ev.id} initialDate={ev.ticket_sale_start} initialTime={ev.ticket_sale_start_time} initialConfirmed={ev.ticket_sale_confirmed} />
                     <SourceUrlField
                       eventId={ev.id}
                       initialUrl={ev.source_url}

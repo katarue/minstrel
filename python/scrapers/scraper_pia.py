@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from scrapers.base import BaseScraper
+from scrapers.url_utils import is_placeholder_image
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 from processor.structured_parser import build_iso8601, region_to_prefecture, game_titles_from_text
 
@@ -239,6 +240,8 @@ class ScraperPia(BaseScraper):
 
         og_image = soup.find("meta", attrs={"property": "og:image"})
         image_url = og_image.get("content") if og_image else None
+        if is_placeholder_image(image_url):
+            image_url = None
         if image_url:
             print(f"[pia] image found: {image_url[:80]}")
 

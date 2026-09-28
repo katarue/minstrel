@@ -42,7 +42,7 @@ type TourEvent = {
   description: string | null;
   description_en: string | null;
   organizers: { name: string; official_site_url: string | null } | null;
-  event_game_titles: Array<{ game_titles: { title_name: string; english_name: string | null; amazon_asin: string | null; amazon_affiliate_url: string | null } | null }>;
+  event_game_titles: Array<{ game_titles: { title_name: string; english_name: string | null } | null }>;
 };
 
 export default async function TourPage({
@@ -61,7 +61,7 @@ export default async function TourPage({
     venue_name, venue_name_en, prefecture, flyer_image_url, key_visual_url,
     ticket_urls, source_url, official_url, description, description_en,
     organizers ( name, official_site_url ),
-    event_game_titles ( game_titles ( title_name, english_name, amazon_asin, amazon_affiliate_url ) )
+    event_game_titles ( game_titles ( title_name, english_name ) )
   `;
 
   // まず tour_id で検索。なければ event.id で単件フォールバック
@@ -263,37 +263,6 @@ export default async function TourPage({
             </p>
           </div>
         )}
-
-        {/* Amazon サウンドトラック */}
-        {(() => {
-          const items = first.event_game_titles
-            .map((egt) => egt.game_titles)
-            .filter((gt): gt is NonNullable<typeof gt> => gt != null && gt.amazon_asin != null)
-            .slice(0, 4);
-          if (items.length === 0) return null;
-          return (
-            <div className="border-t border-gold/30 pt-6">
-              <div className="grid grid-cols-2 gap-3">
-                {items.map((gt) => (
-                  <a
-                    key={gt.amazon_asin}
-                    href={gt.amazon_affiliate_url ?? `https://www.amazon.co.jp/dp/${gt.amazon_asin}?tag=k0642-22`}
-                    target="_blank"
-                    rel="noopener noreferrer sponsored"
-                    className="block rounded-md overflow-hidden border border-gold/20 hover:border-gold/50 transition-colors aspect-square"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`/api/amazon-image?asin=${gt.amazon_asin}`}
-                      alt={gt.title_name}
-                      className="w-full h-full object-cover"
-                    />
-                  </a>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
 
       </div>
     </div>

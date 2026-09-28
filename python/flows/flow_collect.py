@@ -16,7 +16,7 @@ from images.processor import process_event_image, image_storage_key
 from utils.db import get_client
 from utils.notify import notify_failure, notify_success
 from utils import ai_usage
-from utils.config import IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, GOOGLE_PLACES_API_KEY
+from utils.config import GOOGLE_PLACES_API_KEY
 from utils.entity_resolution import (
     extract_hard_keys,
     find_existing_event,
@@ -65,6 +65,37 @@ def scrape_livepocket() -> list[dict]:
 @task
 def scrape_sugimania() -> list[dict]:
     return ScraperSugimania().scrape()
+
+
+@task
+def dedupe_raw_events(raw_events: list[dict]) -> list[dict]:
+    """同じURLのraw itemが複数回スクレイピングされた場合（検索キーワードの重複等）に1件へ統合する。
+    サイトを問わず適用する共通の安全策。"""
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    dup_count = 0
+
+    for raw in raw_events:
+        pre_list = raw.get("_pre_parsed_list")
+        if pre_list:
+            key = "|".join(sorted(
+                pre.get("source_url", raw.get("source_url", "")) for pre in pre_list
+            ))
+        else:
+            key = raw.get("source_url", "")
+
+        if not key:
+            deduped.append(raw)
+            continue
+        if key in seen:
+            dup_count += 1
+            continue
+        seen.add(key)
+        deduped.append(raw)
+
+    if dup_count:
+        print(f"[dedupe] removed {dup_count} duplicate raw items (same source URL)")
+    return deduped
 
 
 @task
@@ -517,93 +548,6 @@ def auto_enrich() -> int:
 
 
 @task
-def fetch_missing_igdb_covers() -> int:
-    """igdb_cover_url が未設定のゲームタイトルにカバー画像を付与する。"""
-    if not IGDB_CLIENT_ID or not IGDB_CLIENT_SECRET:
-        print("[igdb] IGDB_CLIENT_ID / IGDB_CLIENT_SECRET 未設定のためスキップ")
-        return 0
-
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from scripts.fetch_igdb_covers import get_token, search_cover, build_search_candidates
-    import time
-
-    db = get_client()
-    result = db.table("game_titles").select("id, title_name, english_name, igdb_cover_url").execute()
-    pending = [t for t in (result.data or []) if not t.get("igdb_cover_url")]
-
-    if not pending:
-        print("[igdb] カバー画像取得不要（すべて設定済み）")
-        return 0
-
-    print(f"[igdb] 未取得タイトル: {len(pending)} 件")
-    token = get_token()
-    found = 0
-    for title in pending:
-        candidates = build_search_candidates(title["title_name"], title.get("english_name"))
-        url = None
-        for query in candidates:
-            try:
-                url = search_cover(query, token)
-                time.sleep(0.25)
-            except Exception as e:
-                print(f"[igdb] error for {title['title_name']}: {e}")
-                break
-            if url:
-                break
-        if url:
-            db.table("game_titles").update({"igdb_cover_url": url}).eq("id", title["id"]).execute()
-            found += 1
-
-    print(f"[igdb] 取得完了: {found} / {len(pending)} 件")
-    return found
-
-
-@task
-def fetch_ticket_sale_dates() -> int:
-    """ticket_sale_start が未設定の公開済みイベントの発売日を source_url からスクレイピングする。"""
-    from processor.ticket_sale_fetcher import fetch_ticket_sale_date
-
-    db = get_client()
-    result = (
-        db.table("events")
-        .select("id, source_url")
-        .eq("is_published", True)
-        .is_("ticket_sale_start", "null")
-        .not_.is_("source_url", "null")
-        .execute()
-    )
-
-    events = [
-        e for e in (result.data or [])
-        if e.get("source_url") and not e["source_url"].startswith("screenshot:")
-    ]
-    if not events:
-        print("[ticket_sale] No events to process")
-        return 0
-
-    print(f"[ticket_sale] Processing {len(events)} events")
-    updated = 0
-    for event in events:
-        sale_date = fetch_ticket_sale_date(event["source_url"])
-        if sale_date:
-            db.table("events").update({"ticket_sale_start": sale_date}).eq("id", event["id"]).execute()
-            print(f"[ticket_sale] {event['id'][:8]} → {sale_date}")
-            updated += 1
-        time.sleep(0.5)
-
-    print(f"[ticket_sale] updated {updated} / {len(events)} events")
-    return updated
-
-
-@task
-def fetch_ticket_sale_dates_from_x() -> int:
-    """X（Twitter）の監視アカウント投稿からチケット発売日を取得してDBを更新する。"""
-    from processor.ticket_sale_fetcher import fetch_ticket_sale_dates_from_x as _fetch
-    return _fetch()
-
-
-@task
 def sync_ticket_sale_scheduled_posts() -> int:
     """ticket_sale_start が今日以降の公開済みイベントを scheduled_posts に事前登録する。"""
     from processor.ticket_sale_scheduler import sync_ticket_sale_posts
@@ -654,7 +598,10 @@ def collect_flow():
             f"sugimania={len(raw_sugimania)}, total={scraped_count}"
         )
 
-        extracted = extract_events(raw)
+        deduped = dedupe_raw_events(raw)
+        print(f"deduped: {len(deduped)} items (from {scraped_count})")
+
+        extracted = extract_events(deduped)
         print(f"extracted: {len(extracted)} items")
 
         validated = validate_events(extracted)
@@ -669,15 +616,6 @@ def collect_flow():
 
         enrich_count = auto_enrich()
         print(f"auto-enriched: {enrich_count} events")
-
-        igdb_count = fetch_missing_igdb_covers()
-        print(f"igdb covers fetched: {igdb_count}")
-
-        ticket_sale_count = fetch_ticket_sale_dates()
-        print(f"ticket sale dates fetched (source_url): {ticket_sale_count}")
-
-        ticket_sale_x_count = fetch_ticket_sale_dates_from_x()
-        print(f"ticket sale dates fetched (X): {ticket_sale_x_count}")
 
         ticket_scheduled_count = sync_ticket_sale_scheduled_posts()
         print(f"ticket sale scheduled posts synced: {ticket_scheduled_count}")

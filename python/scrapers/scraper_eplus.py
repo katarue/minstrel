@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from scrapers.base import BaseScraper
-from scrapers.url_utils import collect_x_url, collect_candidate_official_urls
+from scrapers.url_utils import collect_x_url, collect_candidate_official_urls, is_placeholder_image
 from utils.config import SCRAPE_RATE_LIMIT_SEC
 from processor.structured_parser import build_iso8601, game_titles_from_text
 
@@ -187,6 +187,8 @@ class ScraperEplus(BaseScraper):
 
         og_image = soup.find("meta", property="og:image")
         image_url = og_image["content"] if og_image and og_image.get("content") else None
+        if is_placeholder_image(image_url):
+            image_url = None
 
         pre_parsed_list = _parse_eplus_structured(soup, url)
 

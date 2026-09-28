@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, Browser
 
 from scrapers.base import BaseScraper
-from scrapers.url_utils import collect_x_url, collect_candidate_official_urls
+from scrapers.url_utils import collect_x_url, collect_candidate_official_urls, is_placeholder_image
 from utils.config import SCRAPE_RATE_LIMIT_SEC, USER_AGENT
 from processor.structured_parser import build_iso8601, extract_date_time, extract_prefecture
 
@@ -206,7 +206,7 @@ class ScraperPeatix(BaseScraper):
                 base = href.split("?")[0]
                 if base not in seen:
                     seen.add(base)
-                urls.append(base)
+                    urls.append(base)
 
         return urls
 
@@ -243,6 +243,8 @@ class ScraperPeatix(BaseScraper):
 
         og_image = soup.find("meta", property="og:image")
         image_url = og_image["content"] if og_image and og_image.get("content") else None
+        if is_placeholder_image(image_url):
+            image_url = None
 
         result = {
             "source_url": url,

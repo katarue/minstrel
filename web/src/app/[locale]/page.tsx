@@ -1,11 +1,9 @@
-import Image from "next/image";
 import { cookies } from "next/headers";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { formatDateShort } from "@/utils/formatDate";
 import { Link } from "@/i18n/navigation";
 import Card from "@/components/ui/Card";
-import { TitleCoverImage } from "./titles/TitleCoverImage";
 import HeroSearch from "./HeroSearch";
 import JapanMapSection from "@/components/ui/JapanMapSection";
 import { REGIONS, prefectureToRegion, prefectureEn } from "@/utils/regions";
@@ -45,12 +43,11 @@ type LightEvent = {
   start_datetime: string;
   prefecture: string | null;
   event_game_titles: Array<{
-    game_titles: { id: string; title_name: string; english_name: string | null; igdb_cover_url: string | null; amazon_asin: string | null; key_visual_url: string | null } | null;
+    game_titles: { id: string; title_name: string; english_name: string | null } | null;
   }>;
 };
 
 type CalendarEvent = { id: string; tour_id: string | null; event_name: string; event_name_en: string | null; start_datetime: string; venue_name: string | null; prefecture: string | null };
-type TicketSaleEvent = { id: string; tour_id: string | null; event_name: string; event_name_en: string | null; source_url: string | null; ticket_sale_start: string | null; ticket_sale_start_time: string | null; flyer_image_url: string | null; key_visual_url: string | null; prefecture: string | null };
 
 function toGenre(val: string | null | undefined): Genre | undefined {
   if (val && (VALID_GENRES as readonly string[]).includes(val)) return val as Genre;
@@ -60,7 +57,6 @@ function toGenre(val: string | null | undefined): Genre | undefined {
 // 2026-08-18: ホームの「ゲームタイトルで探す」セクションを非表示化
 // （カバー画像が安定せず利用も少ないため）。復活させる場合は true に戻す。
 const SHOW_GAME_TITLES = false;
-
 
 export default async function Home() {
   const locale = await getLocale();
@@ -81,7 +77,6 @@ export default async function Home() {
   let allEvents: LightEvent[] = [];
   let upcomingBroadcasts: BroadcastRow[] = [];
   let calendarEvents: CalendarEvent[] = [];
-  let ticketSaleUpcoming: TicketSaleEvent[] = [];
 
   try {
     const cookieStore = await cookies();
@@ -89,7 +84,7 @@ export default async function Home() {
 
     const broadcastEnd = new Date(nowUtc.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [topResult, allResult, broadcastResult, calendarResult, ticketSaleResult] = await Promise.all([
+    const [topResult, allResult, broadcastResult, calendarResult] = await Promise.all([
       supabase
         .from("events")
         .select(`
@@ -106,7 +101,7 @@ export default async function Home() {
         .from("events")
         .select(`
           id, start_datetime, prefecture,
-          event_game_titles ( game_titles ( id, title_name, english_name, igdb_cover_url, amazon_asin, key_visual_url ) )
+          event_game_titles ( game_titles ( id, title_name, english_name ) )
         `)
         .eq("is_published", true)
         .gte("start_datetime", todayStart)
@@ -126,14 +121,6 @@ export default async function Home() {
         .gte("start_datetime", new Date(Date.UTC(calYear, calMonth, 1)).toISOString())
         .lt("start_datetime", new Date(Date.UTC(calYear, calMonth + 1, 1)).toISOString())
         .order("start_datetime", { ascending: true }),
-      supabase
-        .from("events")
-        .select("id, tour_id, event_name, event_name_en, source_url, ticket_sale_start, ticket_sale_start_time, flyer_image_url, key_visual_url, prefecture")
-        .eq("is_published", true)
-        .eq("ticket_sale_confirmed", false)
-        .gte("ticket_sale_start", todayJst)
-        .lte("ticket_sale_start", new Date(jstNow.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10))
-        .order("ticket_sale_start", { ascending: true }),
     ]);
 
     if (topResult.error) console.error("Failed to fetch top events:", topResult.error);
@@ -147,9 +134,6 @@ export default async function Home() {
 
     if (!calendarResult.error)
       calendarEvents = (calendarResult.data ?? []) as unknown as CalendarEvent[];
-
-    if (!ticketSaleResult.error)
-      ticketSaleUpcoming = (ticketSaleResult.data ?? []) as unknown as TicketSaleEvent[];
   } catch (err) {
     console.error("Supabase connection error:", err);
   }
@@ -179,7 +163,7 @@ export default async function Home() {
   }
 
   // Section 2: count events per game title
-  type TitleInfo = { id: string; name: string; count: number; asin: string | null; keyVisualUrl: string | null; igdbUrl: string | null };
+  type TitleInfo = { id: string; name: string; count: number };
   const titleMap = new Map<string, TitleInfo>();
   for (const ev of allEvents) {
     for (const egt of ev.event_game_titles) {
@@ -193,9 +177,6 @@ export default async function Home() {
           id: gt.id,
           name: locale === "en" && gt.english_name ? gt.english_name : gt.title_name,
           count: 1,
-          asin: gt.amazon_asin ?? null,
-          keyVisualUrl: gt.key_visual_url ?? null,
-          igdbUrl: gt.igdb_cover_url ?? null,
         });
       }
     }
@@ -256,66 +237,6 @@ export default async function Home() {
           <HeroSearch />
         </div>
       </section>
-
-      {/* チケット発売情報 */}
-      {ticketSaleUpcoming.length > 0 && (
-        <section className="py-8 border-b border-gold/30">
-          <h2 className="font-heading text-ink-heading text-xl md:text-2xl font-semibold mb-5">
-            {locale === "ja" ? "チケット発売情報" : "Ticket Sales"}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-3">
-            {ticketSaleUpcoming.map((ev) => {
-              const isToday = ev.ticket_sale_start === todayJst;
-              const saleDateLabel = ev.ticket_sale_start
-                ? `${parseInt(ev.ticket_sale_start.slice(5, 7))}月${parseInt(ev.ticket_sale_start.slice(8, 10))}日発売`
-                : "";
-              const saleTimeLabel = ev.ticket_sale_start_time
-                ? ev.ticket_sale_start_time.slice(0, 5)
-                : null;
-              const imageUrl = ev.flyer_image_url ?? ev.key_visual_url;
-              const displayName = locale === "en" ? (ev.event_name_en ?? ev.event_name) : ev.event_name;
-              return (
-                <a
-                  key={ev.id}
-                  href={ev.source_url ?? `/tours/${ev.tour_id ?? ev.id}`}
-                  target={ev.source_url ? "_blank" : undefined}
-                  rel={ev.source_url ? "noopener noreferrer" : undefined}
-                  className="relative group flex flex-col bg-parchment-dark border border-gold/20 rounded-lg hover:border-bordeaux/40 transition-colors"
-                >
-                  <div className="absolute -top-3 left-3 z-10">
-                    <span className={`inline-block font-body text-xs font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap text-white ${isToday ? "bg-red-500" : "bg-bordeaux"}`}>
-                      {isToday ? (locale === "ja" ? "本日発売" : "On Sale Today") : saleDateLabel}
-                    </span>
-                  </div>
-                  <div className="relative aspect-video bg-gold/10 overflow-hidden rounded-t-lg">
-                    {imageUrl ? (
-                      <Image src={imageUrl} alt={displayName} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-gold/30 text-3xl">♪</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-2.5 flex flex-col gap-1">
-                    <p className="font-heading text-xs text-ink-heading font-semibold leading-snug line-clamp-2 group-hover:text-bordeaux transition-colors">
-                      {displayName}
-                    </p>
-                    <div className="flex items-center justify-between mt-auto pt-1">
-                      {ev.prefecture
-                        ? <span className="text-xs text-ink-body/50">{ev.prefecture}</span>
-                        : <span />
-                      }
-                      {saleTimeLabel && (
-                        <span className="text-xs text-ink-body/60 font-mono">{saleTimeLabel}</span>
-                      )}
-                    </div>
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
       {/* Section 1: 直近6件 */}
       <section className="py-12 border-b border-gold/30">
@@ -384,14 +305,9 @@ export default async function Home() {
                 href={`/titles/${title.id}`}
                 className="group flex flex-col gap-2"
               >
-                <div className="relative aspect-[3/4] bg-parchment-dark rounded overflow-hidden"
+                <div className="relative aspect-[3/4] bg-parchment-dark rounded overflow-hidden flex items-center justify-center"
                   style={{ boxShadow: "0 2px 6px rgba(59, 47, 29, 0.12)" }}>
-                  <TitleCoverImage
-                    asin={title.asin}
-                    keyVisualUrl={title.keyVisualUrl}
-                    igdbUrl={title.igdbUrl}
-                    alt={title.name}
-                  />
+                  <span className="font-heading text-gold/40 text-4xl select-none" aria-hidden>♪</span>
                   <span className="absolute top-1.5 right-1.5 bg-bordeaux/90 text-white font-body text-xs font-medium px-1.5 py-0.5 rounded leading-none tabular-nums">
                     {title.count}
                   </span>

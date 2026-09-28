@@ -24,7 +24,6 @@ from flows.flow_collect import (
     validate_events,
     process_images,
     upsert_to_db,
-    fetch_missing_igdb_covers,
     _log_run,
 )
 from utils.notify import notify_failure, notify_success
@@ -108,8 +107,6 @@ def collect_x_flow(since_days: int = 1):
         with_images = process_images(validated)
         inserted_count = upsert_to_db(with_images)
         print(f"inserted: {inserted_count} new events")
-
-        fetch_missing_igdb_covers()
 
         _log_run(started_at, "success", scraped_count, inserted_count)
         notify_success(FLOW_NAME, scraped_count, inserted_count)
