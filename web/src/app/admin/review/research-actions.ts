@@ -6,6 +6,29 @@ import { revalidatePath } from "next/cache";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+function classifyAnthropicError(err: unknown): string {
+  if (err instanceof Anthropic.APIConnectionTimeoutError) {
+    return "AI の呼び出しがタイムアウトしました。しばらく待ってから再試行してください";
+  }
+  if (err instanceof Anthropic.APIError) {
+    const msg = err.message ?? "";
+    if (err.status === 401) {
+      return "AI の呼び出しに失敗しました（認証エラー）。ANTHROPIC_API_KEY を確認してください";
+    }
+    if (
+      err.status === 402 ||
+      msg.toLowerCase().includes("credit") ||
+      msg.toLowerCase().includes("billing") ||
+      msg.toLowerCase().includes("balance")
+    ) {
+      return "AI の呼び出しに失敗しました（クレジット残高不足）。Anthropic Console で残高を確認してください";
+    }
+    return `AI の呼び出しに失敗しました（HTTP ${err.status}: ${msg.slice(0, 100)}）`;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return `AI の呼び出しに失敗しました（${msg}）`;
+}
+
 const SOCIAL_DOMAINS = ["x.com", "twitter.com", "t.co", "instagram.com", "facebook.com", "youtube.com", "youtu.be"];
 
 type ResearchResult = {
@@ -202,16 +225,16 @@ JSONのみ返してください：
 テキスト:
 ${pageText}`;
 
+  const resp = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 512,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const block = resp.content[0];
+  if (block.type !== "text") return {};
+  const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+  if (!match) return {};
   try {
-    const resp = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = resp.content[0];
-    if (block.type !== "text") return {};
-    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-    if (!match) return {};
     return JSON.parse(match[0]) as ResearchResult;
   } catch {
     return {};
@@ -347,7 +370,12 @@ export async function reresearchEvent(
   if (effectiveUrl && !isSocialUrl(effectiveUrl)) {
     mainPageData = await fetchPageData(effectiveUrl);
     if (mainPageData) {
-      parsed = await extractFromPage(mainPageData.text);
+      try {
+        parsed = await extractFromPage(mainPageData.text);
+      } catch (err) {
+        console.error("[reresearch] AI API error (main page):", err);
+        return { ok: false, message: classifyAnthropicError(err) };
+      }
       mainStartTimes = mainPageData.startTimes;
       scrapedFromUrl = true;
     }
@@ -392,14 +420,23 @@ export async function reresearchEvent(
 
     // 公式ページから抽出（外部URLがあれば最優先）
     if (externalUrlText) {
-      parsed = await extractFromPage(externalUrlText);
+      try {
+        parsed = await extractFromPage(externalUrlText);
+      } catch (err) {
+        console.error("[reresearch] AI API error (external URL):", err);
+      }
       scrapedFromUrl = true;
     }
 
     // リプライのテキストから補完（ゲームタイトル・会場が未取得の場合）
     if (replyTexts.length > 0 && (!parsed.game_titles?.length || !parsed.venue_name)) {
       const replyText = replyTexts.join("\n").slice(0, 4000);
-      const replyResult = await extractFromPage(replyText);
+      let replyResult: ResearchResult = {};
+      try {
+        replyResult = await extractFromPage(replyText);
+      } catch (err) {
+        console.error("[reresearch] AI API error (replies):", err);
+      }
       if (!parsed.game_titles?.length && replyResult.game_titles?.length) {
         parsed.game_titles = replyResult.game_titles;
       }
@@ -422,7 +459,12 @@ export async function reresearchEvent(
         if (tweetImage && !parsed.flyer_url) parsed.flyer_url = tweetImage;
         if (refTexts.length > 0) {
           const refText = refTexts.join("\n").slice(0, 4000);
-          const refResult = await extractFromPage(refText);
+          let refResult: ResearchResult = {};
+          try {
+            refResult = await extractFromPage(refText);
+          } catch (err) {
+            console.error("[reresearch] AI API error (ref tweet replies):", err);
+          }
           if (!parsed.game_titles?.length && refResult.game_titles?.length) parsed.game_titles = refResult.game_titles;
           if (!parsed.venue_name && refResult.venue_name) parsed.venue_name = refResult.venue_name;
           if (!parsed.prefecture && refResult.prefecture) parsed.prefecture = refResult.prefecture;
@@ -437,7 +479,12 @@ export async function reresearchEvent(
     } else {
       const refText = await fetchPageText(event.reference_url);
       if (refText) {
-        const refResult = await extractFromPage(refText);
+        let refResult: ResearchResult = {};
+        try {
+          refResult = await extractFromPage(refText);
+        } catch (err) {
+          console.error("[reresearch] AI API error (ref page):", err);
+        }
         if (!parsed.game_titles?.length && refResult.game_titles?.length) parsed.game_titles = refResult.game_titles;
         if (!parsed.venue_name && refResult.venue_name) parsed.venue_name = refResult.venue_name;
         if (!parsed.prefecture && refResult.prefecture) parsed.prefecture = refResult.prefecture;
@@ -480,8 +527,9 @@ export async function reresearchEvent(
         }
       }
     } catch (err) {
+      console.error("[reresearch] AI API error (web search):", err);
       if (!scrapedFromUrl && !parsed.game_titles?.length) {
-        return { ok: false, message: `検索エラー: ${err instanceof Error ? err.message : String(err)}` };
+        return { ok: false, message: classifyAnthropicError(err) };
       }
     }
   }
@@ -688,16 +736,16 @@ async function extractFullEvent(pageText: string, sourceUrl: string): Promise<In
 テキスト:
 ${pageText}`;
 
+  const resp = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const block = resp.content[0];
+  if (block.type !== "text") return {};
+  const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+  if (!match) return {};
   try {
-    const resp = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = resp.content[0];
-    if (block.type !== "text") return {};
-    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-    if (!match) return {};
     return JSON.parse(match[0]) as IngestExtraction;
   } catch {
     return {};
@@ -754,16 +802,16 @@ async function extractTourEvents(pageText: string, sourceUrl: string): Promise<T
 テキスト:
 ${pageText}`;
 
+  const resp = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 2048,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const block = resp.content[0];
+  if (block.type !== "text") return null;
+  const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+  if (!match) return null;
   try {
-    const resp = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = resp.content[0];
-    if (block.type !== "text") return null;
-    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-    if (!match) return null;
     const parsed = JSON.parse(match[0]) as TourExtraction;
     if (!parsed.tour_title || !Array.isArray(parsed.events)) return null;
     return parsed;
@@ -784,16 +832,25 @@ export async function ingestFromUrl(
     return { ok: false, message: "URLを入力してください" };
   }
 
-  // 重複チェック（このURLから既に登録済みか）
+  // event_id が NULL でない行がある = 有効なイベントが登録済み
   const { data: existing } = await supabase
     .from("event_sources")
-    .select("event_id")
+    .select("id")
     .eq("source_url", trimmedUrl)
+    .not("event_id", "is", null)
     .limit(1);
 
   if (existing?.length) {
     return { ok: false, message: "このURLは既に登録済みです" };
   }
+
+  // 孤立行（イベント削除済み: event_id = NULL）を取得して再利用する
+  const { data: orphanedRows } = await supabase
+    .from("event_sources")
+    .select("id")
+    .eq("source_url", trimmedUrl)
+    .is("event_id", null);
+  const orphanQueue = [...(orphanedRows ?? [])];
 
   // ページ取得
   const pageData = await fetchPageData(trimmedUrl);
@@ -802,7 +859,13 @@ export async function ingestFromUrl(
   }
 
   // ── ツアーページ判定（複数公演抽出を試みる）──────────────────────────────
-  const tourResult = await extractTourEvents(pageData.text, trimmedUrl);
+  let tourResult: TourExtraction | null = null;
+  try {
+    tourResult = await extractTourEvents(pageData.text, trimmedUrl);
+  } catch (err) {
+    console.error("[ingest] AI API error (tour extraction):", err);
+    return { ok: false, message: classifyAnthropicError(err) };
+  }
 
   if (tourResult && tourResult.events.length >= 2) {
     // 複数公演モード
@@ -855,15 +918,26 @@ export async function ingestFromUrl(
         continue;
       }
 
-      await supabase.from("event_sources").insert({
-        event_id: newEvent.id,
-        source_url: trimmedUrl,
-        source_name: "manual_ingest",
-        match_status: "new",
-      });
+      // 孤立行を再利用（なければ新規挿入）
+      const orphan = orphanQueue.shift();
+      if (orphan) {
+        await supabase.from("event_sources").update({ event_id: newEvent.id }).eq("id", orphan.id);
+      } else {
+        await supabase.from("event_sources").insert({
+          event_id: newEvent.id,
+          source_url: trimmedUrl,
+          source_name: "manual_ingest",
+          match_status: "new",
+        });
+      }
 
       await insertGameTitlesForEvent(supabase, newEvent.id, tourResult.game_titles ?? []);
       created++;
+    }
+
+    // イベント数が前回より減った場合、残った孤立行を削除
+    for (const orphan of orphanQueue) {
+      await supabase.from("event_sources").delete().eq("id", orphan.id);
     }
 
     revalidatePath("/admin/review");
@@ -876,7 +950,13 @@ export async function ingestFromUrl(
   }
 
   // ── 単一イベントモード ───────────────────────────────────────────────────
-  const extracted = await extractFullEvent(pageData.text, trimmedUrl);
+  let extracted: IngestExtraction = {};
+  try {
+    extracted = await extractFullEvent(pageData.text, trimmedUrl);
+  } catch (err) {
+    console.error("[ingest] AI API error (full extraction):", err);
+    return { ok: false, message: classifyAnthropicError(err) };
+  }
 
   const eventName = extracted.event_name || "（イベント名未取得 — 手動入力が必要です）";
   const startDatetime = extracted.start_datetime || "1900-01-01T00:00:00+09:00";
@@ -916,12 +996,20 @@ export async function ingestFromUrl(
     return { ok: false, message: `登録エラー: ${insertError?.message ?? "不明なエラー"}` };
   }
 
-  await supabase.from("event_sources").insert({
-    event_id: newEvent.id,
-    source_url: trimmedUrl,
-    source_name: "manual_ingest",
-    match_status: "new",
-  });
+  // 孤立行を再利用（なければ新規挿入。複数ある場合は先頭のみ再利用し残りを削除）
+  if (orphanQueue.length > 0) {
+    await supabase.from("event_sources").update({ event_id: newEvent.id }).eq("id", orphanQueue[0].id);
+    for (const extra of orphanQueue.slice(1)) {
+      await supabase.from("event_sources").delete().eq("id", extra.id);
+    }
+  } else {
+    await supabase.from("event_sources").insert({
+      event_id: newEvent.id,
+      source_url: trimmedUrl,
+      source_name: "manual_ingest",
+      match_status: "new",
+    });
+  }
 
   await insertGameTitlesForEvent(supabase, newEvent.id, extracted.game_titles ?? []);
 
@@ -980,29 +1068,29 @@ async function extractFromScreenshot(
   ]
 }`;
 
-  try {
-    const resp = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2048,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-              data: base64,
-            },
+  const resp = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 2048,
+    messages: [{
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: base64,
           },
-          { type: "text", text: prompt },
-        ],
-      }],
-    });
-    const block = resp.content[0];
-    if (block.type !== "text") return null;
-    const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
-    if (!match) return null;
+        },
+        { type: "text", text: prompt },
+      ],
+    }],
+  });
+  const block = resp.content[0];
+  if (block.type !== "text") return null;
+  const match = block.text.replace(/```json|```/g, "").match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
     const parsed = JSON.parse(match[0]) as ScreenshotExtraction;
     if (!parsed.event_name || !Array.isArray(parsed.performances) || parsed.performances.length === 0) return null;
     return parsed;
@@ -1017,7 +1105,13 @@ export async function ingestFromScreenshot(
 ): Promise<{ ok: boolean; message: string }> {
   const supabase = createAdminClient();
 
-  const extracted = await extractFromScreenshot(base64, mediaType);
+  let extracted: ScreenshotExtraction | null = null;
+  try {
+    extracted = await extractFromScreenshot(base64, mediaType);
+  } catch (err) {
+    console.error("[screenshot] AI API error:", err);
+    return { ok: false, message: classifyAnthropicError(err) };
+  }
   if (!extracted) {
     return { ok: false, message: "画像から情報を抽出できませんでした" };
   }
