@@ -2,6 +2,8 @@ import json
 import re
 import anthropic
 from utils.config import ANTHROPIC_API_KEY
+from utils import ai_usage
+from processor.claude_extractor import raise_if_fatal_error
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -26,12 +28,17 @@ def enrich_event_fields(event_name: str, organizer: str = "") -> dict:
     result_text = ""
 
     for _ in range(8):
-        resp = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=512,
-            tools=tools,
-            messages=msgs,
-        )
+        try:
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                tools=tools,
+                messages=msgs,
+            )
+        except Exception as e:
+            raise_if_fatal_error(e)
+            raise
+        ai_usage.record(resp)
         text_block = next((b for b in reversed(resp.content) if b.type == "text"), None)
         if text_block:
             result_text = text_block.text

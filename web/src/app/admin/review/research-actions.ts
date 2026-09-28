@@ -69,7 +69,7 @@ function detectStartTimes(html: string): string[] {
   return times.sort();
 }
 
-async function fetchPageData(url: string): Promise<{ text: string; startTimes: string[] } | null> {
+async function fetchPageData(url: string): Promise<{ text: string; startTimes: string[]; ogImage: string | null } | null> {
   try {
     const res = await fetch(url, {
       headers: {
@@ -133,7 +133,8 @@ async function fetchPageData(url: string): Promise<{ text: string; startTimes: s
     const startTimes = detectStartTimes(html);
     const prefix = structuredParts.length ? structuredParts.join("\n") + "\n\n" : "";
     const fullText = ogImage ? `${prefix}${text}\n\nog:image: ${ogImage}` : `${prefix}${text}`;
-    return { text: fullText, startTimes };
+    const absoluteOgImage = ogImage ? new URL(ogImage, url).toString() : null;
+    return { text: fullText, startTimes, ogImage: absoluteOgImage };
   } catch {
     return null;
   }
@@ -245,6 +246,7 @@ async function uploadFlyer(
   supabase: ReturnType<typeof createAdminClient>,
   imageUrl: string,
   eventId: string,
+  filename = "flyer_researched",
 ): Promise<string | null> {
   try {
     const res = await fetch(imageUrl, { signal: AbortSignal.timeout(8000) });
@@ -252,7 +254,7 @@ async function uploadFlyer(
     const buffer = Buffer.from(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") ?? "image/jpeg";
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
-    const path = `${eventId}/flyer_researched.${ext}`;
+    const path = `${eventId}/${filename}.${ext}`;
     const { error } = await supabase.storage
       .from("event-images")
       .upload(path, buffer, { contentType, upsert: true });
@@ -931,6 +933,13 @@ export async function ingestFromUrl(
         });
       }
 
+      if (pageData.ogImage) {
+        const storedUrl = await uploadFlyer(supabase, pageData.ogImage, newEvent.id, "flyer_ingested");
+        if (storedUrl) {
+          await supabase.from("events").update({ flyer_image_url: storedUrl }).eq("id", newEvent.id);
+        }
+      }
+
       await insertGameTitlesForEvent(supabase, newEvent.id, tourResult.game_titles ?? []);
       created++;
     }
@@ -1009,6 +1018,13 @@ export async function ingestFromUrl(
       source_name: "manual_ingest",
       match_status: "new",
     });
+  }
+
+  if (pageData.ogImage) {
+    const storedUrl = await uploadFlyer(supabase, pageData.ogImage, newEvent.id, "flyer_ingested");
+    if (storedUrl) {
+      await supabase.from("events").update({ flyer_image_url: storedUrl }).eq("id", newEvent.id);
+    }
   }
 
   await insertGameTitlesForEvent(supabase, newEvent.id, extracted.game_titles ?? []);

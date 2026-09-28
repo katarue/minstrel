@@ -15,12 +15,14 @@ from validator.machine_validator import validate
 from images.processor import process_event_image, image_storage_key
 from utils.db import get_client
 from utils.notify import notify_failure, notify_success
+from utils import ai_usage
 from utils.config import IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, GOOGLE_PLACES_API_KEY
 from utils.entity_resolution import (
     extract_hard_keys,
     find_existing_event,
     find_existing_event_by_name_date,
     find_or_create_organizer,
+    load_known_source_urls,
     save_game_titles,
     save_external_ids,
     save_event_source,
@@ -67,18 +69,57 @@ def scrape_sugimania() -> list[dict]:
 
 @task
 def extract_events(raw_events: list[dict]) -> list[dict]:
+    db = get_client()
+    matched_urls, rejected_urls = load_known_source_urls(db)
+
+    def _known(url: str) -> bool:
+        return bool(url) and (url in matched_urls or url in rejected_urls)
+
     results = []
     skipped_not_game = 0
+    skipped_known = 0
     pre_parsed_count = 0
 
     for raw in raw_events:
+        source_name_for_log = raw.get("source_name", "unknown")
+
         # ── 複数公演（_pre_parsed_list）の展開 ───────────────────────────
         pre_list = raw.get("_pre_parsed_list")
         if pre_list:
+            perf_urls = [pre.get("source_url", raw.get("source_url", "")) for pre in pre_list]
+            if perf_urls and all(_known(u) for u in perf_urls if u):
+                # 全公演が既知（AI呼び出し不要）。却下済みは作らず、
+                # 既存イベントに紐づくものだけ upsert_to_db に通して更新を継続させる。
+                skipped_known += len(perf_urls)
+                for pre in pre_list:
+                    perf_url = pre.get("source_url", raw.get("source_url", ""))
+                    if not perf_url or perf_url in rejected_urls:
+                        continue
+                    if not (pre.get("title") and pre.get("start_datetime")):
+                        continue
+                    pre["source_rank"]    = raw.get("source_rank", "A")
+                    pre["_image_url"]     = raw.get("image_url")
+                    pre["_source_name"]   = raw.get("source_name", "unknown")
+                    pre["_raw_source_url"] = perf_url
+                    if raw.get("_organizer_x_url"):
+                        pre["_organizer_x_url"] = raw["_organizer_x_url"]
+                    pre["game_titles"] = []
+                    pre["game_music_reason"] = ""
+                    results.append(pre)
+                    pre_parsed_count += 1
+                continue
+
             content = raw.get("raw_html") or raw.get("raw_text") or ""
             gt_result = extract_game_titles(content, raw.get("source_url", ""))
             if not gt_result.get("is_game_music_event", True):
                 skipped_not_game += 1
+                for url in perf_urls:
+                    if url:
+                        save_event_source(
+                            db, url, source_name_for_log,
+                            {"_rejected_reason": gt_result.get("game_music_reason", "")},
+                            None, "rejected_not_game",
+                        )
                 continue
             for pre in pre_list:
                 if not (pre.get("title") and pre.get("start_datetime")):
@@ -99,19 +140,48 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
         # ── 構造化済みデータがある場合は Claude をスキップ ──────────────
         pre = raw.get("_pre_parsed")
         if pre and pre.get("title") and pre.get("start_datetime"):
+            pre_url = raw.get("source_url", "")
+
+            if pre_url and pre_url in rejected_urls:
+                skipped_known += 1
+                continue
+
+            if pre_url and pre_url in matched_urls:
+                # AI呼び出し不要。既存イベント更新（開催日変更・中止など）のため upsert_to_db に通す。
+                skipped_known += 1
+                pre["source_rank"] = raw.get("source_rank", "A")
+                pre["_image_url"] = raw.get("image_url")
+                pre["_source_name"] = raw.get("source_name", "unknown")
+                pre["_raw_source_url"] = pre_url
+                if raw.get("ticket_url") and not pre.get("ticket_url"):
+                    pre["ticket_url"] = raw["ticket_url"]
+                if raw.get("_organizer_x_url"):
+                    pre["_organizer_x_url"] = raw["_organizer_x_url"]
+                pre["game_titles"] = []
+                pre["game_music_reason"] = ""
+                results.append(pre)
+                pre_parsed_count += 1
+                continue
+
             pre["source_rank"] = raw.get("source_rank", "A")
             pre["_image_url"] = raw.get("image_url")
             pre["_source_name"] = raw.get("source_name", "unknown")
-            pre["_raw_source_url"] = raw.get("source_url", "")
+            pre["_raw_source_url"] = pre_url
             if raw.get("ticket_url") and not pre.get("ticket_url"):
                 pre["ticket_url"] = raw["ticket_url"]
             if raw.get("_organizer_x_url"):
                 pre["_organizer_x_url"] = raw["_organizer_x_url"]
             # ゲームタイトルは常に Claude で抽出（キーワードマッチを使わない）
             content = raw.get("raw_html") or raw.get("raw_text") or ""
-            gt_result = extract_game_titles(content, raw.get("source_url", ""))
+            gt_result = extract_game_titles(content, pre_url)
             if not gt_result.get("is_game_music_event", True):
                 skipped_not_game += 1
+                if pre_url:
+                    save_event_source(
+                        db, pre_url, source_name_for_log,
+                        {"_rejected_reason": gt_result.get("game_music_reason", "")},
+                        None, "rejected_not_game",
+                    )
                 continue
             pre["game_titles"] = gt_result["game_titles"]
             pre["game_music_reason"] = gt_result.get("game_music_reason", "")
@@ -121,6 +191,13 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
 
         content = raw.get("raw_html") or raw.get("raw_text") or ""
         if not content:
+            continue
+
+        # 構造化データを持たないソース（生テキスト/画像のみ）はAIでしか情報を得られないため、
+        # 既知URLは matched/rejected を問わず完全にスキップする（更新の取りこぼしは許容）。
+        source_url_for_check = raw.get("source_url", "")
+        if _known(source_url_for_check):
+            skipped_known += 1
             continue
 
         source_name = raw.get("source_name", "")
@@ -146,6 +223,12 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
         if extracted:
             if not extracted.get("is_game_music_event", True):
                 skipped_not_game += 1
+                if source_url_for_check:
+                    save_event_source(
+                        db, source_url_for_check, source_name,
+                        {"_rejected_reason": extracted.get("game_music_reason", "")},
+                        None, "rejected_not_game",
+                    )
                 continue
             extracted["source_rank"] = raw.get("source_rank", "C")
             extracted["_image_url"] = raw.get("image_url") or raw.get("_flyer_image_url")
@@ -161,6 +244,8 @@ def extract_events(raw_events: list[dict]) -> list[dict]:
                 extracted["_tweet_text"] = raw.get("_tweet_text", "")
             results.append(extracted)
 
+    if skipped_known:
+        print(f"[extract] skipped {skipped_known} already-known URLs (no AI call)")
     if skipped_not_game:
         print(f"[extract] skipped {skipped_not_game} non-game-music events")
     if pre_parsed_count:
@@ -551,6 +636,7 @@ def collect_flow():
     started_at = datetime.now(timezone.utc)
     scraped_count = 0
     inserted_count = 0
+    ai_usage.reset()
     try:
         raw_teket = scrape_teket()
         raw_eplus = scrape_eplus()
@@ -605,6 +691,8 @@ def collect_flow():
         _log_run(started_at, "failed", scraped_count, inserted_count, error_msg)
         notify_failure(FLOW_NAME, error_msg)
         raise
+    finally:
+        print(ai_usage.summary_line())
 
 
 if __name__ == "__main__":

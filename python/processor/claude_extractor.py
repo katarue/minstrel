@@ -1,8 +1,23 @@
 import json
 import anthropic
 from utils.config import ANTHROPIC_API_KEY
+from utils import ai_usage
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+
+class AIFatalError(Exception):
+    """認証エラー・クレジット残高不足など、リトライしても回復しない致命的なAI呼び出しエラー。"""
+
+
+def raise_if_fatal_error(exc: Exception) -> None:
+    """認証エラー・クレジット残高不足を検出した場合は AIFatalError を送出する（それ以外は何もしない）。"""
+    if isinstance(exc, anthropic.AuthenticationError):
+        raise AIFatalError(f"AI呼び出し失敗（認証エラー、ANTHROPIC_API_KEYを確認してください）: {exc}") from exc
+    if isinstance(exc, anthropic.APIStatusError):
+        msg = str(exc).lower()
+        if exc.status_code in (401, 402) or any(kw in msg for kw in ("credit", "billing", "balance")):
+            raise AIFatalError(f"AI呼び出し失敗（クレジット残高不足の可能性）: {exc}") from exc
 
 _GAME_TITLES_CRITERIA = """
 【game_titles の判定基準】
@@ -216,6 +231,7 @@ JSONのみ返してください。"""
             messages=[{"role": "user", "content": prompt}],
             system=GAME_TITLES_SYSTEM,
         )
+        ai_usage.record(resp)
         text = resp.content[0].text.strip()
         if text.startswith("```"):
             text = text.split("```")[1]
@@ -227,7 +243,8 @@ JSONのみ返してください。"""
             "is_game_music_event": parsed.get("is_game_music_event", True),
             "game_music_reason": parsed.get("game_music_reason", ""),
         }
-    except Exception:
+    except Exception as e:
+        raise_if_fatal_error(e)
         return {"game_titles": [], "is_game_music_event": True, "game_music_reason": ""}
 
 
@@ -260,12 +277,17 @@ def extract_event(raw_text: str, source_url: str, strict: bool = False) -> dict 
 
 JSONのみ返してください。他のテキストは不要です。"""
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-        system=system,
-    )
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+            system=system,
+        )
+    except Exception as e:
+        raise_if_fatal_error(e)
+        raise
+    ai_usage.record(resp)
     return _parse_json_response(resp.content[0].text)
 
 
@@ -296,8 +318,10 @@ JSONのみ返してください。"""
             }],
             system=EXTRACTION_SYSTEM_STRICT,
         )
+        ai_usage.record(resp)
         return _parse_json_response(resp.content[0].text)
     except Exception as e:
+        raise_if_fatal_error(e)
         print(f"[vision] extraction failed for {image_url[:60]}: {e}")
         return None
 
@@ -327,6 +351,7 @@ def translate_event_names_en(event_names: list[str]) -> list[str | None]:
             messages=[{"role": "user", "content": prompt}],
             system=_TRANSLATE_SYSTEM,
         )
+        ai_usage.record(resp)
         text = resp.content[0].text.strip()
         if text.startswith("```"):
             text = text.split("```")[1]
@@ -336,6 +361,7 @@ def translate_event_names_en(event_names: list[str]) -> list[str | None]:
         if isinstance(result, list) and len(result) == len(event_names):
             return [str(r) if r else None for r in result]
     except Exception as e:
+        raise_if_fatal_error(e)
         print(f"[translate] error: {e}")
     return [None] * len(event_names)
 
@@ -377,7 +403,9 @@ def translate_event_descriptions_en(descriptions: list[str]) -> list[str | None]
             messages=[{"role": "user", "content": prompt}],
             system=_TRANSLATE_DESC_SYSTEM,
         )
+        ai_usage.record(resp)
         return _parse_translated_list(resp.content[0].text, len(descriptions))
     except Exception as e:
+        raise_if_fatal_error(e)
         print(f"[translate-desc] error: {e}")
     return [None] * len(descriptions)

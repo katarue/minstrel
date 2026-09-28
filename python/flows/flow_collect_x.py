@@ -28,6 +28,7 @@ from flows.flow_collect import (
     _log_run,
 )
 from utils.notify import notify_failure, notify_success
+from utils import ai_usage
 
 FLOW_NAME = "minstrel-collect-x"
 
@@ -90,6 +91,7 @@ def collect_x_flow(since_days: int = 1):
     started_at = datetime.now(timezone.utc)
     scraped_count = 0
     inserted_count = 0
+    ai_usage.reset()
     try:
         sync_following_if_stale(max_age_days=0)
         sync_x_lists_if_stale(max_age_days=0)
@@ -118,6 +120,8 @@ def collect_x_flow(since_days: int = 1):
         _log_run(started_at, "failed", scraped_count, inserted_count, error_msg)
         notify_failure(FLOW_NAME, error_msg)
         raise
+    finally:
+        print(ai_usage.summary_line())
 
 
 if __name__ == "__main__":

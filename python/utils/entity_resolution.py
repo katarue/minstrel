@@ -190,6 +190,43 @@ def save_external_ids(db, event_id: str, hard_keys: list[tuple[str, str]]) -> No
             print(f"[er] external_id upsert failed ({id_type}={value}): {e}")
 
 
+def load_known_source_urls(db) -> tuple[set[str], set[str]]:
+    """
+    event_sources に記録済みの source_url を全件ロードする（AI呼び出し前の既知URLフィルタ用）。
+    戻り値: (matched_urls, rejected_urls)
+      matched_urls  ... 既存イベントに紐づいている（紐づき得る）URL。
+                        ゲームタイトル判定のAI呼び出しは不要だが、upsert_to_db による
+                        既存イベントの更新（開催日変更・中止など）は通す必要がある。
+      rejected_urls ... 「ゲーム音楽ではない」とAIが判定済みのURL（match_status='rejected_not_game'）。
+                        イベントを作らないため完全にスキップする。
+    1000件超えに備えてページネーションする。
+    """
+    matched: set[str] = set()
+    rejected: set[str] = set()
+    page_size = 1000
+    start = 0
+    while True:
+        result = (
+            db.table("event_sources")
+            .select("source_url, match_status")
+            .range(start, start + page_size - 1)
+            .execute()
+        )
+        rows = result.data or []
+        for row in rows:
+            url = row.get("source_url")
+            if not url:
+                continue
+            if row.get("match_status") == "rejected_not_game":
+                rejected.add(url)
+            else:
+                matched.add(url)
+        if len(rows) < page_size:
+            break
+        start += page_size
+    return matched, rejected
+
+
 def save_event_source(
     db,
     source_url: str,
