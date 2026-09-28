@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { logoutAction } from "./logout/actions";
 
 export const metadata = { title: "管理ダッシュボード – Minstrel" };
 
@@ -15,6 +16,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </a>
           <span className="text-gold/60 text-sm">|</span>
           <span className="text-sm text-ink-body/60">管理ダッシュボード</span>
+          <div className="ml-auto">
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="text-sm text-ink-body/50 hover:text-bordeaux transition-colors"
+              >
+                ログアウト
+              </button>
+            </form>
+          </div>
         </header>
         <main className="w-[90vw] max-w-[1600px] mx-auto px-4 md:px-6 py-8">{children}</main>
       </body>
