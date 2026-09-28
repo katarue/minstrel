@@ -121,7 +121,8 @@
       "Read(//mnt/c/Users/katar/repos/active/minstrel/python/processor/**)",
       "Read(//mnt/c/Users/katar/repos/active/minstrel/web/src/app/admin/game-titles/**)",
       "Read(//mnt/c/Users/katar/repos/active/minstrel/python/utils/**)",
-      "WebFetch(domain:x.com)"
+      "WebFetch(domain:x.com)",
+      "WebFetch(domain:developer.spotify.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\katar\\repos\\active\\minstrel\\supabase",
@@ -130,7 +131,33 @@
       "C:\\Users\\katar\\.claude",
       "c:\\Users\\katar\\repos\\active\\claude-hq\\dashboard",
       "c:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\.githooks",
-      "c:\\Users\\katar\\repos\\active\\claude-hq\\.githooks"
+      "c:\\Users\\katar\\repos\\active\\claude-hq\\.githooks",
+      "C:\\Users\\katar\\repos\\active\\claude-hq\\docs",
+      "C:\\Users\\katar\\repos\\active\\ai-news-video-pipeline\\pipeline"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR\\.claude\\hooks\\session_start.ps1\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "& \"$env:CLAUDE_PROJECT_DIR\\.claude\\hooks\\stop_check.ps1\""
+          }
+        ]
+      }
     ]
   }
 }

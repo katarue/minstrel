@@ -9,8 +9,12 @@
 
   # 本実行（全シード・類似アーティスト拡張・上位100曲を投入）
   cd python && .venv/Scripts/python -m curation.main
+
+  # Phase 1-6 をスキップし、キャッシュから Phase 7 のみ再実行（失敗リカバリ用）
+  cd python && .venv/Scripts/python -m curation.main --upsert-from-cache
 """
 import argparse
+import json
 import logging
 import os
 import sys
@@ -42,6 +46,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TOP_N          = 100
+_CACHE_FILE    = os.path.join(os.path.dirname(__file__), "_cache_scored_records.json")
 SIMILAR_DEPTH  = 2
 SIMILAR_LIMIT  = 15  # 1アーティストあたりの類似アーティスト取得数
 
@@ -236,6 +241,8 @@ def main():
                         help="類似アーティスト拡張をスキップ")
     parser.add_argument("--top-n", type=int, default=TOP_N,
                         help=f"投入する上位N曲（デフォルト: {TOP_N}）")
+    parser.add_argument("--upsert-from-cache", action="store_true",
+                        help="Phase 1-6 をスキップ。キャッシュファイルから読み込んで Phase 7 のみ実行")
     args = parser.parse_args()
 
     if not LASTFM_API_KEY:
@@ -253,6 +260,25 @@ def main():
         else:
             logger.error("✗ アーティスト情報取得失敗")
             sys.exit(1)
+        return
+
+    # --- キャッシュから再実行 ---
+    if args.upsert_from_cache:
+        if not os.path.exists(_CACHE_FILE):
+            logger.error("キャッシュファイルが見つかりません: %s", _CACHE_FILE)
+            sys.exit(1)
+        with open(_CACHE_FILE, encoding="utf-8") as f:
+            records = json.load(f)
+        logger.info("=== キャッシュから %d 曲を読み込みました ===", len(records))
+        top_records = records[:args.top_n]
+        logger.info("=== Phase 7: Supabase に投入 ===")
+        inserted, updated = upsert_tracks(top_records)
+        logger.info("完了: 新規追加=%d, 既存更新=%d", inserted, updated)
+        total = inserted + updated
+        if total < 30:
+            logger.warning("⚠️  投入曲数が30曲未満 (%d曲)。", total)
+        else:
+            logger.info("✓ Sprint 1 完了: %d曲を music_curation に投入しました。", total)
         return
 
     # Phase 1: 収集
@@ -273,6 +299,11 @@ def main():
     if not records:
         logger.error("楽曲が0曲。中止します。")
         sys.exit(1)
+
+    # スコアリング結果をキャッシュ保存（Phase 7 失敗時のリカバリ用）
+    with open(_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+    logger.info("キャッシュ保存: %s (%d曲)", _CACHE_FILE, len(records))
 
     top_records = records[:args.top_n]
     logger.info("=== 投入候補: 上位 %d 曲 ===", len(top_records))

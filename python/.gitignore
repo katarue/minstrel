@@ -7,3 +7,9 @@ venv/
 data/raw/
 data/images/
 logs/
+curation/_cache_scored_records.json
+
+# 一時調査・デバッグ用スクリプト（コミット対象外）
+_check_*.py
+_debug_*.py
+_tmp_*.py

@@ -1,5 +1,31 @@
 {
   "handles": [
+    "LTO_Orchestra",
+    "mrst_winds",
+    "gakudan_zero",
+    "sakamotomusicst",
+    "orpheus_we_sns",
+    "troubadour_U",
+    "subcul_IM",
+    "GeonbSapporo",
+    "LylatSystemPO",
+    "Yuki_HERO44",
+    "shinyuristring",
+    "dragonquestwind",
+    "y_symphony",
+    "o35SbWm4tO11177",
+    "NewPhilChiba",
+    "sapporosymphony",
+    "NHKSO_Tokyo",
+    "Tokyo_Symphony",
+    "hirokyo_info",
+    "nagoyaphil",
+    "kyotosymphony",
+    "KyushuSymphony",
+    "TKWOJapan",
+    "Osaka_phil",
+    "B_E_OneforAll",
+    "Okami_Concert",
     "SEGA",
     "TokyoCityPhil",
     "Harmonia_KISEKI",
@@ -100,6 +126,6 @@
     "nhk_classical",
     "brabraff"
   ],
-  "synced_at": "2026-05-18T16:00:02.543742+00:00",
-  "count": 99
+  "synced_at": "2026-08-21T00:03:59.592964+00:00",
+  "count": 125
 }

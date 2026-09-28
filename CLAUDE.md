@@ -30,13 +30,25 @@
 
 ## 🔁 セッション運用
 
-**開始時:** Pre-Flight Check → `git branch --show-current`（main なら feature/* または chore/* へ誘導）。
+**進捗の正本は STATE.md（このリポジトリ直下）の1か所だけ。** 合言葉やクロージング手順を覚えていなくても記録が残ることを最優先にした設計。
+
+**開始時:** Pre-Flight Check → `git branch --show-current`（main なら feature/* または chore/* へ誘導）。SessionStart フックが STATE.md の「現在地」を自動でコンテキストに読み込む（`.claude/hooks/session_start.ps1`）。
 
 **アーキ・実装を提案する前:** GitHub Issues で `label:decision/adopted` を検索し過去判断を確認。`docs/implementation_schedule.md` のフェーズと整合を確認。
 
-**記録先:** 記憶は auto memory（永続）、新規決定は GitHub Issues（`[decision]`/`decision/adopted`）、過去決定 D-001〜D-027 は `docs/archive/memory_bank/decision_log.md`（読み取り専用）。
+**進捗の記録（最重要・作業を1つ終えるたび）:** STATE.md の「現在地」（完了／判明した事実／進行中／次のステップ）を更新し、同じコミットに含める。STATE.md は「今の状態」を書く場所であり、古くなった記述は消すか書き換える。追記を積み上げるだけにせず、全体で約150行以内を目安に保つ。
+Stop フックが、STATE.md 以外の変更（未コミット含む）や新しいコミットがあるのに STATE.md が未更新のまま終了しようとした場合を検知し、更新を促す（`.claude/hooks/stop_check.ps1`）。このため次項のクロージングは任意の確認手順であり、実行しなくても記録は残る。
 
-**終了時:** 「クロージングを始めて」で3ゲート手順を実行 → `.claude/rules/closing_ritual.md`。
+**記録先（1か所ずつ・用途固定）:**
+
+| 記録先 | 用途 |
+|---|---|
+| `STATE.md`（このリポジトリ） | 進捗の正本。唯一の「今の状態」の記録場所 |
+| GitHub Issues（`decision/adopted`） | 決定事項の記録専用 |
+| auto memory | 進捗は書かない（PC ごとの保存で他PC・claude.ai から見えないため） |
+| ~~Notion 開発日誌~~ | 廃止。記録しない |
+
+**終了時（任意）:** `.claude/rules/closing_ritual.md` の確認手順を使ってもよい（無くても記録は残る）。
 
 詳細（アーキ提案前チェック・記録管理・AUTO-PUSH・DoD・コミット規約）→ `.claude/rules/session_workflow.md`
 

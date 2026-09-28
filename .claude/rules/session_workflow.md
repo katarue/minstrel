@@ -6,8 +6,9 @@ CLAUDE.md 本体「セッション運用」の詳細版。
 
 トリガー: Claude Code セッション起動時。
 
-1. Pre-Flight Check を実行（`preflight_check.md`）
-2. `git branch --show-current` でブランチ確認
+1. SessionStart フック（`.claude/hooks/session_start.ps1`）が STATE.md の「現在地」セクションを自動でコンテキストに追加する。合言葉やムーチョの記憶に頼らず、何もしなくても最新の状態が読み込まれる
+2. Pre-Flight Check を実行（`preflight_check.md`）
+3. `git branch --show-current` でブランチ確認
    - main の場合は警告:「作業は feature/* または chore/* ブランチで行います」
 
 ## アーキテクチャ・実装を提案する前に
@@ -16,11 +17,17 @@ CLAUDE.md 本体「セッション運用」の詳細版。
 2. 実装方針が `docs/implementation_schedule.md` のフェーズ・タスク番号と整合しているか
 3. 変更箇所が 4 原則（Surgical Changes）に従っているか
 
-## 記憶・決定の管理
+## 進捗・決定の記録
 
-- **記憶**: `~/.claude/projects/.../memory/` の auto memory に記録（セッション間で永続）
-- **新規決定**: GitHub Issues 起票（タイトル `[decision] ...`、ラベル `decision/adopted`）
+進捗の正本は **このリポジトリの STATE.md 1か所だけ**。記録先を分散させない。
+
+- **進捗（今の状態）**: STATE.md の「現在地」を更新。作業を1つ完了して報告するたびに、同じコミットに含める。追記を積み上げず、古い記述は消すか書き換えて全体を約150行以内に保つ
+- **新規決定**: GitHub Issues 起票（タイトル `[decision] ...`、ラベル `decision/adopted`）専用。進捗は書かない
+- **auto memory**: 進捗は書かない（PC ごとの保存で他PC・claude.ai から見えないため、進捗の正本にはできない）
+- **Notion 開発日誌**: 廃止。記録しない
 - **過去の決定（D-001〜D-027）**: `docs/archive/memory_bank/decision_log.md` を参照（読み取り専用）
+
+STATE.md 以外に変更があるのに STATE.md が未更新のまま終了しようとすると、Stop フック（`.claude/hooks/stop_check.ps1`）が検知して更新を促す。仕組みで担保しているため、クロージング手順（`closing_ritual.md`）は任意の確認用であり必須ではない。
 
 ## Git 運用
 
